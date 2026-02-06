@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  category    String   // "burger", "wrap", "fries", "drink"
+  image       String?
+  available   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orderItems  OrderItem[]
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String
+  role          UserRole  @default(CUSTOMER)
+  phone         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  orders        Order[]
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  userId          String?
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+  deliveryAddress String
+  city            String
+  postalCode      String?
+  totalAmount     Float
+  status          OrderStatus @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  stripePaymentId String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  items           OrderItem[]
+  user            User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  menuItemId  String
+  quantity    Int
+  price       Float
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem    MenuItem @relation(fields: [menuItemId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+

@@ -1,0 +1,188 @@
+'use client'
+
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { Package, Clock, CheckCircle, XCircle, MapPin, Phone, Mail } from 'lucide-react'
+
+interface Order {
+  id: string
+  customerName: string
+  customerEmail: string
+  customerPhone: string
+  deliveryAddress: string
+  city: string
+  totalAmount: number
+  status: string
+  paymentStatus: string
+  createdAt: string
+  items: Array<{
+    id: string
+    quantity: number
+    price: number
+    menuItem: {
+      name: string
+    }
+  }>
+}
+
+export default function DashboardPage() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login')
+    }
+  }, [status, router])
+
+  useEffect(() => {
+    if (session) {
+      fetchOrders()
+    }
+  }, [session])
+
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch('/api/orders/user')
+      const data = await response.json()
+      setOrders(data)
+    } catch (error) {
+      console.error('Error fetching orders:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (status === 'loading' || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl">Loading...</div>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return null
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'DELIVERED':
+        return <CheckCircle className="w-5 h-5 text-green-600" />
+      case 'CANCELLED':
+        return <XCircle className="w-5 h-5 text-red-600" />
+      default:
+        return <Clock className="w-5 h-5 text-yellow-600" />
+    }
+  }
+
+  return (
+    <div className="min-h-screen py-8 px-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">My Dashboard</h1>
+          <p className="text-gray-600">
+            Welcome back, {session.user?.name || session.user?.email}!
+          </p>
+        </div>
+
+        {orders.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+            <Package className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+            <h2 className="text-2xl font-bold mb-2">No Orders Yet</h2>
+            <p className="text-gray-600 mb-6">
+              Start ordering delicious food from our menu!
+            </p>
+            <Link
+              href="/menu"
+              className="inline-block bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+            >
+              Browse Menu
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-gray-900">My Orders</h2>
+            {orders.map((order) => (
+              <div
+                key={order.id}
+                className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow"
+              >
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+                  <div className="mb-4 md:mb-0">
+                    <div className="flex items-center space-x-3 mb-2">
+                      {getStatusIcon(order.status)}
+                      <h3 className="text-xl font-semibold">Order #{order.id.slice(-8)}</h3>
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          order.status === 'DELIVERED'
+                            ? 'bg-green-100 text-green-800'
+                            : order.status === 'CANCELLED'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}
+                      >
+                        {order.status}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      {new Date(order.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-primary-600">
+                      ${order.totalAmount.toFixed(2)}
+                    </p>
+                    <p
+                      className={`text-sm font-medium ${
+                        order.paymentStatus === 'PAID'
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      }`}
+                    >
+                      {order.paymentStatus}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4 space-y-3">
+                  <div>
+                    <h4 className="font-semibold mb-2">Items Ordered</h4>
+                    <div className="space-y-1">
+                      {order.items.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex justify-between text-sm text-gray-700"
+                        >
+                          <span>
+                            {item.menuItem.name} x {item.quantity}
+                          </span>
+                          <span>${(item.price * item.quantity).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-3">
+                    <h4 className="font-semibold mb-2 flex items-center">
+                      <MapPin className="w-4 h-4 mr-2" />
+                      Delivery Address
+                    </h4>
+                    <p className="text-sm text-gray-700">
+                      {order.deliveryAddress}, {order.city}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
