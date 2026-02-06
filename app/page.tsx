@@ -18,7 +18,7 @@ export default function Home() {
 
   useEffect(() => {
     // Handle hash navigation when coming from other pages
-    const hash = window.location.hash.replace('#', '')
+    const hash = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : ''
     if (hash) {
       setTimeout(() => {
         const element = document.getElementById(hash)
@@ -72,7 +72,7 @@ export default function Home() {
           <div className="text-center mb-8 sm:mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4">About MeatBirdz</h2>
             <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto px-2">
-              We're passionate about serving delicious, high-quality fast food made fresh daily. 
+              We&apos;re passionate about serving delicious, high-quality fast food made fresh daily. 
               Our commitment to excellence has made us a favorite among food lovers.
             </p>
           </div>

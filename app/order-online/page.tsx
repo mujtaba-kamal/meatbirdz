@@ -25,7 +25,7 @@ export default function OrderOnlinePage() {
             Order Online
           </h1>
           <p className="text-base sm:text-lg lg:text-xl text-gray-600">
-            Choose how you'd like to receive your order
+            Choose how you&apos;d like to receive your order
           </p>
         </div>
 

@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { useCartStore } from '@/store/cartStore'
 import { Plus, Minus, MapPin, Store, Truck } from 'lucide-react'
 import toast from 'react-hot-toast'
+
+export const dynamic = 'force-dynamic'
 
 interface MenuItem {
   id: string
@@ -33,6 +36,9 @@ export default function MenuPage() {
   const addItem = useCartStore((state) => state.addItem)
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return
+    
     // Check if location is selected
     const storedOrderType = localStorage.getItem('orderType')
     const storedLocation = localStorage.getItem('selectedLocation')
@@ -173,10 +179,11 @@ export default function MenuPage() {
             >
               {item.image && (
                 <div className="h-48 bg-gradient-to-br from-primary-100 to-primary-200 relative">
-                  <img
+                  <Image
                     src={item.image}
                     alt={item.name}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                 </div>
               )}

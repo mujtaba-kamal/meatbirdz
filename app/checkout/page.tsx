@@ -7,6 +7,9 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Store, Truck } from 'lucide-react'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 export default function CheckoutPage() {
   const router = useRouter()
   const { data: session } = useSession()
@@ -14,6 +17,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false)
   const [orderType, setOrderType] = useState<string | null>(null)
   const [selectedLocation, setSelectedLocation] = useState<any>(null)
+  const [mounted, setMounted] = useState(false)
   const [formData, setFormData] = useState({
     customerName: '',
     customerEmail: '',
@@ -24,6 +28,13 @@ export default function CheckoutPage() {
   })
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    // Only run on client side after mount
+    if (!mounted || typeof window === 'undefined') return
+    
     // Get selected location from localStorage
     const storedOrderType = localStorage.getItem('orderType')
     const storedLocation = localStorage.getItem('selectedLocation')
@@ -60,9 +71,14 @@ export default function CheckoutPage() {
       toast.error('Please select a location first')
       router.push('/order-online')
     }
-  }, [session, router]) // Removed orderType and selectedLocation from dependencies
+  }, [session, router, mounted]) // Added mounted to dependencies
 
   const total = getTotal()
+
+  // Don't render until mounted (prevents SSR issues)
+  if (!mounted) {
+    return null
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -101,7 +117,9 @@ export default function CheckoutPage() {
         router.push(`/payment?clientSecret=${data.clientSecret}&orderId=${data.orderId}`)
       } else if (data.checkoutUrl) {
         // For Stripe Checkout redirect
-        window.location.href = data.checkoutUrl
+        if (typeof window !== 'undefined') {
+          window.location.href = data.checkoutUrl
+        }
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to process checkout')
