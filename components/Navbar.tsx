@@ -48,11 +48,11 @@ export default function Navbar() {
   }
 
   return (
-    <nav className={`shadow-lg sticky top-0 z-50 border-b ${isAdmin ? 'bg-blue-900 border-blue-800' : 'bg-white border-gray-100'}`}>
+    <nav className={`shadow-lg sticky top-0 z-50 border-b ${isAdmin ? 'bg-primary-900 border-primary-800' : 'bg-white border-gray-100'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link href={isAdmin ? "/admin" : "/"} className="flex items-center space-x-2 group">
-            <div className={`p-2 rounded-lg transition-colors ${isAdmin ? 'bg-blue-700 group-hover:bg-blue-600' : 'bg-primary-600 group-hover:bg-primary-700'}`}>
+            <div className={`p-2 rounded-lg transition-colors ${isAdmin ? 'bg-primary-700 group-hover:bg-primary-600' : 'bg-primary-600 group-hover:bg-primary-700'}`}>
               <ChefHat className="w-6 h-6 text-white" />
             </div>
             <span className={`text-xl sm:text-2xl font-bold bg-clip-text text-transparent ${isAdmin ? 'text-white' : 'bg-gradient-to-r from-primary-600 to-primary-800'}`}>

@@ -33,7 +33,7 @@ interface Order {
 
 const statusColors: Record<string, string> = {
   PENDING: 'bg-yellow-100 text-yellow-800',
-  CONFIRMED: 'bg-blue-100 text-blue-800',
+  CONFIRMED: 'bg-primary-100 text-primary-800',
   PREPARING: 'bg-purple-100 text-purple-800',
   READY: 'bg-green-100 text-green-800',
   DELIVERED: 'bg-gray-100 text-gray-800',
@@ -128,15 +128,15 @@ export default function AdminPage() {
             <h2 className="text-xl font-semibold mb-4">Recent Orders</h2>
             <div className="space-y-4">
               {orders.length === 0 ? (
-                <div className="bg-white rounded-2xl shadow-lg p-8 text-center border border-blue-100">
-                  <Package className="w-16 h-16 mx-auto text-blue-300 mb-4" />
+                <div className="bg-white rounded-2xl shadow-lg p-8 text-center border border-primary-100">
+                  <Package className="w-16 h-16 mx-auto text-primary-300 mb-4" />
                   <p className="text-gray-600">No orders yet</p>
                 </div>
               ) : (
                 orders.map((order) => (
                   <div
                     key={order.id}
-                    className="bg-white rounded-2xl shadow-lg p-6 cursor-pointer hover:shadow-xl transition-all border border-blue-100 hover:border-blue-300"
+                    className="bg-white rounded-2xl shadow-lg p-6 cursor-pointer hover:shadow-xl transition-all border border-primary-100 hover:border-primary-300"
                     onClick={() => setSelectedOrder(order)}
                   >
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-2">
@@ -149,7 +149,7 @@ export default function AdminPage() {
                         </p>
                       </div>
                       <div className="text-left sm:text-right">
-                        <p className="font-bold text-base sm:text-lg text-blue-600">
+                        <p className="font-bold text-base sm:text-lg text-primary-600">
                           ${order.totalAmount.toFixed(2)}
                         </p>
                         <span
@@ -186,7 +186,7 @@ export default function AdminPage() {
           {/* Order Details Sidebar */}
           <div className="lg:col-span-1 order-3">
             {selectedOrder ? (
-              <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-24 border border-blue-100">
+              <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-24 border border-primary-100">
                 <h2 className="text-xl font-semibold mb-4 text-gray-900">Order Details</h2>
 
                 <div className="space-y-4 mb-6">
@@ -242,7 +242,7 @@ export default function AdminPage() {
                           className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                             selectedOrder.status === status
                               ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                              : 'bg-blue-600 text-white hover:bg-blue-700'
+                              : 'bg-primary-600 text-white hover:bg-primary-700'
                           }`}
                         >
                           Mark as {status}
@@ -253,7 +253,7 @@ export default function AdminPage() {
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl shadow-lg p-6 text-center text-gray-500 border border-blue-100">
+              <div className="bg-white rounded-2xl shadow-lg p-6 text-center text-gray-500 border border-primary-100">
                 Select an order to view details
               </div>
             )}
