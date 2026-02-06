@@ -68,13 +68,13 @@ export default function Navbar() {
               </div>
             ) : isAdmin ? (
               // Admin only sees admin portal and logout
-              <div className="flex items-center space-x-2 pl-2 border-l border-blue-700">
-                <span className="text-sm text-blue-100 hidden sm:block">
+              <div className="flex items-center space-x-2 pl-2 border-l border-primary-700">
+                <span className="text-sm text-primary-100 hidden sm:block">
                   {session.user.name || session.user.email}
                 </span>
                 <button
                   onClick={handleSignOut}
-                  className="text-blue-100 hover:text-white transition-colors p-2 rounded-lg hover:bg-blue-800"
+                  className="text-primary-100 hover:text-white transition-colors p-2 rounded-lg hover:bg-primary-800"
                   title="Sign Out"
                 >
                   <LogOut className="w-5 h-5" />
@@ -258,7 +258,7 @@ export default function Navbar() {
             </Link>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className={`p-2 rounded-lg transition-colors ${isAdmin ? 'text-blue-100 hover:bg-blue-800' : 'text-gray-700 hover:bg-gray-100'}`}
+              className={`p-2 rounded-lg transition-colors ${isAdmin ? 'text-primary-100 hover:bg-primary-800' : 'text-gray-700 hover:bg-gray-100'}`}
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? (
@@ -272,16 +272,16 @@ export default function Navbar() {
 
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className={`lg:hidden border-t ${isAdmin ? 'border-blue-800' : 'border-gray-200'}`}>
-            <div className={`px-2 pt-2 pb-3 space-y-1 ${isAdmin ? 'bg-blue-900' : 'bg-white'}`}>
+          <div className={`lg:hidden border-t ${isAdmin ? 'border-primary-800' : 'border-gray-200'}`}>
+            <div className={`px-2 pt-2 pb-3 space-y-1 ${isAdmin ? 'bg-primary-900' : 'bg-white'}`}>
               {isAdmin ? (
                 <div className="px-3 py-2">
-                  <p className={`text-sm mb-2 ${isAdmin ? 'text-blue-100' : 'text-gray-600'}`}>
+                  <p className={`text-sm mb-2 ${isAdmin ? 'text-primary-100' : 'text-gray-600'}`}>
                     {session?.user?.name || session?.user?.email}
                   </p>
                   <button
                     onClick={handleSignOut}
-                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${isAdmin ? 'text-blue-100 hover:bg-blue-800' : 'text-gray-700 hover:bg-gray-100'}`}
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${isAdmin ? 'text-primary-100 hover:bg-primary-800' : 'text-gray-700 hover:bg-gray-100'}`}
                   >
                     Sign Out
                   </button>
