@@ -43,7 +43,12 @@ export default function CartPage() {
             >
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-base sm:text-lg truncate">{item.name}</h3>
-                <p className="text-gray-600 text-sm">${item.price.toFixed(2)} each</p>
+                <p className="text-gray-600 text-sm">£{item.price.toFixed(2)} each</p>
+                {item.instructions && (
+                  <p className="text-xs sm:text-sm text-primary-600 mt-1 italic">
+                    Note: {item.instructions}
+                  </p>
+                )}
               </div>
               <div className="flex items-center justify-between sm:justify-end gap-4">
                 <div className="flex items-center space-x-2">
@@ -66,7 +71,7 @@ export default function CartPage() {
                   </button>
                 </div>
                 <span className="font-semibold text-base sm:text-lg min-w-[80px] text-right">
-                  ${(item.price * item.quantity).toFixed(2)}
+                  £{(item.price * item.quantity).toFixed(2)}
                 </span>
                 <button
                   onClick={() => removeItem(item.id)}
@@ -84,7 +89,7 @@ export default function CartPage() {
           <div className="flex justify-between items-center mb-4">
             <span className="text-xl font-semibold">Total</span>
             <span className="text-2xl font-bold text-primary-600">
-              ${total.toFixed(2)}
+              £{total.toFixed(2)}
             </span>
           </div>
         </div>
