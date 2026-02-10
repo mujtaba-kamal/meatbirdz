@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { name, description, price, category, image, available, availableInMeal, mealCategory } = await request.json()
+    const { name, description, price, category, image, available } = await request.json()
 
     if (!name || !price || !category) {
       return NextResponse.json(
@@ -54,8 +54,6 @@ export async function POST(request: NextRequest) {
         category,
         image: image || null,
         available: available !== undefined ? available : true,
-        availableInMeal: availableInMeal !== undefined ? availableInMeal : false,
-        mealCategory: mealCategory || null,
       },
     })
 

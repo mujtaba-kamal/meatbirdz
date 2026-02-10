@@ -13,19 +13,17 @@ datasource db {
 }
 
 model MenuItem {
-  id              String   @id @default(cuid())
-  name            String
-  description     String?
-  price           Float
-  category        String   // "burger", "wrap", "fries", "drink"
-  image           String?
-  available       Boolean  @default(true)
-  availableInMeal Boolean  @default(false) // Whether this item can be selected in the meal
-  mealCategory    String?  // "main", "side", "drink" - which category in the meal
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  orderItems      OrderItem[]
-  mealOptions     MealOption[]
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  category    String   // "burger", "wrap", "fries", "drink"
+  image       String?
+  available   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orderItems  OrderItem[]
+  mealOptions MealOption[]
 }
 
 model User {
