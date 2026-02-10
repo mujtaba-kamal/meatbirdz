@@ -270,9 +270,32 @@ export async function POST(request: NextRequest) {
       // Add new category columns if they don't exist
       if (!hasCategory1Name) {
         console.log('Adding category name columns to Meal table...')
-        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN IF NOT EXISTS "category1Name" TEXT NOT NULL DEFAULT 'Fries';`)
-        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN IF NOT EXISTS "category2Name" TEXT NOT NULL DEFAULT 'Drink';`)
-        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN IF NOT EXISTS "category3Name" TEXT NOT NULL DEFAULT 'Side';`)
+        const checkCategory2Name = await prisma.$queryRawUnsafe(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'Meal' 
+            AND column_name = 'category2Name'
+          );
+        `)
+        const checkCategory3Name = await prisma.$queryRawUnsafe(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'Meal' 
+            AND column_name = 'category3Name'
+          );
+        `)
+        
+        if (!hasCategory1Name) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN "category1Name" TEXT NOT NULL DEFAULT 'Fries';`)
+        }
+        if (!(checkCategory2Name as any[])[0]?.exists) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN "category2Name" TEXT NOT NULL DEFAULT 'Drink';`)
+        }
+        if (!(checkCategory3Name as any[])[0]?.exists) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN "category3Name" TEXT NOT NULL DEFAULT 'Side';`)
+        }
       }
       
       // Check if MealOption table exists, if not create it
