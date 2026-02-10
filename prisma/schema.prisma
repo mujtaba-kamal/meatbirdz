@@ -23,6 +23,7 @@ model MenuItem {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   orderItems  OrderItem[]
+  mealItems   MealItem[]
 }
 
 model User {
@@ -61,12 +62,39 @@ model Order {
 model OrderItem {
   id          String   @id @default(cuid())
   orderId     String
-  menuItemId  String
+  menuItemId  String?
+  mealId      String?
   quantity    Int
   price       Float
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItem    MenuItem @relation(fields: [menuItemId], references: [id])
+  menuItem    MenuItem? @relation(fields: [menuItemId], references: [id])
+  meal        Meal?    @relation(fields: [mealId], references: [id])
   createdAt   DateTime @default(now())
+}
+
+model Meal {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  image       String?
+  available   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  items       MealItem[]
+  orderItems  OrderItem[]
+}
+
+model MealItem {
+  id          String   @id @default(cuid())
+  mealId      String
+  menuItemId  String
+  quantity    Int      @default(1) // How many of this item in the meal
+  meal        Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  menuItem    MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  
+  @@unique([mealId, menuItemId])
 }
 
 enum OrderStatus {

@@ -8,6 +8,9 @@ export interface CartItem {
   quantity: number
   image?: string
   instructions?: string
+  type?: 'menuItem' | 'meal' // Add type to distinguish between menu items and meals
+  mealId?: string // For meals
+  menuItemId?: string // For menu items
 }
 
 interface CartStore {

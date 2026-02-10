@@ -38,6 +38,8 @@ export default function MenuPage() {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({})
   const [itemInstructions, setItemInstructions] = useState<Record<string, string>>({})
+  const [meals, setMeals] = useState<any[]>([])
+  const [selectedMeal, setSelectedMeal] = useState<string | null>(null)
   const addItem = useCartStore((state) => state.addItem)
 
   useEffect(() => {
@@ -57,7 +59,20 @@ export default function MenuPage() {
     }
     
     fetchMenuItems()
+    fetchMeals()
   }, [router])
+
+  const fetchMeals = async () => {
+    try {
+      const response = await fetch('/api/meals')
+      if (response.ok) {
+        const data = await response.json()
+        setMeals(data.filter((meal: any) => meal.available))
+      }
+    } catch (error) {
+      console.error('Error fetching meals:', error)
+    }
+  }
 
   const fetchMenuItems = async () => {
     try {
@@ -134,6 +149,8 @@ export default function MenuPage() {
         price: item.price,
         image: item.image || undefined,
         instructions: instructions || undefined,
+        type: 'menuItem',
+        menuItemId: item.id,
       })
     }
     
@@ -232,6 +249,107 @@ export default function MenuPage() {
             ))}
           </div>
         </div>
+
+        {/* Meals Section */}
+        {meals.length > 0 && (
+          <div className="mb-8 sm:mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6">Meal Deals</h2>
+            <p className="text-gray-600 mb-4 sm:mb-6">Select one meal deal to add to your order</p>
+            <div className="space-y-3 sm:space-y-4">
+              {meals.map((meal) => (
+                <div
+                  key={meal.id}
+                  className={`bg-white rounded-xl sm:rounded-2xl shadow-md border-2 transition-all ${
+                    selectedMeal === meal.id
+                      ? 'border-primary-500 shadow-lg'
+                      : 'border-gray-200 hover:shadow-lg'
+                  }`}
+                >
+                  <div className="p-4 sm:p-6">
+                    <div className="flex items-start gap-4">
+                      <input
+                        type="radio"
+                        name="meal"
+                        id={`meal-${meal.id}`}
+                        checked={selectedMeal === meal.id}
+                        onChange={() => setSelectedMeal(meal.id)}
+                        className="mt-1 w-5 h-5 text-primary-600 focus:ring-primary-500"
+                      />
+                      {meal.image && (
+                        <div className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-100">
+                          <img
+                            src={meal.image}
+                            alt={meal.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = `https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&h=200&fit=crop&crop=center`
+                            }}
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <label
+                          htmlFor={`meal-${meal.id}`}
+                          className="cursor-pointer block"
+                        >
+                          <div className="flex items-start justify-between gap-4 mb-2">
+                            <div>
+                              <h3 className="font-bold text-lg sm:text-xl text-gray-900 mb-1">
+                                {meal.name}
+                              </h3>
+                              {meal.description && (
+                                <p className="text-sm sm:text-base text-gray-600 mb-2">
+                                  {meal.description}
+                                </p>
+                              )}
+                              <div className="mb-2">
+                                <p className="text-xs font-medium text-gray-700 mb-1">Includes:</p>
+                                <ul className="text-xs sm:text-sm text-gray-600 space-y-1">
+                                  {meal.items?.map((item: any, idx: number) => (
+                                    <li key={idx}>
+                                      • {item.menuItem?.name} {item.quantity > 1 && `x ${item.quantity}`}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="font-bold text-xl sm:text-2xl text-primary-600">
+                                ${meal.price.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        </label>
+                        {selectedMeal === meal.id && (
+                          <div className="mt-4 flex gap-2">
+                            <button
+                              onClick={() => {
+                                addItem({
+                                  id: meal.id,
+                                  name: meal.name,
+                                  price: meal.price,
+                                  quantity: 1,
+                                  image: meal.image || undefined,
+                                  type: 'meal',
+                                  mealId: meal.id,
+                                })
+                                toast.success(`${meal.name} added to cart!`)
+                                setSelectedMeal(null) // Clear selection after adding
+                              }}
+                              className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+                            >
+                              Add to Cart
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Menu Items List */}
         <div className="space-y-3 sm:space-y-4">

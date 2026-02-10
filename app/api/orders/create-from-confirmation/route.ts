@@ -24,15 +24,17 @@ export async function POST(request: NextRequest) {
     }
 
     // For Stripe payments, verify payment was successful
-    let paymentStatus: 'PENDING' | 'PAID' = 'PENDING'
+    let paymentStatus: PaymentStatus = PaymentStatus.PENDING
     let stripePaymentId: string | null = null
 
     if (paymentIntentId && stripe) {
       try {
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
         if (paymentIntent.status === 'succeeded') {
-          paymentStatus = 'PAID'
+          paymentStatus = PaymentStatus.PAID
           stripePaymentId = paymentIntent.id
+        } else if (paymentIntent.status === 'failed') {
+          paymentStatus = PaymentStatus.FAILED
         }
       } catch (error) {
         console.error('Error verifying payment intent:', error)
@@ -51,12 +53,13 @@ export async function POST(request: NextRequest) {
         city: customerInfo.city,
         postalCode: customerInfo.postalCode || null,
         totalAmount: total,
-        status: paymentStatus === 'PAID' ? 'CONFIRMED' : 'PENDING',
-        paymentStatus: paymentStatus as 'PENDING' | 'PAID',
+        status: paymentStatus === PaymentStatus.PAID ? 'CONFIRMED' : 'PENDING',
+        paymentStatus: paymentStatus,
         stripePaymentId: stripePaymentId,
         items: {
           create: items.map((item: any) => ({
-            menuItemId: item.id,
+            menuItemId: item.type === 'meal' ? null : (item.menuItemId || item.id),
+            mealId: item.type === 'meal' ? (item.mealId || item.id) : null,
             quantity: item.quantity,
             price: item.price,
           })),
@@ -66,6 +69,15 @@ export async function POST(request: NextRequest) {
         items: {
           include: {
             menuItem: true,
+            meal: {
+              include: {
+                items: {
+                  include: {
+                    menuItem: true,
+                  },
+                },
+              },
+            },
           },
         },
       },

@@ -1,0 +1,120 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { prisma } from '@/lib/prisma'
+import { authOptions } from '@/lib/auth'
+
+export const dynamic = 'force-dynamic'
+
+// PUT - Update a meal
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Unauthorized. Admin access required.' },
+        { status: 401 }
+      )
+    }
+
+    const mealId = params.id
+    const { name, description, price, image, available, items } = await request.json()
+
+    // If items are provided, update them
+    if (items && Array.isArray(items)) {
+      // Delete existing meal items
+      await prisma.mealItem.deleteMany({
+        where: { mealId },
+      })
+
+      // Create new meal items
+      await prisma.mealItem.createMany({
+        data: items.map((item: { menuItemId: string; quantity: number }) => ({
+          mealId,
+          menuItemId: item.menuItemId,
+          quantity: item.quantity || 1,
+        })),
+      })
+    }
+
+    // Update meal details
+    const meal = await prisma.meal.update({
+      where: { id: mealId },
+      data: {
+        ...(name && { name }),
+        ...(description !== undefined && { description: description || null }),
+        ...(price !== undefined && { price: parseFloat(price) }),
+        ...(image !== undefined && { image: image || null }),
+        ...(available !== undefined && { available }),
+      },
+      include: {
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
+    })
+
+    return NextResponse.json(meal)
+  } catch (error: any) {
+    console.error('Error updating meal:', error)
+    return NextResponse.json(
+      { error: 'Failed to update meal', details: error.message },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE - Delete a meal
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Unauthorized. Admin access required.' },
+        { status: 401 }
+      )
+    }
+
+    const mealId = params.id
+
+    // Check if meal is used in any orders
+    const orderItems = await prisma.orderItem.findMany({
+      where: { mealId },
+      take: 1,
+    })
+
+    if (orderItems.length > 0) {
+      // Instead of deleting, mark as unavailable
+      const meal = await prisma.meal.update({
+        where: { id: mealId },
+        data: { available: false },
+      })
+      return NextResponse.json({
+        message: 'Meal marked as unavailable (used in orders)',
+        meal,
+      })
+    }
+
+    await prisma.meal.delete({
+      where: { id: mealId },
+    })
+
+    return NextResponse.json({ message: 'Meal deleted successfully' })
+  } catch (error: any) {
+    console.error('Error deleting meal:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete meal', details: error.message },
+      { status: 500 }
+    )
+  }
+}
+
