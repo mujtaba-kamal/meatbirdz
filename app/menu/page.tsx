@@ -162,28 +162,76 @@ export default function MenuPage() {
     
     const quantity = itemQuantities[item.id] || 1
     const instructions = itemInstructions[item.id] || ''
+    const isMealSelected = showMealOption[item.id] && meal
+    const mealChoicesForItem = mealChoices[item.id]
+    
+    // If meal is selected, check if all categories are selected
+    if (isMealSelected) {
+      if (!mealChoicesForItem?.category1 || !mealChoicesForItem?.category2 || !mealChoicesForItem?.category3) {
+        toast.error('Please select one option from each category (Fries, Drink, Side)')
+        return
+      }
+    }
     
     // Add item with quantity
     for (let i = 0; i < quantity; i++) {
-      addItem({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        image: item.image || undefined,
-        instructions: instructions || undefined,
-        type: 'menuItem',
-        menuItemId: item.id,
-      })
+      if (isMealSelected && mealChoicesForItem) {
+        // Add as meal
+        const totalPrice =
+          item.price +
+          (meal.basePrice || 0) +
+          (mealChoicesForItem.category1.price || 0) +
+          (mealChoicesForItem.category2.price || 0) +
+          (mealChoicesForItem.category3.price || 0)
+
+        addItem({
+          id: `${item.id}-meal-${Date.now()}-${i}`, // Unique ID for meal with this item
+          name: `${item.name} - ${meal.name}`,
+          price: totalPrice,
+          quantity: 1,
+          image: item.image || meal.image || undefined,
+          instructions: instructions || undefined,
+          type: 'meal',
+          mealId: meal.id,
+          mealChoices: {
+            main: mealChoicesForItem.category1,
+            side: mealChoicesForItem.category3,
+            drink: mealChoicesForItem.category2,
+          },
+        })
+      } else {
+        // Add as regular menu item
+        addItem({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          image: item.image || undefined,
+          instructions: instructions || undefined,
+          type: 'menuItem',
+          menuItemId: item.id,
+        })
+      }
     }
     
-    toast.success(`${quantity}x ${item.name} added to cart`)
+    const itemName = isMealSelected ? `${item.name} with ${meal.name}` : item.name
+    toast.success(`${quantity}x ${itemName} added to cart`)
     
-    // Reset quantity and instructions for this item
+    // Reset quantity, instructions, meal option, and meal choices for this item
     setItemQuantities((prev) => ({ ...prev, [item.id]: 1 }))
     setItemInstructions((prev) => {
       const newInstructions = { ...prev }
       delete newInstructions[item.id]
       return newInstructions
+    })
+    setShowMealOption((prev) => {
+      const newOptions = { ...prev }
+      delete newOptions[item.id]
+      return newOptions
+    })
+    setMealChoices((prev) => {
+      const newChoices = { ...prev }
+      delete newChoices[item.id]
+      return newChoices
     })
     setExpandedItems((prev) => {
       const newSet = new Set(prev)
@@ -388,28 +436,27 @@ export default function MenuPage() {
                     {/* Meal Deal Option */}
                     {meal && meal.available && (
                       <div className="border-t border-gray-200 pt-4">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            toggleMealOption(item.id)
-                          }}
-                          className="w-full flex items-center justify-between p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors mb-4"
-                        >
-                          <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-3 p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={showMealOption[item.id] || false}
+                            onChange={(e) => {
+                              e.stopPropagation()
+                              toggleMealOption(item.id)
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-5 h-5 text-primary-600 focus:ring-primary-500 rounded"
+                          />
+                          <div className="flex items-center gap-2 flex-1">
                             <span className="text-lg">🍔</span>
                             <span className="font-semibold text-gray-900">
-                              Add as {meal.name}
+                              Make it a meal
                             </span>
                             <span className="text-sm text-gray-600">
                               (+£{meal.basePrice?.toFixed(2) || '0.00'})
                             </span>
                           </div>
-                          {showMealOption[item.id] ? (
-                            <ChevronUp className="w-5 h-5 text-gray-600" />
-                          ) : (
-                            <ChevronDown className="w-5 h-5 text-gray-600" />
-                          )}
-                        </button>
+                        </label>
 
                         {/* Meal Options */}
                         {showMealOption[item.id] && (
@@ -567,10 +614,10 @@ export default function MenuPage() {
                               </div>
                             )}
 
-                            {/* Meal Total Price */}
+                            {/* Meal Total Price Display */}
                             {mealChoices[item.id]?.category1 && mealChoices[item.id]?.category2 && mealChoices[item.id]?.category3 && (
                               <div className="pt-3 border-t border-gray-200">
-                                <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center justify-between">
                                   <span className="text-sm font-semibold text-gray-900">Meal Total:</span>
                                   <span className="text-lg font-bold text-primary-600">
                                     £{(
@@ -581,54 +628,6 @@ export default function MenuPage() {
                                     ).toFixed(2)}
                                   </span>
                                 </div>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    const choices = mealChoices[item.id]
-                                    if (!choices?.category1 || !choices?.category2 || !choices?.category3) {
-                                      toast.error('Please select one option from each category')
-                                      return
-                                    }
-
-                                    const totalPrice =
-                                      (meal.basePrice || 0) +
-                                      (choices.category1.price || 0) +
-                                      (choices.category2.price || 0) +
-                                      (choices.category3.price || 0)
-
-                                    addItem({
-                                      id: `${item.id}-meal-${Date.now()}`, // Unique ID for meal with this item
-                                      name: `${item.name} - ${meal.name}`,
-                                      price: totalPrice,
-                                      quantity: 1,
-                                      image: item.image || meal.image || undefined,
-                                      type: 'meal',
-                                      mealId: meal.id,
-                                      mealChoices: {
-                                        main: choices.category1,
-                                        side: choices.category3,
-                                        drink: choices.category2,
-                                      },
-                                    })
-
-                                    toast.success(`${item.name} with ${meal.name} added to cart!`)
-                                    setShowMealOption((prev) => ({ ...prev, [item.id]: false }))
-                                    setMealChoices((prev) => {
-                                      const newChoices = { ...prev }
-                                      delete newChoices[item.id]
-                                      return newChoices
-                                    })
-                                  }}
-                                  disabled={!mealChoices[item.id]?.category1 || !mealChoices[item.id]?.category2 || !mealChoices[item.id]?.category3}
-                                  className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-2 rounded-lg font-semibold hover:from-green-700 hover:to-green-800 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  Add {item.name} as Meal - £{(
-                                    (meal.basePrice || 0) +
-                                    (mealChoices[item.id]?.category1?.price || 0) +
-                                    (mealChoices[item.id]?.category2?.price || 0) +
-                                    (mealChoices[item.id]?.category3?.price || 0)
-                                  ).toFixed(2)}
-                                </button>
                               </div>
                             )}
                           </div>
@@ -642,9 +641,17 @@ export default function MenuPage() {
                         e.stopPropagation()
                         handleAddToCart(item)
                       }}
-                      className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3 sm:py-4 rounded-xl font-semibold hover:from-primary-700 hover:to-primary-800 transition-all transform hover:scale-[1.02] shadow-md text-sm sm:text-base"
+                      disabled={
+                        showMealOption[item.id] &&
+                        (!mealChoices[item.id]?.category1 || !mealChoices[item.id]?.category2 || !mealChoices[item.id]?.category3)
+                      }
+                      className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3 sm:py-4 rounded-xl font-semibold hover:from-primary-700 hover:to-primary-800 transition-all transform hover:scale-[1.02] shadow-md text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                     >
-                      Add {quantity > 1 ? `${quantity}x ` : ''}to Cart - £{(item.price * quantity).toFixed(2)}
+                      {showMealOption[item.id] && mealChoices[item.id]?.category1 && mealChoices[item.id]?.category2 && mealChoices[item.id]?.category3
+                        ? `Add ${quantity > 1 ? `${quantity}x ` : ''}to Cart - £${(
+                            (item.price + (meal.basePrice || 0) + (mealChoices[item.id]?.category1?.price || 0) + (mealChoices[item.id]?.category2?.price || 0) + (mealChoices[item.id]?.category3?.price || 0)) * quantity
+                          ).toFixed(2)}`
+                        : `Add ${quantity > 1 ? `${quantity}x ` : ''}to Cart - £${(item.price * quantity).toFixed(2)}`}
                     </button>
                   </div>
                 )}
