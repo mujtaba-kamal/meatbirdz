@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const mealCategoryTableExists = (checkMealCategoryTable as any[])[0]?.exists || false
 
     // Check if MealOption has categoryId column
-    const checkCategoryIdColumn = await prisma.$queryRawUnsafe(`
+    const checkCategoryIdColumnEarly = await prisma.$queryRawUnsafe(`
       SELECT EXISTS (
         SELECT FROM information_schema.columns 
         WHERE table_schema = 'public' 
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
         AND column_name = 'categoryId'
       );
     `)
-    const hasCategoryIdColumn = (checkCategoryIdColumn as any[])[0]?.exists || false
+    const hasCategoryIdColumnEarly = (checkCategoryIdColumnEarly as any[])[0]?.exists || false
 
     // Check if MealOption still has old category column
     const checkOldCategoryColumn = await prisma.$queryRawUnsafe(`
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     `)
     const hasOldCategoryColumn = (checkOldCategoryColumn as any[])[0]?.exists || false
 
-    if (mealCategoryTableExists && hasCategoryIdColumn && !hasOldCategoryColumn) {
+    if (mealCategoryTableExists && hasCategoryIdColumnEarly && !hasOldCategoryColumn) {
       console.log('Database schema v2 is already fully migrated.')
       return NextResponse.json({
         success: true,
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log('Migration needed. Status:', { mealCategoryTableExists, hasCategoryIdColumn, hasOldCategoryColumn })
+    console.log('Migration needed. Status:', { mealCategoryTableExists, hasCategoryIdColumn: hasCategoryIdColumnEarly, hasOldCategoryColumn })
 
     // Create MealCategory table
     console.log('Creating MealCategory table...')
