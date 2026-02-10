@@ -251,9 +251,24 @@ export default function MenuPage() {
                 <button
                   onClick={() => toggleExpand(item.id)}
                   disabled={!item.available}
-                  className="w-full p-4 sm:p-6 flex items-center justify-between text-left hover:bg-gray-50 transition-colors disabled:cursor-not-allowed"
+                  className="w-full p-4 sm:p-6 flex items-start gap-4 text-left hover:bg-gray-50 transition-colors disabled:cursor-not-allowed"
                 >
-                  <div className="flex-1 min-w-0">
+                  {/* Item Image */}
+                  {item.image && (
+                    <div className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-100">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback to placeholder if image fails to load
+                          e.currentTarget.src = `https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&h=200&fit=crop&crop=center`
+                        }}
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="flex-1 min-w-0 flex flex-col">
                     <div className="flex items-start justify-between gap-4 mb-2">
                       <h3 className="text-lg sm:text-xl font-bold text-gray-900 flex-1">{item.name}</h3>
                       <span className="text-lg sm:text-xl font-extrabold text-primary-600 whitespace-nowrap">
@@ -269,7 +284,7 @@ export default function MenuPage() {
                       <p className="text-red-600 text-sm font-semibold mt-2">Currently Unavailable</p>
                     )}
                   </div>
-                  <div className="ml-4 flex-shrink-0">
+                  <div className="ml-2 flex-shrink-0">
                     {isExpanded ? (
                       <ChevronUp className="w-5 h-5 sm:w-6 sm:h-6 text-primary-600" />
                     ) : (
