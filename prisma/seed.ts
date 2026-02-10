@@ -38,7 +38,7 @@ async function main() {
   console.log('Admin: admin@meatbirdz.com / admin123')
   console.log('Customer: customer@meatbirdz.com / customer123')
 
-  // Create menu items
+  // Create menu items with images
   const menuItems = [
     // BURGERS
     {
@@ -46,6 +46,7 @@ async function main() {
       description: '4oz (2 patties). Fresh Premium Angus, double cheese, lettuce, caramelised onions, gherkins, house sauce',
       price: 7.99,
       category: 'burger',
+      image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -53,6 +54,7 @@ async function main() {
       description: '6oz (3 patties). Fresh Premium Angus, triple cheese, lettuce, caramelised onions, gherkins, house sauce',
       price: 8.99,
       category: 'burger',
+      image: 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -60,6 +62,7 @@ async function main() {
       description: '8oz (4 patties). Fresh Premium Angus, quadruple cheese, lettuce, caramelised onions, gherkins, house sauce',
       price: 9.99,
       category: 'burger',
+      image: 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -67,6 +70,7 @@ async function main() {
       description: 'Freshly prepared in-house marination. Crispy fried chicken, lettuce, house sauce, cheese',
       price: 6.99,
       category: 'burger',
+      image: 'https://images.unsplash.com/photo-1606755962773-d324e0a13086?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -74,6 +78,7 @@ async function main() {
       description: 'Freshly prepared in-house marination. Double crispy chicken fillet, double cheese, lettuce, house sauce',
       price: 7.99,
       category: 'burger',
+      image: 'https://images.unsplash.com/photo-1606755962773-d324e0a13086?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -81,6 +86,7 @@ async function main() {
       description: 'Lettuce, single cheese, mayonnaise, house sauce',
       price: 5.50,
       category: 'burger',
+      image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -88,6 +94,7 @@ async function main() {
       description: 'Lettuce, double cheese, mayonnaise, house sauce',
       price: 6.00,
       category: 'burger',
+      image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -95,6 +102,7 @@ async function main() {
       description: 'Freshly prepared in-house marination. Chargrilled chicken, cheese, lettuce, house sauce',
       price: 7.50,
       category: 'burger',
+      image: 'https://images.unsplash.com/photo-1606755962773-d324e0a13086?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -102,6 +110,7 @@ async function main() {
       description: 'Freshly prepared in-house marination. Chargrilled chicken, double cheese, lettuce, house sauce',
       price: 8.50,
       category: 'burger',
+      image: 'https://images.unsplash.com/photo-1606755962773-d324e0a13086?w=400&h=400&fit=crop',
       available: true,
     },
     // WRAPS (Hex-Wraps)
@@ -110,6 +119,7 @@ async function main() {
       description: 'Fresh angus, caramelised onions, lettuce, house sauce, 100% mozzarella cheese',
       price: 8.49,
       category: 'wrap',
+      image: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -117,6 +127,7 @@ async function main() {
       description: 'Freshly prepared in-house marination. Crispy fried chicken, lettuce, house sauce, 100% mozzarella cheese',
       price: 7.49,
       category: 'wrap',
+      image: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -124,6 +135,7 @@ async function main() {
       description: 'Freshly prepared in-house marination. Chargrilled chicken, cheese, lettuce, 100% mozzarella cheese, house sauce',
       price: 8.29,
       category: 'wrap',
+      image: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=400&h=400&fit=crop',
       available: true,
     },
     // SIDES - Fries
@@ -132,6 +144,7 @@ async function main() {
       description: 'Crispy skin-on fries',
       price: 2.50,
       category: 'fries',
+      image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -139,6 +152,7 @@ async function main() {
       description: 'Large portion of crispy skin-on fries',
       price: 3.00,
       category: 'fries',
+      image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -146,6 +160,7 @@ async function main() {
       description: 'Spicy peri-peri seasoned fries',
       price: 2.75,
       category: 'fries',
+      image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -153,6 +168,7 @@ async function main() {
       description: 'Large portion of spicy peri-peri seasoned fries',
       price: 3.50,
       category: 'fries',
+      image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=400&fit=crop',
       available: true,
     },
     // SIDES - Chicken Tenders
@@ -161,6 +177,7 @@ async function main() {
       description: '3 pieces of crispy chicken tenders',
       price: 4.99,
       category: 'fries',
+      image: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -168,6 +185,7 @@ async function main() {
       description: '6 pieces of crispy chicken tenders',
       price: 6.99,
       category: 'fries',
+      image: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -175,6 +193,7 @@ async function main() {
       description: '9 pieces of crispy chicken tenders',
       price: 8.99,
       category: 'fries',
+      image: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -182,6 +201,7 @@ async function main() {
       description: '12 pieces of crispy chicken tenders',
       price: 11.99,
       category: 'fries',
+      image: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -189,6 +209,7 @@ async function main() {
       description: '3 pieces of chargrilled chicken tenders',
       price: 5.99,
       category: 'fries',
+      image: 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -196,6 +217,7 @@ async function main() {
       description: '6 pieces of chargrilled chicken tenders',
       price: 7.99,
       category: 'fries',
+      image: 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -203,6 +225,7 @@ async function main() {
       description: '9 pieces of chargrilled chicken tenders',
       price: 9.99,
       category: 'fries',
+      image: 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -210,6 +233,7 @@ async function main() {
       description: '12 pieces of chargrilled chicken tenders',
       price: 12.99,
       category: 'fries',
+      image: 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400&h=400&fit=crop',
       available: true,
     },
     // LOADED FRIES
@@ -218,6 +242,7 @@ async function main() {
       description: 'Skin on fries, Fresh Angus, melted cheese, house sauce',
       price: 8.49,
       category: 'fries',
+      image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -225,6 +250,7 @@ async function main() {
       description: 'Skin on fries, crispy chicken, melted cheese, house sauce',
       price: 7.00,
       category: 'fries',
+      image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -232,6 +258,7 @@ async function main() {
       description: 'Skin on fries, in-house marinated chargrilled chicken, melted cheese, house & peri sauce',
       price: 8.49,
       category: 'fries',
+      image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -239,6 +266,7 @@ async function main() {
       description: 'Skin on fries, melted cheese, cheese sauce, house sauce, jalapeños',
       price: 5.00,
       category: 'fries',
+      image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=400&fit=crop',
       available: true,
     },
     // BOXES
@@ -247,6 +275,7 @@ async function main() {
       description: 'Choice burger (Angus Classic or The Crispy Bird), loaded fries topped with crispy chicken (add on £2.00 for Angus), 3 crispy chicken strips, can drink of choice, 2 dips',
       price: 12.99,
       category: 'burger',
+      image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -254,6 +283,7 @@ async function main() {
       description: 'Choice of 2 burgers (Angus Classic or The Crispy Bird), loaded fries with crispy chicken (add on £2.00 for Angus), 6 crispy chicken strips, can drink of choice, 2 dips',
       price: 17.99,
       category: 'burger',
+      image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -261,6 +291,7 @@ async function main() {
       description: 'Choice of 4 burgers (Angus Classic or The Crispy Bird), loaded fries with crispy chicken (add on £2.00 for Angus), 12 crispy chicken strips, 4 cans, 8 dips',
       price: 35.00,
       category: 'burger',
+      image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -268,6 +299,7 @@ async function main() {
       description: 'Chargrilled Burger (make it a double £1.50), loaded chargrill fries, 3 chargrilled strips, can of choice, 2 dips',
       price: 13.99,
       category: 'burger',
+      image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -275,6 +307,7 @@ async function main() {
       description: 'Choice of Hex Wrap, loaded fries with crispy chicken (add on Angus beef £2.00), 3 crispy chicken strips, can of choice, 2 dips',
       price: 13.99,
       category: 'wrap',
+      image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop',
       available: true,
     },
     // DRINKS
@@ -283,6 +316,7 @@ async function main() {
       description: 'Refreshing ice cola',
       price: 1.50,
       category: 'drink',
+      image: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -290,6 +324,7 @@ async function main() {
       description: 'Diet cola drink',
       price: 1.50,
       category: 'drink',
+      image: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -297,6 +332,7 @@ async function main() {
       description: 'Bottled water',
       price: 1.00,
       category: 'drink',
+      image: 'https://images.unsplash.com/photo-1523362628745-0c100150b504?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -304,6 +340,7 @@ async function main() {
       description: 'Mango flavored drink',
       price: 1.50,
       category: 'drink',
+      image: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -311,6 +348,7 @@ async function main() {
       description: 'Passion fruit flavored drink',
       price: 1.50,
       category: 'drink',
+      image: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -318,6 +356,7 @@ async function main() {
       description: 'Mint mojito flavored drink',
       price: 1.50,
       category: 'drink',
+      image: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&h=400&fit=crop',
       available: true,
     },
     // DIPS
@@ -326,6 +365,7 @@ async function main() {
       description: 'Our signature house sauce',
       price: 1.00,
       category: 'drink',
+      image: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -333,6 +373,7 @@ async function main() {
       description: 'Creamy garlic mayonnaise',
       price: 1.00,
       category: 'drink',
+      image: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -340,6 +381,7 @@ async function main() {
       description: 'Spicy chilli sauce',
       price: 1.00,
       category: 'drink',
+      image: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&h=400&fit=crop',
       available: true,
     },
     {
@@ -347,6 +389,7 @@ async function main() {
       description: 'Creamy cheese sauce',
       price: 1.00,
       category: 'drink',
+      image: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&h=400&fit=crop',
       available: true,
     },
   ]
