@@ -87,8 +87,9 @@ export default function AdminPage() {
   useEffect(() => {
     if (session?.user?.role === 'ADMIN') {
       fetchOrders()
-      // Refresh every 30 seconds
-      const interval = setInterval(fetchOrders, 30000)
+      
+      // Set up real-time updates using shorter polling (every 2 seconds)
+      const interval = setInterval(fetchOrders, 2000)
       return () => clearInterval(interval)
     }
   }, [session, dateFilter, customFromDate, customToDate])
