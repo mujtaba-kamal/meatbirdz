@@ -35,53 +35,54 @@ export async function POST(request: NextRequest) {
 
     if (!mealTableExists) {
       console.log('Creating Meal table...')
-      // Create Meal table
+      // Create Meal table with new schema
       await prisma.$executeRawUnsafe(`
         CREATE TABLE IF NOT EXISTS "Meal" (
           "id" TEXT NOT NULL,
           "name" TEXT NOT NULL DEFAULT 'Meal Deal',
           "description" TEXT,
-          "price" DOUBLE PRECISION NOT NULL,
+          "basePrice" DOUBLE PRECISION NOT NULL,
           "image" TEXT,
           "available" BOOLEAN NOT NULL DEFAULT true,
-          "mainLabel" TEXT NOT NULL DEFAULT 'Main',
-          "sideLabel" TEXT NOT NULL DEFAULT 'Side',
-          "drinkLabel" TEXT NOT NULL DEFAULT 'Drink',
+          "category1Name" TEXT NOT NULL DEFAULT 'Fries',
+          "category2Name" TEXT NOT NULL DEFAULT 'Drink',
+          "category3Name" TEXT NOT NULL DEFAULT 'Side',
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           "updatedAt" TIMESTAMP(3) NOT NULL,
           CONSTRAINT "Meal_pkey" PRIMARY KEY ("id")
         );
       `)
 
-      // Create MealItem table
-      console.log('Creating MealItem table...')
+      // Create MealOption table (replaces MealItem)
+      console.log('Creating MealOption table...')
       await prisma.$executeRawUnsafe(`
-        CREATE TABLE IF NOT EXISTS "MealItem" (
+        CREATE TABLE IF NOT EXISTS "MealOption" (
           "id" TEXT NOT NULL,
           "mealId" TEXT NOT NULL,
           "menuItemId" TEXT NOT NULL,
-          "quantity" INTEGER NOT NULL DEFAULT 1,
+          "category" INTEGER NOT NULL,
+          "additionalPrice" DOUBLE PRECISION NOT NULL DEFAULT 0,
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          CONSTRAINT "MealItem_pkey" PRIMARY KEY ("id")
+          CONSTRAINT "MealOption_pkey" PRIMARY KEY ("id")
         );
       `)
 
-      // Add unique constraint to MealItem
+      // Add unique constraint to MealOption
       await prisma.$executeRawUnsafe(`
-        CREATE UNIQUE INDEX IF NOT EXISTS "MealItem_mealId_menuItemId_key" 
-        ON "MealItem"("mealId", "menuItemId");
+        CREATE UNIQUE INDEX IF NOT EXISTS "MealOption_mealId_menuItemId_category_key" 
+        ON "MealOption"("mealId", "menuItemId", "category");
       `)
 
-      // Add foreign key constraints
+      // Add foreign key constraints for MealOption
       await prisma.$executeRawUnsafe(`
         DO $$ 
         BEGIN
           IF NOT EXISTS (
             SELECT 1 FROM pg_constraint 
-            WHERE conname = 'MealItem_mealId_fkey'
+            WHERE conname = 'MealOption_mealId_fkey'
           ) THEN
-            ALTER TABLE "MealItem" 
-            ADD CONSTRAINT "MealItem_mealId_fkey" 
+            ALTER TABLE "MealOption" 
+            ADD CONSTRAINT "MealOption_mealId_fkey" 
             FOREIGN KEY ("mealId") REFERENCES "Meal"("id") ON DELETE CASCADE ON UPDATE CASCADE;
           END IF;
         END $$;
@@ -92,10 +93,10 @@ export async function POST(request: NextRequest) {
         BEGIN
           IF NOT EXISTS (
             SELECT 1 FROM pg_constraint 
-            WHERE conname = 'MealItem_menuItemId_fkey'
+            WHERE conname = 'MealOption_menuItemId_fkey'
           ) THEN
-            ALTER TABLE "MealItem" 
-            ADD CONSTRAINT "MealItem_menuItemId_fkey" 
+            ALTER TABLE "MealOption" 
+            ADD CONSTRAINT "MealOption_menuItemId_fkey" 
             FOREIGN KEY ("menuItemId") REFERENCES "MenuItem"("id") ON DELETE CASCADE ON UPDATE CASCADE;
           END IF;
         END $$;
