@@ -39,12 +39,12 @@ export default function MenuPage() {
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({})
   const [itemInstructions, setItemInstructions] = useState<Record<string, string>>({})
   const [meal, setMeal] = useState<any>(null)
-  const [expandedMeal, setExpandedMeal] = useState<boolean>(false)
-  const [mealChoices, setMealChoices] = useState<{
+  const [mealChoices, setMealChoices] = useState<Record<string, {
     category1?: { id: string; name: string; price: number }
     category2?: { id: string; name: string; price: number }
     category3?: { id: string; name: string; price: number }
-  }>({})
+  }>>({})
+  const [showMealOption, setShowMealOption] = useState<Record<string, boolean>>({})
   const addItem = useCartStore((state) => state.addItem)
 
   useEffect(() => {
@@ -78,6 +78,21 @@ export default function MenuPage() {
       }
     } catch (error) {
       console.error('Error fetching meals:', error)
+    }
+  }
+
+  const toggleMealOption = (itemId: string) => {
+    setShowMealOption((prev) => ({
+      ...prev,
+      [itemId]: !prev[itemId],
+    }))
+    // Reset meal choices for this item when toggling
+    if (showMealOption[itemId]) {
+      setMealChoices((prev) => {
+        const newChoices = { ...prev }
+        delete newChoices[itemId]
+        return newChoices
+      })
     }
   }
 
@@ -630,6 +645,257 @@ export default function MenuPage() {
                         rows={3}
                       />
                     </div>
+
+                    {/* Meal Deal Option */}
+                    {meal && meal.available && (
+                      <div className="border-t border-gray-200 pt-4">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleMealOption(item.id)
+                          }}
+                          className="w-full flex items-center justify-between p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors mb-4"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🍔</span>
+                            <span className="font-semibold text-gray-900">
+                              Add as {meal.name}
+                            </span>
+                            <span className="text-sm text-gray-600">
+                              (+£{meal.basePrice?.toFixed(2) || '0.00'})
+                            </span>
+                          </div>
+                          {showMealOption[item.id] ? (
+                            <ChevronUp className="w-5 h-5 text-gray-600" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5 text-gray-600" />
+                          )}
+                        </button>
+
+                        {/* Meal Options */}
+                        {showMealOption[item.id] && (
+                          <div className="space-y-4 mb-4 p-4 bg-gray-50 rounded-lg">
+                            {/* Category 1 Options */}
+                            {meal.options && meal.options.filter((opt: any) => opt.category === 1).length > 0 && (
+                              <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                  {meal.category1Name || 'Category 1'}:
+                                </label>
+                                <div className="space-y-2">
+                                  {meal.options
+                                    .filter((opt: any) => opt.category === 1)
+                                    .map((option: any) => (
+                                      <label
+                                        key={option.id}
+                                        className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-white transition-colors bg-white"
+                                      >
+                                        <input
+                                          type="radio"
+                                          name={`meal-category1-${item.id}`}
+                                          value={option.menuItemId}
+                                          checked={mealChoices[item.id]?.category1?.id === option.menuItemId}
+                                          onChange={() => {
+                                            setMealChoices((prev) => ({
+                                              ...prev,
+                                              [item.id]: {
+                                                ...prev[item.id],
+                                                category1: {
+                                                  id: option.menuItemId,
+                                                  name: option.menuItem.name,
+                                                  price: option.additionalPrice || 0,
+                                                },
+                                              },
+                                            }))
+                                          }}
+                                          className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                                        />
+                                        <div className="flex-1">
+                                          <span className="text-sm font-medium text-gray-900">{option.menuItem.name}</span>
+                                          {option.additionalPrice > 0 && (
+                                            <span className="text-xs text-gray-600 ml-2">
+                                              (+£{option.additionalPrice.toFixed(2)})
+                                            </span>
+                                          )}
+                                          {option.additionalPrice === 0 && (
+                                            <span className="text-xs text-green-600 ml-2">(Included)</span>
+                                          )}
+                                        </div>
+                                      </label>
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Category 2 Options */}
+                            {meal.options && meal.options.filter((opt: any) => opt.category === 2).length > 0 && (
+                              <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                  {meal.category2Name || 'Category 2'}:
+                                </label>
+                                <div className="space-y-2">
+                                  {meal.options
+                                    .filter((opt: any) => opt.category === 2)
+                                    .map((option: any) => (
+                                      <label
+                                        key={option.id}
+                                        className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-white transition-colors bg-white"
+                                      >
+                                        <input
+                                          type="radio"
+                                          name={`meal-category2-${item.id}`}
+                                          value={option.menuItemId}
+                                          checked={mealChoices[item.id]?.category2?.id === option.menuItemId}
+                                          onChange={() => {
+                                            setMealChoices((prev) => ({
+                                              ...prev,
+                                              [item.id]: {
+                                                ...prev[item.id],
+                                                category2: {
+                                                  id: option.menuItemId,
+                                                  name: option.menuItem.name,
+                                                  price: option.additionalPrice || 0,
+                                                },
+                                              },
+                                            }))
+                                          }}
+                                          className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                                        />
+                                        <div className="flex-1">
+                                          <span className="text-sm font-medium text-gray-900">{option.menuItem.name}</span>
+                                          {option.additionalPrice > 0 && (
+                                            <span className="text-xs text-gray-600 ml-2">
+                                              (+£{option.additionalPrice.toFixed(2)})
+                                            </span>
+                                          )}
+                                          {option.additionalPrice === 0 && (
+                                            <span className="text-xs text-green-600 ml-2">(Included)</span>
+                                          )}
+                                        </div>
+                                      </label>
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Category 3 Options */}
+                            {meal.options && meal.options.filter((opt: any) => opt.category === 3).length > 0 && (
+                              <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                  {meal.category3Name || 'Category 3'}:
+                                </label>
+                                <div className="space-y-2">
+                                  {meal.options
+                                    .filter((opt: any) => opt.category === 3)
+                                    .map((option: any) => (
+                                      <label
+                                        key={option.id}
+                                        className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-white transition-colors bg-white"
+                                      >
+                                        <input
+                                          type="radio"
+                                          name={`meal-category3-${item.id}`}
+                                          value={option.menuItemId}
+                                          checked={mealChoices[item.id]?.category3?.id === option.menuItemId}
+                                          onChange={() => {
+                                            setMealChoices((prev) => ({
+                                              ...prev,
+                                              [item.id]: {
+                                                ...prev[item.id],
+                                                category3: {
+                                                  id: option.menuItemId,
+                                                  name: option.menuItem.name,
+                                                  price: option.additionalPrice || 0,
+                                                },
+                                              },
+                                            }))
+                                          }}
+                                          className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                                        />
+                                        <div className="flex-1">
+                                          <span className="text-sm font-medium text-gray-900">{option.menuItem.name}</span>
+                                          {option.additionalPrice > 0 && (
+                                            <span className="text-xs text-gray-600 ml-2">
+                                              (+£{option.additionalPrice.toFixed(2)})
+                                            </span>
+                                          )}
+                                          {option.additionalPrice === 0 && (
+                                            <span className="text-xs text-green-600 ml-2">(Included)</span>
+                                          )}
+                                        </div>
+                                      </label>
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Meal Total Price */}
+                            {mealChoices[item.id]?.category1 && mealChoices[item.id]?.category2 && mealChoices[item.id]?.category3 && (
+                              <div className="pt-3 border-t border-gray-200">
+                                <div className="flex items-center justify-between mb-3">
+                                  <span className="text-sm font-semibold text-gray-900">Meal Total:</span>
+                                  <span className="text-lg font-bold text-primary-600">
+                                    £{(
+                                      (meal.basePrice || 0) +
+                                      (mealChoices[item.id]?.category1?.price || 0) +
+                                      (mealChoices[item.id]?.category2?.price || 0) +
+                                      (mealChoices[item.id]?.category3?.price || 0)
+                                    ).toFixed(2)}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    const choices = mealChoices[item.id]
+                                    if (!choices?.category1 || !choices?.category2 || !choices?.category3) {
+                                      toast.error('Please select one option from each category')
+                                      return
+                                    }
+
+                                    const totalPrice =
+                                      (meal.basePrice || 0) +
+                                      (choices.category1.price || 0) +
+                                      (choices.category2.price || 0) +
+                                      (choices.category3.price || 0)
+
+                                    addItem({
+                                      id: `${item.id}-meal-${Date.now()}`, // Unique ID for meal with this item
+                                      name: `${item.name} - ${meal.name}`,
+                                      price: totalPrice,
+                                      quantity: 1,
+                                      image: item.image || meal.image || undefined,
+                                      type: 'meal',
+                                      mealId: meal.id,
+                                      mealChoices: {
+                                        main: choices.category1,
+                                        side: choices.category3,
+                                        drink: choices.category2,
+                                      },
+                                    })
+
+                                    toast.success(`${item.name} with ${meal.name} added to cart!`)
+                                    setShowMealOption((prev) => ({ ...prev, [item.id]: false }))
+                                    setMealChoices((prev) => {
+                                      const newChoices = { ...prev }
+                                      delete newChoices[item.id]
+                                      return newChoices
+                                    })
+                                  }}
+                                  disabled={!mealChoices[item.id]?.category1 || !mealChoices[item.id]?.category2 || !mealChoices[item.id]?.category3}
+                                  className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-2 rounded-lg font-semibold hover:from-green-700 hover:to-green-800 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  Add {item.name} as Meal - £{(
+                                    (meal.basePrice || 0) +
+                                    (mealChoices[item.id]?.category1?.price || 0) +
+                                    (mealChoices[item.id]?.category2?.price || 0) +
+                                    (mealChoices[item.id]?.category3?.price || 0)
+                                  ).toFixed(2)}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Add to Cart Button */}
                     <button
