@@ -186,26 +186,7 @@ export async function POST(request: NextRequest) {
     } else {
       console.log('Meal table already exists. Checking for schema updates...')
       
-      // Quick check: if all required columns exist, skip migration
-      const checkAllColumns = await prisma.$queryRawUnsafe(`
-        SELECT 
-          EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Meal' AND column_name = 'basePrice') as has_base_price,
-          EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Meal' AND column_name = 'category1Name') as has_cat1,
-          EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Meal' AND column_name = 'category2Name') as has_cat2,
-          EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Meal' AND column_name = 'category3Name') as has_cat3,
-          EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'MealOption') as has_meal_option;
-      `)
-      const cols = (checkAllColumns as any[])[0]
-      if (cols?.has_base_price && cols?.has_cat1 && cols?.has_cat2 && cols?.has_cat3 && cols?.has_meal_option) {
-        console.log('✅ All required columns and tables already exist. Migration complete.')
-        return NextResponse.json({
-          success: true,
-          message: 'Database schema is already up to date',
-          alreadyMigrated: true,
-        })
-      }
-      
-      // Check what columns exist
+      // Check if table has old schema (price instead of basePrice)
       const checkPriceColumn = await prisma.$queryRawUnsafe(`
         SELECT EXISTS (
           SELECT FROM information_schema.columns 
@@ -214,28 +195,13 @@ export async function POST(request: NextRequest) {
           AND column_name = 'price'
         );
       `)
-      const hasPrice = (checkPriceColumn as any[])[0]?.exists || false
       
-      const checkBasePrice = await prisma.$queryRawUnsafe(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.columns 
-          WHERE table_schema = 'public' 
-          AND table_name = 'Meal' 
-          AND column_name = 'basePrice'
-        );
-      `)
-      const hasBasePrice = (checkBasePrice as any[])[0]?.exists || false
-      
-      // Migrate price to basePrice if needed
-      if (hasPrice && !hasBasePrice) {
+      if ((checkPriceColumn as any[])[0]?.exists) {
         console.log('Migrating from old schema: renaming price to basePrice...')
         await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" RENAME COLUMN "price" TO "basePrice";`)
-      } else if (!hasBasePrice) {
-        console.log('Adding basePrice column to Meal table...')
-        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN "basePrice" DOUBLE PRECISION NOT NULL DEFAULT 0;`)
       }
       
-      // Check for old label columns
+      // Check if table has old label columns and migrate to new category names
       const checkMainLabel = await prisma.$queryRawUnsafe(`
         SELECT EXISTS (
           SELECT FROM information_schema.columns 
@@ -244,7 +210,28 @@ export async function POST(request: NextRequest) {
           AND column_name = 'mainLabel'
         );
       `)
-      const hasMainLabel = (checkMainLabel as any[])[0]?.exists || false
+      
+      if ((checkMainLabel as any[])[0]?.exists) {
+        console.log('Migrating from old schema: renaming label columns to category names...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" RENAME COLUMN "mainLabel" TO "category1Name";`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" RENAME COLUMN "sideLabel" TO "category3Name";`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" RENAME COLUMN "drinkLabel" TO "category2Name";`)
+      }
+      
+      // Add new columns if they don't exist
+      const checkBasePrice = await prisma.$queryRawUnsafe(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_schema = 'public' 
+          AND table_name = 'Meal' 
+          AND column_name = 'basePrice'
+        );
+      `)
+      
+      if (!(checkBasePrice as any[])[0]?.exists) {
+        console.log('Adding basePrice column to Meal table...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN "basePrice" DOUBLE PRECISION NOT NULL DEFAULT 0;`)
+      }
       
       const checkCategory1Name = await prisma.$queryRawUnsafe(`
         SELECT EXISTS (
@@ -254,125 +241,12 @@ export async function POST(request: NextRequest) {
           AND column_name = 'category1Name'
         );
       `)
-      const hasCategory1Name = (checkCategory1Name as any[])[0]?.exists || false
       
-      // Migrate old label columns to new category names if needed
-      if (hasMainLabel && !hasCategory1Name) {
-        console.log('Migrating from old schema: renaming label columns to category names...')
-        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" RENAME COLUMN "mainLabel" TO "category1Name";`)
-        
-        const checkSideLabel = await prisma.$queryRawUnsafe(`
-          SELECT EXISTS (
-            SELECT FROM information_schema.columns 
-            WHERE table_schema = 'public' 
-            AND table_name = 'Meal' 
-            AND column_name = 'sideLabel'
-          );
-        `)
-        if ((checkSideLabel as any[])[0]?.exists) {
-          await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" RENAME COLUMN "sideLabel" TO "category3Name";`)
-        }
-        
-        const checkDrinkLabel = await prisma.$queryRawUnsafe(`
-          SELECT EXISTS (
-            SELECT FROM information_schema.columns 
-            WHERE table_schema = 'public' 
-            AND table_name = 'Meal' 
-            AND column_name = 'drinkLabel'
-          );
-        `)
-        if ((checkDrinkLabel as any[])[0]?.exists) {
-          await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" RENAME COLUMN "drinkLabel" TO "category2Name";`)
-        }
-      }
-      
-      // Add new category columns if they don't exist (check each individually)
-      const checkCategory2Name = await prisma.$queryRawUnsafe(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.columns 
-          WHERE table_schema = 'public' 
-          AND table_name = 'Meal' 
-          AND column_name = 'category2Name'
-        );
-      `)
-      const hasCategory2Name = (checkCategory2Name as any[])[0]?.exists || false
-      
-      const checkCategory3Name = await prisma.$queryRawUnsafe(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.columns 
-          WHERE table_schema = 'public' 
-          AND table_name = 'Meal' 
-          AND column_name = 'category3Name'
-        );
-      `)
-      const hasCategory3Name = (checkCategory3Name as any[])[0]?.exists || false
-      
-      // Add columns only if they don't exist (using DO block to avoid errors)
-      if (!hasCategory1Name) {
-        console.log('Adding category1Name column to Meal table...')
-        try {
-          await prisma.$executeRawUnsafe(`
-            DO $$ 
-            BEGIN
-              IF NOT EXISTS (
-                SELECT 1 FROM information_schema.columns 
-                WHERE table_schema = 'public' 
-                AND table_name = 'Meal' 
-                AND column_name = 'category1Name'
-              ) THEN
-                ALTER TABLE "Meal" ADD COLUMN "category1Name" TEXT NOT NULL DEFAULT 'Fries';
-              END IF;
-            END $$;
-          `)
-        } catch (e: any) {
-          if (!e.message?.includes('already exists')) {
-            throw e
-          }
-        }
-      }
-      if (!hasCategory2Name) {
-        console.log('Adding category2Name column to Meal table...')
-        try {
-          await prisma.$executeRawUnsafe(`
-            DO $$ 
-            BEGIN
-              IF NOT EXISTS (
-                SELECT 1 FROM information_schema.columns 
-                WHERE table_schema = 'public' 
-                AND table_name = 'Meal' 
-                AND column_name = 'category2Name'
-              ) THEN
-                ALTER TABLE "Meal" ADD COLUMN "category2Name" TEXT NOT NULL DEFAULT 'Drink';
-              END IF;
-            END $$;
-          `)
-        } catch (e: any) {
-          if (!e.message?.includes('already exists')) {
-            throw e
-          }
-        }
-      }
-      if (!hasCategory3Name) {
-        console.log('Adding category3Name column to Meal table...')
-        try {
-          await prisma.$executeRawUnsafe(`
-            DO $$ 
-            BEGIN
-              IF NOT EXISTS (
-                SELECT 1 FROM information_schema.columns 
-                WHERE table_schema = 'public' 
-                AND table_name = 'Meal' 
-                AND column_name = 'category3Name'
-              ) THEN
-                ALTER TABLE "Meal" ADD COLUMN "category3Name" TEXT NOT NULL DEFAULT 'Side';
-              END IF;
-            END $$;
-          `)
-        } catch (e: any) {
-          if (!e.message?.includes('already exists')) {
-            throw e
-          }
-        }
+      if (!(checkCategory1Name as any[])[0]?.exists) {
+        console.log('Adding category name columns to Meal table...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN IF NOT EXISTS "category1Name" TEXT NOT NULL DEFAULT 'Fries';`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN IF NOT EXISTS "category2Name" TEXT NOT NULL DEFAULT 'Drink';`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN IF NOT EXISTS "category3Name" TEXT NOT NULL DEFAULT 'Side';`)
       }
       
       // Check if MealOption table exists, if not create it

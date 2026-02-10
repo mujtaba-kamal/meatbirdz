@@ -11,6 +11,11 @@ export interface CartItem {
   type?: 'menuItem' | 'meal' // Add type to distinguish between menu items and meals
   mealId?: string // For meals
   menuItemId?: string // For menu items
+  mealChoices?: { // For meals: store selected choices
+    main?: { id: string; name: string; price: number }
+    side?: { id: string; name: string; price: number }
+    drink?: { id: string; name: string; price: number }
+  }
 }
 
 interface CartStore {
@@ -28,18 +33,26 @@ export const useCartStore = create<CartStore>()(
     (set, get) => ({
       items: [],
       addItem: (item) => {
-        const existingItem = get().items.find((i) => i.id === item.id)
+        // For meals, always add as a new item to allow different combinations
+        if (item.type === 'meal') {
+          set({
+            items: [...get().items, { ...item, quantity: item.quantity || 1 }],
+          })
+          return
+        }
+
+        const existingItem = get().items.find((i) => i.id === item.id && i.type !== 'meal')
         if (existingItem) {
           set({
             items: get().items.map((i) =>
-              i.id === item.id
+              i.id === item.id && i.type !== 'meal'
                 ? { ...i, quantity: i.quantity + (item.quantity || 1) }
                 : i
             ),
           })
         } else {
           set({
-            items: [...get().items, { ...item, quantity: item.quantity || 1 }],
+            items: [...get().items, { ...item, quantity: item.quantity || 1, type: 'menuItem' }],
           })
         }
       },
