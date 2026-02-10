@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { CheckCircle, MapPin, Phone, Mail } from 'lucide-react'
+import { CheckCircle, MapPin, Phone, Mail, CheckCircle2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface OrderItem {
@@ -28,6 +28,8 @@ interface Order {
   totalAmount: number
   status: string
   paymentStatus: string
+  arrivalNotification: string | null
+  arrivalAcknowledged: boolean
   items: OrderItem[]
   createdAt: string
 }
@@ -153,6 +155,38 @@ function OrderConfirmationContent() {
     }
   }
 
+  const handleMarkArrival = async () => {
+    if (!order) return
+    
+    try {
+      const response = await fetch(`/api/orders/${order.id}/arrival`, {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast.success('Arrival notification sent! Admin has been notified.')
+        // Refresh order to show updated status
+        if (order.id) {
+          fetchOrder(order.id)
+        }
+      } else {
+        toast.error(data.error || 'Failed to mark arrival')
+      }
+    } catch (error) {
+      console.error('Error marking arrival:', error)
+      toast.error('Failed to mark arrival')
+    }
+  }
+
+  // Check if order is a collection order
+  const isCollectionOrder = order && (
+    order.deliveryAddress.includes('High Street') ||
+    order.deliveryAddress.includes('Hagley Road') ||
+    order.deliveryAddress.includes('Digbeth')
+  )
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -254,6 +288,39 @@ function OrderConfirmationContent() {
               </p>
             </div>
           </div>
+
+          {/* Arrival Button for Collection Orders */}
+          {isCollectionOrder && (order.status === 'CONFIRMED' || order.status === 'PREPARING' || order.status === 'READY') && (
+            <div className="border-t pt-4 mt-4">
+              {order.arrivalNotification ? (
+                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center">
+                    <CheckCircle2 className="w-5 h-5 text-green-600 mr-2" />
+                    <div>
+                      <span className="text-sm font-medium text-green-800 block">
+                        {order.arrivalAcknowledged 
+                          ? 'Admin has been notified and acknowledged your arrival'
+                          : 'Arrival notification sent! Admin will be notified shortly.'}
+                      </span>
+                      {order.arrivalAcknowledged && (
+                        <span className="text-xs text-green-600">
+                          Arrived at {new Date(order.arrivalNotification).toLocaleTimeString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={handleMarkArrival}
+                  className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-3 px-6 rounded-lg font-semibold hover:from-green-700 hover:to-green-800 transition-all transform hover:scale-[1.02] shadow-md flex items-center justify-center gap-2"
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  I&apos;ve Arrived
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="text-center">
