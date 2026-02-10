@@ -371,13 +371,17 @@ export default function AdminPage() {
       const method = meal ? 'PUT' : 'POST'
       
       const requestBody = {
-        ...mealForm,
+        name: mealForm.name,
+        description: mealForm.description,
+        basePrice: mealForm.basePrice,
+        image: mealForm.image,
+        available: mealForm.available,
         categories: categoriesToSend,
-        options: optionsToSend,
-        menuItemIds: linkedMenuItems,
+        options: optionsToSend || [],
+        menuItemIds: linkedMenuItems || [],
       }
 
-      console.log('Saving meal with data:', requestBody) // Debug log
+      console.log('Saving meal with data:', JSON.stringify(requestBody, null, 2)) // Debug log
       
       const response = await fetch(url, {
         method,
@@ -393,6 +397,7 @@ export default function AdminPage() {
         const error = await response.json()
         toast.error(error.error || 'Failed to save meal')
         console.error('Save meal error:', error)
+        console.error('Request body was:', requestBody)
       }
     } catch (error) {
       console.error('Error saving meal:', error)

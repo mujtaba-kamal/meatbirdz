@@ -93,6 +93,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const body = await request.json()
     const { 
       name, 
       description, 
@@ -102,7 +103,9 @@ export async function POST(request: NextRequest) {
       categories, // Array of { name, order }
       options, // Array of { menuItemId, categoryId, additionalPrice }
       menuItemIds, // Array of menu item IDs to link this meal to
-    } = await request.json()
+    } = body
+
+    console.log('Received meal data:', JSON.stringify({ name, basePrice, categoriesCount: categories?.length, optionsCount: options?.length }, null, 2))
 
     if (!name || basePrice === undefined) {
       return NextResponse.json(
@@ -111,9 +114,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!categories || categories.length === 0) {
+    if (!categories || !Array.isArray(categories) || categories.length === 0) {
+      console.error('Categories validation failed:', { categories, isArray: Array.isArray(categories), length: categories?.length })
       return NextResponse.json(
-        { error: 'At least one category is required' },
+        { error: 'At least one category is required', received: { categories, body } },
         { status: 400 }
       )
     }
