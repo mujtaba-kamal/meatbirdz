@@ -49,7 +49,8 @@ export async function GET(request: NextRequest) {
         items: {
           include: {
             menuItem: true,
-            meal: true, // Include meal relation if it exists
+            // Note: meal relation will be available after database migration
+            // For now, we only include menuItem to avoid errors
           },
         },
       },
@@ -60,12 +61,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(orders)
   } catch (error: any) {
     console.error('Error fetching orders:', error)
-    // Return empty array instead of error to prevent frontend .filter() errors
-    // The error might be due to missing database columns (mealId) if migration hasn't run
-    if (error.message?.includes('mealId') || error.message?.includes('column') || error.message?.includes('does not exist')) {
-      console.error('Database schema mismatch. Please run: npx prisma db push')
+    const errorMessage = error.message || error.toString() || ''
+    
+    // Check if error is due to missing database columns (schema not migrated)
+    if (
+      errorMessage.includes('mealId') ||
+      errorMessage.includes('column') ||
+      errorMessage.includes('does not exist') ||
+      errorMessage.includes('Unknown column') ||
+      errorMessage.includes('relation') ||
+      errorMessage.includes('table')
+    ) {
+      console.error('Database schema mismatch detected.')
+      console.error('The database needs to be migrated. Please run: npx prisma db push')
     }
-    return NextResponse.json([]) // Return empty array to prevent frontend errors
+    
+    // Return empty array instead of error to prevent frontend .filter() errors
+    return NextResponse.json([])
   }
 }
 
