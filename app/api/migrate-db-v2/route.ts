@@ -244,9 +244,53 @@ export async function POST(request: NextRequest) {
         CREATE INDEX IF NOT EXISTS "MealOption_mealId_categoryId_idx" 
         ON "MealOption"("mealId", "categoryId");
       `)
-
-      // Optionally drop old category column (keep it for now for safety)
-      // await prisma.$executeRawUnsafe(`ALTER TABLE "MealOption" DROP COLUMN IF EXISTS category;`)
+    }
+    
+    // Always try to drop the old category column if it exists
+    if (hasOldCategoryColumn) {
+      console.log('Dropping old category column from MealOption...')
+      try {
+        // First, make sure all MealOption rows have categoryId set
+        const optionsWithoutCategoryId = await prisma.$queryRawUnsafe(`
+          SELECT COUNT(*) as count
+          FROM "MealOption"
+          WHERE "categoryId" IS NULL;
+        `) as any[]
+        
+        const count = parseInt(optionsWithoutCategoryId[0]?.count || '0')
+        if (count > 0) {
+          console.log(`Warning: ${count} MealOption rows still have NULL categoryId. These will be deleted.`)
+          // Delete rows without categoryId
+          await prisma.$executeRawUnsafe(`
+            DELETE FROM "MealOption" WHERE "categoryId" IS NULL;
+          `)
+        }
+        
+        // Drop any constraints that reference the old category column
+        await prisma.$executeRawUnsafe(`
+          DROP INDEX IF EXISTS "MealOption_mealId_menuItemId_category_key";
+        `)
+        
+        // Drop the old category column
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "MealOption" DROP COLUMN IF EXISTS "category";
+        `)
+        console.log('✅ Old category column dropped successfully.')
+      } catch (error: any) {
+        console.error('Error dropping old category column:', error.message)
+        // Try alternative approach - drop constraint first if it exists
+        try {
+          await prisma.$executeRawUnsafe(`
+            ALTER TABLE "MealOption" DROP CONSTRAINT IF EXISTS "MealOption_mealId_menuItemId_category_key";
+          `)
+          await prisma.$executeRawUnsafe(`
+            ALTER TABLE "MealOption" DROP COLUMN IF EXISTS "category";
+          `)
+          console.log('✅ Old category column dropped after removing constraints.')
+        } catch (error2: any) {
+          console.error('Could not drop old category column:', error2.message)
+        }
+      }
     }
 
     // Remove old category name columns from Meal (optional, keep for now)
