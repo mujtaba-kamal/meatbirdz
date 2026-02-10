@@ -21,10 +21,10 @@ export async function PUT(
     }
 
     const mealId = params.id
-    const { name, description, price, image, available, items } = await request.json()
+    const { name, description, price, image, available, mainLabel, sideLabel, drinkLabel, itemIds } = await request.json()
 
-    // If items are provided, update them
-    if (items && Array.isArray(items)) {
+    // If itemIds are provided, update them
+    if (itemIds && Array.isArray(itemIds)) {
       // Delete existing meal items
       await prisma.mealItem.deleteMany({
         where: { mealId },
@@ -32,10 +32,9 @@ export async function PUT(
 
       // Create new meal items
       await prisma.mealItem.createMany({
-        data: items.map((item: { menuItemId: string; quantity: number }) => ({
+        data: itemIds.map((menuItemId: string) => ({
           mealId,
-          menuItemId: item.menuItemId,
-          quantity: item.quantity || 1,
+          menuItemId,
         })),
       })
     }
@@ -49,6 +48,9 @@ export async function PUT(
         ...(price !== undefined && { price: parseFloat(price) }),
         ...(image !== undefined && { image: image || null }),
         ...(available !== undefined && { available }),
+        ...(mainLabel && { mainLabel }),
+        ...(sideLabel && { sideLabel }),
+        ...(drinkLabel && { drinkLabel }),
       },
       include: {
         items: {

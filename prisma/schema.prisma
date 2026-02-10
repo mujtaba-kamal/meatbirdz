@@ -13,17 +13,19 @@ datasource db {
 }
 
 model MenuItem {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  price       Float
-  category    String   // "burger", "wrap", "fries", "drink"
-  image       String?
-  available   Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  orderItems  OrderItem[]
-  mealItems   MealItem[]
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  price           Float
+  category        String   // "burger", "wrap", "fries", "drink"
+  image           String?
+  available       Boolean  @default(true)
+  availableInMeal Boolean  @default(false) // Whether this item can be selected in the meal
+  mealCategory    String?  // "main", "side", "drink" - which category in the meal
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  orderItems      OrderItem[]
+  mealItems       MealItem[]
 }
 
 model User {
@@ -89,7 +91,6 @@ model MealItem {
   id          String   @id @default(cuid())
   mealId      String
   menuItemId  String
-  quantity    Int      @default(1) // How many of this item in the meal
   meal        Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
   menuItem    MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())

@@ -71,11 +71,10 @@ export default function AdminPage() {
   
   // Menu management state
   const [menuItems, setMenuItems] = useState<any[]>([])
-  const [meals, setMeals] = useState<any[]>([])
+  const [meal, setMeal] = useState<any>(null)
   const [showAddMenuItem, setShowAddMenuItem] = useState(false)
-  const [showAddMeal, setShowAddMeal] = useState(false)
+  const [showMealEditor, setShowMealEditor] = useState(false)
   const [editingMenuItem, setEditingMenuItem] = useState<any>(null)
-  const [editingMeal, setEditingMeal] = useState<any>(null)
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   
   // Form states
@@ -86,15 +85,19 @@ export default function AdminPage() {
     category: '',
     image: '',
     available: true,
+    availableInMeal: false,
+    mealCategory: '',
   })
   
   const [mealForm, setMealForm] = useState({
-    name: '',
+    name: 'Meal Deal',
     description: '',
     price: '',
     image: '',
     available: true,
-    items: [] as Array<{ menuItemId: string; quantity: number }>,
+    mainLabel: 'Main',
+    sideLabel: 'Side',
+    drinkLabel: 'Drink',
   })
   
   const categories = [
@@ -137,7 +140,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (session?.user?.role === 'ADMIN' && activeTab === 'menu') {
       fetchMenuItems()
-      fetchMeals()
+      fetchMeal()
     }
   }, [session, activeTab])
 
@@ -154,16 +157,28 @@ export default function AdminPage() {
     }
   }
 
-  const fetchMeals = async () => {
+  const fetchMeal = async () => {
     try {
       const response = await fetch('/api/meals')
       if (response.ok) {
         const data = await response.json()
-        setMeals(data)
+        setMeal(data) // Single meal or null
+        if (data) {
+          setMealForm({
+            name: data.name || 'Meal Deal',
+            description: data.description || '',
+            price: data.price?.toString() || '',
+            image: data.image || '',
+            available: data.available !== undefined ? data.available : true,
+            mainLabel: data.mainLabel || 'Main',
+            sideLabel: data.sideLabel || 'Side',
+            drinkLabel: data.drinkLabel || 'Drink',
+          })
+        }
       }
     } catch (error) {
-      console.error('Error fetching meals:', error)
-      toast.error('Failed to fetch meals')
+      console.error('Error fetching meal:', error)
+      toast.error('Failed to fetch meal')
     }
   }
 
@@ -183,7 +198,7 @@ export default function AdminPage() {
       if (response.ok) {
         toast.success('Menu item added successfully')
         setShowAddMenuItem(false)
-        setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true })
+        setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true, availableInMeal: false, mealCategory: '' })
         setSelectedCategory('')
         fetchMenuItems()
       } else {
@@ -208,7 +223,7 @@ export default function AdminPage() {
       if (response.ok) {
         toast.success('Menu item updated successfully')
         setEditingMenuItem(null)
-        setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true })
+        setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true, availableInMeal: false, mealCategory: '' })
         setSelectedCategory('')
         fetchMenuItems()
       } else {
@@ -240,103 +255,64 @@ export default function AdminPage() {
     }
   }
 
-  const handleAddMeal = async () => {
-    if (!mealForm.name || !mealForm.price || mealForm.items.length === 0) {
-      toast.error('Please fill in all required fields and add at least one item')
+  const handleSaveMeal = async () => {
+    if (!mealForm.name || !mealForm.price) {
+      toast.error('Please fill in name and price')
       return
     }
+
+    // Get all menu items that are marked as available in meal
+    const mealItemIds = menuItems
+      .filter(item => item.availableInMeal)
+      .map(item => item.id)
 
     try {
       const response = await fetch('/api/meals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(mealForm),
+        body: JSON.stringify({
+          ...mealForm,
+          itemIds: mealItemIds,
+        }),
       })
 
       if (response.ok) {
-        toast.success('Meal added successfully')
-        setShowAddMeal(false)
-        setMealForm({ name: '', description: '', price: '', image: '', available: true, items: [] })
-        fetchMeals()
+        toast.success('Meal saved successfully')
+        setShowMealEditor(false)
+        fetchMeal()
+        fetchMenuItems() // Refresh to update checkboxes
       } else {
         const error = await response.json()
-        toast.error(error.error || 'Failed to add meal')
+        toast.error(error.error || 'Failed to save meal')
       }
     } catch (error) {
-      toast.error('Failed to add meal')
+      toast.error('Failed to save meal')
     }
   }
 
-  const handleUpdateMeal = async () => {
-    if (!editingMeal) return
-
+  const handleToggleMealItem = async (menuItemId: string, availableInMeal: boolean, mealCategory: string) => {
     try {
-      const response = await fetch(`/api/meals/${editingMeal.id}`, {
+      const response = await fetch(`/api/menu-items/${menuItemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(mealForm),
+        body: JSON.stringify({
+          availableInMeal,
+          mealCategory: availableInMeal ? mealCategory : null,
+        }),
       })
 
       if (response.ok) {
-        toast.success('Meal updated successfully')
-        setEditingMeal(null)
-        setMealForm({ name: '', description: '', price: '', image: '', available: true, items: [] })
-        fetchMeals()
+        fetchMenuItems() // Refresh menu items
+        if (meal) {
+          // If meal exists, update it to include/exclude this item
+          handleSaveMeal()
+        }
       } else {
-        const error = await response.json()
-        toast.error(error.error || 'Failed to update meal')
+        toast.error('Failed to update menu item')
       }
     } catch (error) {
-      toast.error('Failed to update meal')
+      toast.error('Failed to update menu item')
     }
-  }
-
-  const handleDeleteMeal = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this meal?')) return
-
-    try {
-      const response = await fetch(`/api/meals/${id}`, {
-        method: 'DELETE',
-      })
-
-      if (response.ok) {
-        toast.success('Meal deleted successfully')
-        fetchMeals()
-      } else {
-        const error = await response.json()
-        toast.error(error.error || 'Failed to delete meal')
-      }
-    } catch (error) {
-      toast.error('Failed to delete meal')
-    }
-  }
-
-  const addItemToMeal = () => {
-    const menuItemId = (document.getElementById('meal-menu-item-select') as HTMLSelectElement)?.value
-    const quantity = parseInt((document.getElementById('meal-item-quantity') as HTMLInputElement)?.value || '1')
-
-    if (!menuItemId) {
-      toast.error('Please select a menu item')
-      return
-    }
-
-    if (mealForm.items.some(item => item.menuItemId === menuItemId)) {
-      toast.error('This item is already in the meal')
-      return
-    }
-
-    const menuItem = menuItems.find(item => item.id === menuItemId)
-    setMealForm({
-      ...mealForm,
-      items: [...mealForm.items, { menuItemId, quantity }],
-    })
-  }
-
-  const removeItemFromMeal = (menuItemId: string) => {
-    setMealForm({
-      ...mealForm,
-      items: mealForm.items.filter(item => item.menuItemId !== menuItemId),
-    })
   }
 
   const getDateRange = (): { from: Date; to: Date } => {
@@ -1092,12 +1068,12 @@ export default function AdminPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold">Menu Items</h2>
                 <button
-                  onClick={() => {
-                    setShowAddMenuItem(true)
-                    setEditingMenuItem(null)
-                    setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true })
-                    setSelectedCategory('')
-                  }}
+                        onClick={() => {
+                          setShowAddMenuItem(true)
+                          setEditingMenuItem(null)
+                          setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true, availableInMeal: false, mealCategory: '' })
+                          setSelectedCategory('')
+                        }}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
@@ -1187,7 +1163,33 @@ export default function AdminPage() {
                         />
                         <span className="text-sm font-medium text-gray-700">Available</span>
                       </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={menuItemForm.availableInMeal}
+                          onChange={(e) => setMenuItemForm({ ...menuItemForm, availableInMeal: e.target.checked, mealCategory: e.target.checked ? (menuItemForm.mealCategory || 'main') : '' })}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Available in Meal</span>
+                      </label>
                     </div>
+                    {menuItemForm.availableInMeal && (
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Meal Category *
+                        </label>
+                        <select
+                          value={menuItemForm.mealCategory}
+                          onChange={(e) => setMenuItemForm({ ...menuItemForm, mealCategory: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select Category</option>
+                          <option value="main">Main</option>
+                          <option value="side">Side</option>
+                          <option value="drink">Drink</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2 mt-4">
                     <button
@@ -1252,6 +1254,8 @@ export default function AdminPage() {
                             category: item.category,
                             image: item.image || '',
                             available: item.available,
+                            availableInMeal: item.availableInMeal || false,
+                            mealCategory: item.mealCategory || '',
                           })
                           setSelectedCategory(item.category)
                         }}
@@ -1274,28 +1278,24 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Meals Section */}
+            {/* Meal Section - Single Meal Editor */}
             <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Meals</h2>
+                <h2 className="text-xl font-semibold">Meal Deal</h2>
                 <button
-                  onClick={() => {
-                    setShowAddMeal(true)
-                    setEditingMeal(null)
-                    setMealForm({ name: '', description: '', price: '', image: '', available: true, items: [] })
-                  }}
+                  onClick={() => setShowMealEditor(!showMealEditor)}
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
-                  <Plus className="w-4 h-4" />
-                  Add Meal
+                  {showMealEditor ? <XIcon className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
+                  {showMealEditor ? 'Close Editor' : meal ? 'Edit Meal' : 'Create Meal'}
                 </button>
               </div>
 
-              {/* Add/Edit Meal Form */}
-              {(showAddMeal || editingMeal) && (
+              {/* Meal Editor Form */}
+              {showMealEditor && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-300">
-                  <h3 className="font-semibold mb-4">{editingMeal ? 'Edit' : 'Add'} Meal</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <h3 className="font-semibold mb-4">Configure Meal Deal</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Name *
@@ -1305,7 +1305,7 @@ export default function AdminPage() {
                         value={mealForm.name}
                         onChange={(e) => setMealForm({ ...mealForm, name: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                        placeholder="Meal name"
+                        placeholder="Meal Deal"
                       />
                     </div>
                     <div>
@@ -1319,6 +1319,42 @@ export default function AdminPage() {
                         onChange={(e) => setMealForm({ ...mealForm, price: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                         placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Main Label
+                      </label>
+                      <input
+                        type="text"
+                        value={mealForm.mainLabel}
+                        onChange={(e) => setMealForm({ ...mealForm, mainLabel: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                        placeholder="Main"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Side Label
+                      </label>
+                      <input
+                        type="text"
+                        value={mealForm.sideLabel}
+                        onChange={(e) => setMealForm({ ...mealForm, sideLabel: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                        placeholder="Side"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Drink Label
+                      </label>
+                      <input
+                        type="text"
+                        value={mealForm.drinkLabel}
+                        onChange={(e) => setMealForm({ ...mealForm, drinkLabel: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                        placeholder="Drink"
                       />
                     </div>
                     <div className="md:col-span-2">
@@ -1358,71 +1394,87 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  {/* Add Items to Meal */}
-                  <div className="mb-4 p-4 bg-white rounded-lg border border-gray-300">
-                    <h4 className="font-semibold mb-3">Add Items to Meal</h4>
-                    <div className="flex gap-2 mb-3">
-                      <select
-                        id="meal-menu-item-select"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                      >
-                        <option value="">Select Menu Item</option>
-                        {menuItems.filter(item => item.available).map(item => (
-                          <option key={item.id} value={item.id}>{item.name} - ${item.price.toFixed(2)}</option>
-                        ))}
-                      </select>
-                      <input
-                        id="meal-item-quantity"
-                        type="number"
-                        min="1"
-                        defaultValue="1"
-                        className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                        placeholder="Qty"
-                      />
-                      <button
-                        onClick={addItemToMeal}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="space-y-2">
-                      {mealForm.items.map((item) => {
-                        const menuItem = menuItems.find(mi => mi.id === item.menuItemId)
-                        return (
-                          <div key={item.menuItemId} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                            <span className="text-sm">
-                              {menuItem?.name} x {item.quantity}
-                            </span>
-                            <button
-                              onClick={() => removeItemFromMeal(item.menuItemId)}
-                              className="text-red-600 hover:text-red-800"
-                            >
-                              <XIcon className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )
-                      })}
-                      {mealForm.items.length === 0 && (
-                        <p className="text-sm text-gray-500 text-center py-2">No items added yet</p>
-                      )}
+                  {/* Meal Items by Category */}
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600 mb-4">
+                      Mark menu items as "Available in Meal" and select their category. Items marked will appear as choices in the meal.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Main Items */}
+                      <div className="p-4 bg-white rounded-lg border border-gray-300">
+                        <h4 className="font-semibold mb-3">{mealForm.mainLabel || 'Main'}</h4>
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {menuItems.filter(item => item.availableInMeal && item.mealCategory === 'main').map(item => (
+                            <label key={item.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={true}
+                                onChange={() => handleToggleMealItem(item.id, false, '')}
+                                className="w-4 h-4"
+                              />
+                              <span className="text-sm">{item.name}</span>
+                            </label>
+                          ))}
+                          {menuItems.filter(item => item.availableInMeal && item.mealCategory === 'main').length === 0 && (
+                            <p className="text-xs text-gray-500">No items in this category</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Side Items */}
+                      <div className="p-4 bg-white rounded-lg border border-gray-300">
+                        <h4 className="font-semibold mb-3">{mealForm.sideLabel || 'Side'}</h4>
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {menuItems.filter(item => item.availableInMeal && item.mealCategory === 'side').map(item => (
+                            <label key={item.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={true}
+                                onChange={() => handleToggleMealItem(item.id, false, '')}
+                                className="w-4 h-4"
+                              />
+                              <span className="text-sm">{item.name}</span>
+                            </label>
+                          ))}
+                          {menuItems.filter(item => item.availableInMeal && item.mealCategory === 'side').length === 0 && (
+                            <p className="text-xs text-gray-500">No items in this category</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Drink Items */}
+                      <div className="p-4 bg-white rounded-lg border border-gray-300">
+                        <h4 className="font-semibold mb-3">{mealForm.drinkLabel || 'Drink'}</h4>
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {menuItems.filter(item => item.availableInMeal && item.mealCategory === 'drink').map(item => (
+                            <label key={item.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={true}
+                                onChange={() => handleToggleMealItem(item.id, false, '')}
+                                className="w-4 h-4"
+                              />
+                              <span className="text-sm">{item.name}</span>
+                            </label>
+                          ))}
+                          {menuItems.filter(item => item.availableInMeal && item.mealCategory === 'drink').length === 0 && (
+                            <p className="text-xs text-gray-500">No items in this category</p>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
                   <div className="flex gap-2">
                     <button
-                      onClick={editingMeal ? handleUpdateMeal : handleAddMeal}
+                      onClick={handleSaveMeal}
                       className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                     >
                       <Save className="w-4 h-4 inline mr-2" />
-                      {editingMeal ? 'Update' : 'Add'} Meal
+                      Save Meal
                     </button>
                     <button
-                      onClick={() => {
-                        setShowAddMeal(false)
-                        setEditingMeal(null)
-                        setMealForm({ name: '', description: '', price: '', image: '', available: true, items: [] })
-                      }}
+                      onClick={() => setShowMealEditor(false)}
                       className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
                     >
                       <XIcon className="w-4 h-4 inline mr-2" />
@@ -1432,76 +1484,33 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Meals List */}
-              <div className="space-y-2">
-                {meals.map((meal) => (
-                  <div
-                    key={meal.id}
-                    className={`p-4 border rounded-lg ${!meal.available ? 'opacity-60 bg-gray-50' : 'bg-white'}`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          {meal.image && (
-                            <img src={meal.image} alt={meal.name} className="w-16 h-16 object-cover rounded" />
-                          )}
-                          <div>
-                            <h4 className="font-semibold">{meal.name}</h4>
-                            <p className="text-sm text-gray-600">{meal.description}</p>
-                            <div className="flex items-center gap-4 mt-1">
-                              <span className="text-sm font-medium text-green-600">${meal.price.toFixed(2)}</span>
-                              {!meal.available && (
-                                <span className="text-xs text-red-600 font-medium">Unavailable</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-2 ml-0 md:ml-20">
-                          <p className="text-xs font-medium text-gray-700 mb-1">Includes:</p>
-                          <ul className="text-sm text-gray-600 space-y-1">
-                            {meal.items?.map((item: any, idx: number) => (
-                              <li key={idx}>
-                                • {item.menuItem?.name} x {item.quantity}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            setEditingMeal(meal)
-                            setShowAddMeal(false)
-                            setMealForm({
-                              name: meal.name,
-                              description: meal.description || '',
-                              price: meal.price.toString(),
-                              image: meal.image || '',
-                              available: meal.available,
-                              items: meal.items?.map((item: any) => ({
-                                menuItemId: item.menuItemId,
-                                quantity: item.quantity,
-                              })) || [],
-                            })
-                          }}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteMeal(meal.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+              {/* Meal Display */}
+              {!showMealEditor && meal && (
+                <div className="p-4 border rounded-lg bg-white">
+                  <div className="flex items-center gap-3 mb-2">
+                    {meal.image && (
+                      <img src={meal.image} alt={meal.name} className="w-16 h-16 object-cover rounded" />
+                    )}
+                    <div>
+                      <h4 className="font-semibold">{meal.name}</h4>
+                      <p className="text-sm text-gray-600">{meal.description}</p>
+                      <div className="flex items-center gap-4 mt-1">
+                        <span className="text-sm font-medium text-green-600">${meal.price.toFixed(2)}</span>
+                        {!meal.available && (
+                          <span className="text-xs text-red-600 font-medium">Unavailable</span>
+                        )}
                       </div>
                     </div>
                   </div>
-                ))}
-                {meals.length === 0 && (
-                  <p className="text-center text-gray-500 py-8">No meals yet</p>
-                )}
-              </div>
+                  <div className="mt-3 text-sm text-gray-600">
+                    <p>Items available in meal: {menuItems.filter(item => item.availableInMeal).length}</p>
+                  </div>
+                </div>
+              )}
+
+              {!showMealEditor && !meal && (
+                <p className="text-center text-gray-500 py-8">No meal configured yet. Click "Create Meal" to get started.</p>
+              )}
             </div>
           </div>
         )}
