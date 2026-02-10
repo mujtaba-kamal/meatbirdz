@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle, XCircle, Clock, Package } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Package, Bell, BellRing, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface OrderItem {
@@ -27,6 +27,8 @@ interface Order {
   totalAmount: number
   status: string
   paymentStatus: string
+  arrivalNotification: string | null
+  arrivalAcknowledged: boolean
   items: OrderItem[]
   createdAt: string
 }
@@ -109,6 +111,35 @@ export default function AdminPage() {
     }
   }
 
+  const acknowledgeArrival = async (orderId: string, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent selecting the order
+    try {
+      const response = await fetch(`/api/orders/${orderId}/acknowledge-arrival`, {
+        method: 'POST',
+      })
+
+      if (response.ok) {
+        toast.success('Arrival acknowledged')
+        fetchOrders()
+        if (selectedOrder?.id === orderId) {
+          const updatedOrder = orders.find(o => o.id === orderId)
+          if (updatedOrder) {
+            setSelectedOrder({ ...updatedOrder, arrivalAcknowledged: true })
+          }
+        }
+      } else {
+        toast.error('Failed to acknowledge arrival')
+      }
+    } catch (error) {
+      toast.error('Failed to acknowledge arrival')
+    }
+  }
+
+  // Get orders with unacknowledged arrivals
+  const arrivalNotifications = orders.filter(
+    order => order.arrivalNotification && !order.arrivalAcknowledged
+  )
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -141,6 +172,52 @@ export default function AdminPage() {
           </h1>
           <p className="text-sm sm:text-base text-gray-600">Manage orders and track deliveries</p>
         </div>
+
+        {/* Arrival Notifications Banner - Prominent Display */}
+        {arrivalNotifications.length > 0 && (
+          <div className="mb-6 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl shadow-xl p-6 border-4 border-orange-300 animate-pulse">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <BellRing className="w-8 h-8 text-white mr-3 animate-bounce" />
+                <div>
+                  <h2 className="text-2xl font-bold text-white">
+                    {arrivalNotifications.length} Customer{arrivalNotifications.length > 1 ? 's' : ''} Arrived!
+                  </h2>
+                  <p className="text-orange-100">Click to view order details</p>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {arrivalNotifications.map((order) => (
+                <div
+                  key={order.id}
+                  onClick={() => setSelectedOrder(order)}
+                  className="bg-white/95 rounded-lg p-4 cursor-pointer hover:bg-white transition-colors flex items-center justify-between"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Bell className="w-5 h-5 text-orange-600" />
+                      <span className="font-bold text-gray-900">{order.customerName}</span>
+                      <span className="text-sm text-gray-600">
+                        - Order #{order.id.slice(-8)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Arrived at {new Date(order.arrivalNotification!).toLocaleTimeString()}
+                    </p>
+                  </div>
+                  <button
+                    onClick={(e) => acknowledgeArrival(order.id, e)}
+                    className="ml-4 bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center gap-2"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Acknowledge
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {/* Orders List */}
@@ -185,17 +262,25 @@ export default function AdminPage() {
                       <p className="text-sm text-gray-600">
                         {order.items.length} item(s)
                       </p>
-                      {order.paymentStatus === 'PAID' ? (
-                        <span className="flex items-center text-green-600 text-sm">
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Paid
-                        </span>
-                      ) : (
-                        <span className="flex items-center text-red-600 text-sm">
-                          <XCircle className="w-4 h-4 mr-1" />
-                          {order.paymentStatus}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {order.arrivalNotification && !order.arrivalAcknowledged && (
+                          <span className="flex items-center bg-orange-500 text-white px-2 py-1 rounded text-xs font-bold animate-pulse">
+                            <BellRing className="w-3 h-3 mr-1" />
+                            ARRIVED
+                          </span>
+                        )}
+                        {order.paymentStatus === 'PAID' ? (
+                          <span className="flex items-center text-green-600 text-sm">
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Paid
+                          </span>
+                        ) : (
+                          <span className="flex items-center text-red-600 text-sm">
+                            <XCircle className="w-4 h-4 mr-1" />
+                            {order.paymentStatus}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))
@@ -246,6 +331,37 @@ export default function AdminPage() {
                       <span>${selectedOrder.totalAmount.toFixed(2)}</span>
                     </div>
                   </div>
+
+                  {/* Arrival Notification */}
+                  {selectedOrder.arrivalNotification && (
+                    <div className={`border-t pt-4 ${selectedOrder.arrivalAcknowledged ? 'opacity-60' : ''}`}>
+                      <div className={`p-3 rounded-lg ${selectedOrder.arrivalAcknowledged ? 'bg-gray-100' : 'bg-orange-50 border-2 border-orange-300'}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center">
+                            <BellRing className={`w-5 h-5 mr-2 ${selectedOrder.arrivalAcknowledged ? 'text-gray-500' : 'text-orange-600'}`} />
+                            <span className={`font-semibold ${selectedOrder.arrivalAcknowledged ? 'text-gray-600' : 'text-orange-800'}`}>
+                              Customer Arrived
+                            </span>
+                          </div>
+                          {selectedOrder.arrivalAcknowledged && (
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-700">
+                          {selectedOrder.customerName} arrived at {new Date(selectedOrder.arrivalNotification).toLocaleTimeString()}
+                        </p>
+                        {!selectedOrder.arrivalAcknowledged && (
+                          <button
+                            onClick={() => acknowledgeArrival(selectedOrder.id, {} as React.MouseEvent)}
+                            className="mt-2 w-full bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            Acknowledge Arrival
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>

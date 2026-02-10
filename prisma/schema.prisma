@@ -38,22 +38,24 @@ model User {
 }
 
 model Order {
-  id              String      @id @default(cuid())
-  userId          String?
-  customerName    String
-  customerEmail   String
-  customerPhone   String
-  deliveryAddress String
-  city            String
-  postalCode      String?
-  totalAmount     Float
-  status          OrderStatus @default(PENDING)
-  paymentStatus   PaymentStatus @default(PENDING)
-  stripePaymentId String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  items           OrderItem[]
-  user            User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id                  String      @id @default(cuid())
+  userId              String?
+  customerName        String
+  customerEmail       String
+  customerPhone       String
+  deliveryAddress     String
+  city                String
+  postalCode          String?
+  totalAmount         Float
+  status              OrderStatus @default(PENDING)
+  paymentStatus       PaymentStatus @default(PENDING)
+  stripePaymentId     String?
+  arrivalNotification DateTime?   // When customer marked themselves as arrived
+  arrivalAcknowledged Boolean     @default(false) // Whether admin has acknowledged the arrival
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  items               OrderItem[]
+  user                User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 model OrderItem {
