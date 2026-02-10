@@ -395,8 +395,22 @@ export default function AdminPage() {
           'Cache-Control': 'no-cache',
         },
       })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
       const data = await response.json()
-      setOrders(data)
+      // Ensure data is always an array
+      if (Array.isArray(data)) {
+        setOrders(data)
+      } else {
+        console.error('Expected array but got:', data)
+        setOrders([])
+        if (data.error) {
+          toast.error(data.error)
+        }
+      }
       setLastUpdateTime(new Date())
     } catch (error) {
       // Don't show error toast on every failed request (too noisy)
