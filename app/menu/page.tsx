@@ -175,7 +175,7 @@ export default function MenuPage() {
     
     // Add item with quantity
     for (let i = 0; i < quantity; i++) {
-      if (isMealSelected && mealChoicesForItem) {
+      if (isMealSelected && mealChoicesForItem?.category1 && mealChoicesForItem?.category2 && mealChoicesForItem?.category3) {
         // Add as meal
         const totalPrice =
           item.price +
