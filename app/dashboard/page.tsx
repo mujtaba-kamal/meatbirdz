@@ -35,26 +35,83 @@ export default function DashboardPage() {
   const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/login')
-    }
-  }, [status, router])
+    // Always fetch orders, even if not logged in
+    fetchOrders()
+  }, [session])
 
+  // Sync guest orders when user logs in
   useEffect(() => {
-    if (session) {
-      fetchOrders()
+    if (session?.user?.email && typeof window !== 'undefined') {
+      const guestOrderEmail = localStorage.getItem('guestOrderEmail')
+      if (guestOrderEmail && guestOrderEmail === session.user.email) {
+        syncGuestOrders(guestOrderEmail)
+      }
     }
   }, [session])
 
+  const syncGuestOrders = async (email: string) => {
+    if (syncing) return
+    setSyncing(true)
+    try {
+      const response = await fetch('/api/orders/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const data = await response.json()
+      if (response.ok && data.syncedCount > 0) {
+        toast.success(data.message)
+        // Clear guest orders from localStorage after syncing
+        localStorage.removeItem('guestOrders')
+        localStorage.removeItem('guestOrderEmail')
+        // Refresh orders
+        fetchOrders()
+      }
+    } catch (error) {
+      console.error('Error syncing orders:', error)
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   const fetchOrders = async () => {
     try {
-      const response = await fetch('/api/orders/user')
-      const data = await response.json()
-      setOrders(data)
+      setLoading(true)
+      
+      if (session?.user?.id) {
+        // Fetch orders for logged-in user
+        const response = await fetch('/api/orders/user')
+        const data = await response.json()
+        setOrders(data || [])
+      } else {
+        // Fetch guest orders from localStorage
+        if (typeof window !== 'undefined') {
+          const guestOrderIds = JSON.parse(localStorage.getItem('guestOrders') || '[]')
+          const guestOrderEmail = localStorage.getItem('guestOrderEmail')
+          
+          if (guestOrderIds.length > 0) {
+            // Fetch orders by IDs
+            const response = await fetch(`/api/orders/user?orderIds=${guestOrderIds.join(',')}`)
+            const data = await response.json()
+            setOrders(data || [])
+          } else if (guestOrderEmail) {
+            // Fetch orders by email
+            const response = await fetch(`/api/orders/user?email=${encodeURIComponent(guestOrderEmail)}`)
+            const data = await response.json()
+            setOrders(data || [])
+          } else {
+            setOrders([])
+          }
+        } else {
+          setOrders([])
+        }
+      }
     } catch (error) {
       console.error('Error fetching orders:', error)
+      setOrders([])
     } finally {
       setLoading(false)
     }
@@ -88,10 +145,6 @@ export default function DashboardPage() {
     )
   }
 
-  if (!session) {
-    return null
-  }
-
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'DELIVERED':
@@ -108,9 +161,21 @@ export default function DashboardPage() {
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">My Dashboard</h1>
-          <p className="text-gray-600">
-            Welcome back, {session.user?.name || session.user?.email}!
-          </p>
+          {session ? (
+            <p className="text-gray-600">
+              Welcome back, {session.user?.name || session.user?.email}!
+            </p>
+          ) : (
+            <div className="flex items-center gap-4">
+              <p className="text-gray-600">View your orders</p>
+              <Link
+                href="/login"
+                className="text-primary-600 hover:text-primary-700 font-semibold"
+              >
+                Log in to sync orders
+              </Link>
+            </div>
+          )}
         </div>
 
         {orders.length === 0 ? (

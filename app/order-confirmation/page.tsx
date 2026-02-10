@@ -48,6 +48,19 @@ function OrderConfirmationContent() {
       const response = await fetch(`/api/orders/${id}`)
       const data = await response.json()
       setOrder(data)
+      
+      // Store order ID in localStorage for guest orders
+      if (typeof window !== 'undefined' && data) {
+        const guestOrders = JSON.parse(localStorage.getItem('guestOrders') || '[]')
+        if (!guestOrders.includes(id)) {
+          guestOrders.push(id)
+          localStorage.setItem('guestOrders', JSON.stringify(guestOrders))
+        }
+        // Also store order email for syncing later
+        if (data.customerEmail) {
+          localStorage.setItem('guestOrderEmail', data.customerEmail)
+        }
+      }
     } catch (error) {
       console.error('Error fetching order:', error)
     } finally {
