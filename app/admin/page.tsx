@@ -93,16 +93,25 @@ export default function AdminPage() {
     basePrice: '',
     image: '',
     available: true,
-    category1Name: 'Fries',
-    category2Name: 'Drink',
-    category3Name: 'Side',
   })
+  
+  const [mealCategories, setMealCategories] = useState<Array<{
+    id?: string // For existing categories
+    name: string
+    order: number
+  }>>([
+    { name: 'Fries', order: 1 },
+    { name: 'Drink', order: 2 },
+    { name: 'Side', order: 3 },
+  ])
   
   const [mealOptions, setMealOptions] = useState<Array<{
     menuItemId: string
-    category: number
+    categoryId: string // Changed from category number to categoryId
     additionalPrice: number
   }>>([])
+  
+  const [linkedMenuItems, setLinkedMenuItems] = useState<string[]>([]) // Menu item IDs linked to this meal
   
   const categories = [
     { id: 'burger', name: 'Burgers' },
@@ -166,26 +175,62 @@ export default function AdminPage() {
       const response = await fetch('/api/meals')
       if (response.ok) {
         const data = await response.json()
-        setMeal(data) // Single meal or null
-        if (data) {
+        // API now returns an array, get the first meal or allow selecting
+        const meals = Array.isArray(data) ? data : [data].filter(Boolean)
+        if (meals.length > 0) {
+          const firstMeal = meals[0] // For now, use first meal. Later we can add meal selection
+          setMeal(firstMeal)
           setMealForm({
-            name: data.name || 'Meal Deal',
-            description: data.description || '',
-            basePrice: data.basePrice?.toString() || '',
-            image: data.image || '',
-            available: data.available !== undefined ? data.available : true,
-            category1Name: data.category1Name || 'Fries',
-            category2Name: data.category2Name || 'Drink',
-            category3Name: data.category3Name || 'Side',
+            name: firstMeal.name || 'Meal Deal',
+            description: firstMeal.description || '',
+            basePrice: firstMeal.basePrice?.toString() || '',
+            image: firstMeal.image || '',
+            available: firstMeal.available !== undefined ? firstMeal.available : true,
           })
-          // Set meal options
-          if (data.options) {
-            setMealOptions(data.options.map((opt: any) => ({
+          // Set categories from the meal
+          if (firstMeal.categories && Array.isArray(firstMeal.categories)) {
+            setMealCategories(firstMeal.categories.map((cat: any) => ({
+              id: cat.id,
+              name: cat.name,
+              order: cat.order,
+            })).sort((a: any, b: any) => a.order - b.order))
+          } else {
+            // Default categories if none exist
+            setMealCategories([
+              { name: 'Fries', order: 1 },
+              { name: 'Drink', order: 2 },
+              { name: 'Side', order: 3 },
+            ])
+          }
+          // Set meal options with categoryId
+          if (firstMeal.options) {
+            setMealOptions(firstMeal.options.map((opt: any) => ({
               menuItemId: opt.menuItemId,
-              category: opt.category,
+              categoryId: opt.categoryId || opt.category?.id, // Support both old and new structure
               additionalPrice: opt.additionalPrice || 0,
             })))
           }
+          // Set linked menu items
+          if (firstMeal.menuItems && Array.isArray(firstMeal.menuItems)) {
+            setLinkedMenuItems(firstMeal.menuItems.map((link: any) => link.menuItem?.id || link.menuItemId).filter(Boolean))
+          }
+        } else {
+          // No meals exist, reset to defaults
+          setMeal(null)
+          setMealForm({
+            name: 'Meal Deal',
+            description: '',
+            basePrice: '',
+            image: '',
+            available: true,
+          })
+          setMealCategories([
+            { name: 'Fries', order: 1 },
+            { name: 'Drink', order: 2 },
+            { name: 'Side', order: 3 },
+          ])
+          setMealOptions([])
+          setLinkedMenuItems([])
         }
       }
     } catch (error) {
@@ -273,13 +318,34 @@ export default function AdminPage() {
       return
     }
 
+    if (!mealCategories || mealCategories.length === 0) {
+      toast.error('Please add at least one category')
+      return
+    }
+
     try {
-      const response = await fetch('/api/meals', {
-        method: 'POST',
+      // Convert mealOptions to use categoryId properly
+      const options = mealOptions.map(opt => ({
+        menuItemId: opt.menuItemId,
+        categoryId: opt.categoryId,
+        additionalPrice: opt.additionalPrice,
+      }))
+
+      // Use PUT endpoint if meal exists, POST if new
+      const url = meal ? `/api/meals/${meal.id}` : '/api/meals'
+      const method = meal ? 'PUT' : 'POST'
+      
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...mealForm,
-          options: mealOptions,
+          categories: mealCategories.map(cat => ({
+            name: cat.name,
+            order: cat.order,
+          })),
+          options: options,
+          menuItemIds: linkedMenuItems,
         }),
       })
 
@@ -290,27 +356,61 @@ export default function AdminPage() {
       } else {
         const error = await response.json()
         toast.error(error.error || 'Failed to save meal')
+        console.error('Save meal error:', error)
       }
     } catch (error) {
+      console.error('Error saving meal:', error)
       toast.error('Failed to save meal')
     }
   }
 
-  const addMealOption = (menuItemId: string, category: number) => {
+  const addMealOption = (menuItemId: string, categoryId: string) => {
     const menuItem = menuItems.find(item => item.id === menuItemId)
     if (!menuItem) return
 
     // Check if this menu item is already in this category
-    if (mealOptions.some(opt => opt.menuItemId === menuItemId && opt.category === category)) {
+    if (mealOptions.some(opt => opt.menuItemId === menuItemId && opt.categoryId === categoryId)) {
       toast.error('This item is already in this category')
       return
     }
 
     setMealOptions([...mealOptions, {
       menuItemId,
-      category,
+      categoryId,
       additionalPrice: 0,
     }])
+  }
+
+  const addMealCategory = () => {
+    const maxOrder = mealCategories.length > 0 
+      ? Math.max(...mealCategories.map(c => c.order)) 
+      : 0
+    setMealCategories([...mealCategories, {
+      name: `Category ${maxOrder + 1}`,
+      order: maxOrder + 1,
+    }])
+  }
+
+  const removeMealCategory = (index: number) => {
+    const categoryToRemove = mealCategories[index]
+    // Remove the category
+    const newCategories = mealCategories.filter((_, i) => i !== index)
+    // Reorder remaining categories
+    const reordered = newCategories.map((cat, i) => ({
+      ...cat,
+      order: i + 1,
+    }))
+    setMealCategories(reordered)
+    // Remove all options for this category
+    if (categoryToRemove.id) {
+      setMealOptions(mealOptions.filter(opt => opt.categoryId !== categoryToRemove.id))
+    }
+  }
+
+  const updateMealCategory = (index: number, name: string) => {
+    const updated = [...mealCategories]
+    updated[index] = { ...updated[index], name }
+    setMealCategories(updated)
   }
 
   const removeMealOption = (index: number) => {
@@ -1301,41 +1401,46 @@ export default function AdminPage() {
                         placeholder="0.00"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Category 1 Name (e.g., Fries)
-                      </label>
-                      <input
-                        type="text"
-                        value={mealForm.category1Name}
-                        onChange={(e) => setMealForm({ ...mealForm, category1Name: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                        placeholder="Fries"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Category 2 Name (e.g., Drink)
-                      </label>
-                      <input
-                        type="text"
-                        value={mealForm.category2Name}
-                        onChange={(e) => setMealForm({ ...mealForm, category2Name: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                        placeholder="Drink"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Category 3 Name (e.g., Side)
-                      </label>
-                      <input
-                        type="text"
-                        value={mealForm.category3Name}
-                        onChange={(e) => setMealForm({ ...mealForm, category3Name: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                        placeholder="Side"
-                      />
+                    {/* Dynamic Categories */}
+                    <div className="md:col-span-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Categories *
+                        </label>
+                        <button
+                          type="button"
+                          onClick={addMealCategory}
+                          className="text-sm text-green-600 hover:text-green-700 font-medium flex items-center gap-1"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add Category
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {mealCategories.map((category, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={category.name}
+                              onChange={(e) => updateMealCategory(index, e.target.value)}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                              placeholder={`Category ${category.order}`}
+                            />
+                            <span className="text-sm text-gray-500 w-8 text-center">
+                              #{category.order}
+                            </span>
+                            {mealCategories.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeMealCategory(index)}
+                                className="text-red-600 hover:text-red-800 p-2"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1379,153 +1484,91 @@ export default function AdminPage() {
                     <p className="text-sm text-gray-600 mb-4">
                       Add menu items to each category. Set additional price (0 for included items, or extra amount for premium options).
                     </p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* Category 1 Options */}
-                      <div className="p-4 bg-white rounded-lg border border-gray-300">
-                        <h4 className="font-semibold mb-3">{mealForm.category1Name || 'Category 1'}</h4>
-                        <select
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              addMealOption(e.target.value, 1)
-                              e.target.value = ''
-                            }
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 text-sm"
-                        >
-                          <option value="">Add menu item...</option>
-                          {menuItems.filter(item => item.available && !mealOptions.some(opt => opt.menuItemId === item.id && opt.category === 1)).map(item => (
-                            <option key={item.id} value={item.id}>{item.name}</option>
-                          ))}
-                        </select>
-                        <div className="space-y-2 max-h-64 overflow-y-auto">
-                          {mealOptions.filter(opt => opt.category === 1).map((opt, idx) => {
-                            const menuItem = menuItems.find(item => item.id === opt.menuItemId)
-                            const actualIdx = mealOptions.findIndex(o => o === opt)
-                            return (
-                              <div key={idx} className="p-2 bg-gray-50 rounded flex items-center justify-between gap-2">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium">{menuItem?.name}</p>
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    value={opt.additionalPrice}
-                                    onChange={(e) => updateMealOptionPrice(actualIdx, parseFloat(e.target.value) || 0)}
-                                    className="w-full mt-1 px-2 py-1 text-xs border border-gray-300 rounded"
-                                    placeholder="Extra price"
-                                  />
-                                </div>
-                                <button
-                                  onClick={() => removeMealOption(actualIdx)}
-                                  className="text-red-600 hover:text-red-800"
-                                >
-                                  <XIcon className="w-4 h-4" />
-                                </button>
-                              </div>
-                            )
-                          })}
-                          {mealOptions.filter(opt => opt.category === 1).length === 0 && (
-                            <p className="text-xs text-gray-500 text-center py-2">No items added</p>
-                          )}
-                        </div>
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {mealCategories.map((category, catIndex) => {
+                        // Get a temporary ID for the category (use existing ID or generate one)
+                        const categoryId = category.id || `temp_${catIndex}_${category.order}`
+                        const categoryOptions = mealOptions.filter(opt => opt.categoryId === categoryId)
+                        
+                        return (
+                          <div key={catIndex} className="p-4 bg-white rounded-lg border border-gray-300">
+                            <h4 className="font-semibold mb-3">{category.name} (#{category.order})</h4>
+                            <select
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  addMealOption(e.target.value, categoryId)
+                                  e.target.value = ''
+                                }
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 text-sm"
+                            >
+                              <option value="">Add menu item...</option>
+                              {menuItems.filter(item => 
+                                item.available && 
+                                !mealOptions.some(opt => opt.menuItemId === item.id && opt.categoryId === categoryId)
+                              ).map(item => (
+                                <option key={item.id} value={item.id}>{item.name}</option>
+                              ))}
+                            </select>
+                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                              {categoryOptions.map((opt, idx) => {
+                                const menuItem = menuItems.find(item => item.id === opt.menuItemId)
+                                const actualIdx = mealOptions.findIndex(o => o === opt)
+                                return (
+                                  <div key={idx} className="p-2 bg-gray-50 rounded flex items-center justify-between gap-2">
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium">{menuItem?.name}</p>
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        value={opt.additionalPrice}
+                                        onChange={(e) => updateMealOptionPrice(actualIdx, parseFloat(e.target.value) || 0)}
+                                        className="w-full mt-1 px-2 py-1 text-xs border border-gray-300 rounded"
+                                        placeholder="Extra price"
+                                      />
+                                    </div>
+                                    <button
+                                      onClick={() => removeMealOption(actualIdx)}
+                                      className="text-red-600 hover:text-red-800"
+                                    >
+                                      <XIcon className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                )
+                              })}
+                              {categoryOptions.length === 0 && (
+                                <p className="text-xs text-gray-500 text-center py-2">No items added</p>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
 
-                      {/* Category 2 Options */}
-                      <div className="p-4 bg-white rounded-lg border border-gray-300">
-                        <h4 className="font-semibold mb-3">{mealForm.category2Name || 'Category 2'}</h4>
-                        <select
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              addMealOption(e.target.value, 2)
-                              e.target.value = ''
-                            }
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 text-sm"
-                        >
-                          <option value="">Add menu item...</option>
-                          {menuItems.filter(item => item.available && !mealOptions.some(opt => opt.menuItemId === item.id && opt.category === 2)).map(item => (
-                            <option key={item.id} value={item.id}>{item.name}</option>
-                          ))}
-                        </select>
-                        <div className="space-y-2 max-h-64 overflow-y-auto">
-                          {mealOptions.filter(opt => opt.category === 2).map((opt, idx) => {
-                            const menuItem = menuItems.find(item => item.id === opt.menuItemId)
-                            const actualIdx = mealOptions.findIndex(o => o === opt)
-                            return (
-                              <div key={idx} className="p-2 bg-gray-50 rounded flex items-center justify-between gap-2">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium">{menuItem?.name}</p>
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    value={opt.additionalPrice}
-                                    onChange={(e) => updateMealOptionPrice(actualIdx, parseFloat(e.target.value) || 0)}
-                                    className="w-full mt-1 px-2 py-1 text-xs border border-gray-300 rounded"
-                                    placeholder="Extra price"
-                                  />
-                                </div>
-                                <button
-                                  onClick={() => removeMealOption(actualIdx)}
-                                  className="text-red-600 hover:text-red-800"
-                                >
-                                  <XIcon className="w-4 h-4" />
-                                </button>
-                              </div>
-                            )
-                          })}
-                          {mealOptions.filter(opt => opt.category === 2).length === 0 && (
-                            <p className="text-xs text-gray-500 text-center py-2">No items added</p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Category 3 Options */}
-                      <div className="p-4 bg-white rounded-lg border border-gray-300">
-                        <h4 className="font-semibold mb-3">{mealForm.category3Name || 'Category 3'}</h4>
-                        <select
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              addMealOption(e.target.value, 3)
-                              e.target.value = ''
-                            }
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 text-sm"
-                        >
-                          <option value="">Add menu item...</option>
-                          {menuItems.filter(item => item.available && !mealOptions.some(opt => opt.menuItemId === item.id && opt.category === 3)).map(item => (
-                            <option key={item.id} value={item.id}>{item.name}</option>
-                          ))}
-                        </select>
-                        <div className="space-y-2 max-h-64 overflow-y-auto">
-                          {mealOptions.filter(opt => opt.category === 3).map((opt, idx) => {
-                            const menuItem = menuItems.find(item => item.id === opt.menuItemId)
-                            const actualIdx = mealOptions.findIndex(o => o === opt)
-                            return (
-                              <div key={idx} className="p-2 bg-gray-50 rounded flex items-center justify-between gap-2">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium">{menuItem?.name}</p>
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    value={opt.additionalPrice}
-                                    onChange={(e) => updateMealOptionPrice(actualIdx, parseFloat(e.target.value) || 0)}
-                                    className="w-full mt-1 px-2 py-1 text-xs border border-gray-300 rounded"
-                                    placeholder="Extra price"
-                                  />
-                                </div>
-                                <button
-                                  onClick={() => removeMealOption(actualIdx)}
-                                  className="text-red-600 hover:text-red-800"
-                                >
-                                  <XIcon className="w-4 h-4" />
-                                </button>
-                              </div>
-                            )
-                          })}
-                          {mealOptions.filter(opt => opt.category === 3).length === 0 && (
-                            <p className="text-xs text-gray-500 text-center py-2">No items added</p>
-                          )}
-                        </div>
-                      </div>
+                  {/* Link Meal to Menu Items */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Link to Menu Items (select which menu items can have this meal)
+                    </label>
+                    <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3">
+                      {menuItems.map((item) => (
+                        <label key={item.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={linkedMenuItems.includes(item.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setLinkedMenuItems([...linkedMenuItems, item.id])
+                              } else {
+                                setLinkedMenuItems(linkedMenuItems.filter(id => id !== item.id))
+                              }
+                            }}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm">{item.name}</span>
+                        </label>
+                      ))}
                     </div>
                   </div>
 
