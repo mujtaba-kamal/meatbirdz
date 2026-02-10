@@ -1203,7 +1203,7 @@ export default function AdminPage() {
                       onClick={() => {
                         setShowAddMenuItem(false)
                         setEditingMenuItem(null)
-                        setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true })
+                        setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true, availableInMeal: false, mealCategory: '' })
                         setSelectedCategory('')
                       }}
                       className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
