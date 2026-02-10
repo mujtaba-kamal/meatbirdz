@@ -288,17 +288,72 @@ export async function POST(request: NextRequest) {
       `)
       const hasCategory3Name = (checkCategory3Name as any[])[0]?.exists || false
       
+      // Add columns only if they don't exist (using DO block to avoid errors)
       if (!hasCategory1Name) {
         console.log('Adding category1Name column to Meal table...')
-        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN "category1Name" TEXT NOT NULL DEFAULT 'Fries';`)
+        try {
+          await prisma.$executeRawUnsafe(`
+            DO $$ 
+            BEGIN
+              IF NOT EXISTS (
+                SELECT 1 FROM information_schema.columns 
+                WHERE table_schema = 'public' 
+                AND table_name = 'Meal' 
+                AND column_name = 'category1Name'
+              ) THEN
+                ALTER TABLE "Meal" ADD COLUMN "category1Name" TEXT NOT NULL DEFAULT 'Fries';
+              END IF;
+            END $$;
+          `)
+        } catch (e: any) {
+          if (!e.message?.includes('already exists')) {
+            throw e
+          }
+        }
       }
       if (!hasCategory2Name) {
         console.log('Adding category2Name column to Meal table...')
-        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN "category2Name" TEXT NOT NULL DEFAULT 'Drink';`)
+        try {
+          await prisma.$executeRawUnsafe(`
+            DO $$ 
+            BEGIN
+              IF NOT EXISTS (
+                SELECT 1 FROM information_schema.columns 
+                WHERE table_schema = 'public' 
+                AND table_name = 'Meal' 
+                AND column_name = 'category2Name'
+              ) THEN
+                ALTER TABLE "Meal" ADD COLUMN "category2Name" TEXT NOT NULL DEFAULT 'Drink';
+              END IF;
+            END $$;
+          `)
+        } catch (e: any) {
+          if (!e.message?.includes('already exists')) {
+            throw e
+          }
+        }
       }
       if (!hasCategory3Name) {
         console.log('Adding category3Name column to Meal table...')
-        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN "category3Name" TEXT NOT NULL DEFAULT 'Side';`)
+        try {
+          await prisma.$executeRawUnsafe(`
+            DO $$ 
+            BEGIN
+              IF NOT EXISTS (
+                SELECT 1 FROM information_schema.columns 
+                WHERE table_schema = 'public' 
+                AND table_name = 'Meal' 
+                AND column_name = 'category3Name'
+              ) THEN
+                ALTER TABLE "Meal" ADD COLUMN "category3Name" TEXT NOT NULL DEFAULT 'Side';
+              END IF;
+            END $$;
+          `)
+        } catch (e: any) {
+          if (!e.message?.includes('already exists')) {
+            throw e
+          }
+        }
       }
       
       // Check if MealOption table exists, if not create it
