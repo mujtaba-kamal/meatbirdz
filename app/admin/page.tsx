@@ -324,12 +324,41 @@ export default function AdminPage() {
     }
 
     try {
-      // Convert mealOptions to use categoryId properly
-      const options = mealOptions.map(opt => ({
-        menuItemId: opt.menuItemId,
-        categoryId: opt.categoryId,
-        additionalPrice: opt.additionalPrice,
-      }))
+      // For new meals, we need to map temporary category IDs to category orders
+      // The API will create categories and we'll match options by order
+      // For existing meals, we can use the actual category IDs
+      let optionsToSend
+      
+      if (meal && meal.id) {
+        // Existing meal: use actual category IDs
+        optionsToSend = mealOptions.map(opt => ({
+          menuItemId: opt.menuItemId,
+          categoryId: opt.categoryId,
+          additionalPrice: opt.additionalPrice,
+        }))
+      } else {
+        // New meal: map by category order (temporary IDs start with "temp_")
+        // We'll send options with a reference that the API can resolve
+        // Actually, we need to create categories first, then options
+        // For now, let's use the order to match - the API will need to handle this
+        optionsToSend = mealOptions.map(opt => {
+          // Find which category this option belongs to by matching the temp ID
+          const categoryIndex = mealCategories.findIndex(cat => {
+            const tempId = `temp_${mealCategories.indexOf(cat)}_${cat.order}`
+            return opt.categoryId === tempId || opt.categoryId === cat.id
+          })
+          const category = mealCategories[categoryIndex]
+          
+          // For new meals, we'll send the order and let the API match it
+          // The API will create categories first, then match options by order
+          return {
+            menuItemId: opt.menuItemId,
+            categoryOrder: category?.order, // Send order for matching
+            categoryId: category?.id || undefined, // Send ID if exists
+            additionalPrice: opt.additionalPrice,
+          }
+        })
+      }
 
       // Use PUT endpoint if meal exists, POST if new
       const url = meal ? `/api/meals/${meal.id}` : '/api/meals'
@@ -344,7 +373,7 @@ export default function AdminPage() {
             name: cat.name,
             order: cat.order,
           })),
-          options: options,
+          options: optionsToSend,
           menuItemIds: linkedMenuItems,
         }),
       })

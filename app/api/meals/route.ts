@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create meal with categories and options
+    // Create meal with categories first, then options (since options need category IDs)
     const meal = await prisma.meal.create({
       data: {
         name,
@@ -132,19 +132,42 @@ export async function POST(request: NextRequest) {
             order: cat.order,
           })),
         },
-        options: {
-          create: (options || []).map((opt: { menuItemId: string; categoryId: string; additionalPrice: number }) => ({
-            menuItemId: opt.menuItemId,
-            categoryId: opt.categoryId,
-            additionalPrice: parseFloat(opt.additionalPrice?.toString() || '0'),
-          })),
-        },
         menuItems: menuItemIds && menuItemIds.length > 0 ? {
           create: menuItemIds.map((menuItemId: string) => ({
             menuItemId,
           })),
         } : undefined,
       },
+      include: {
+        categories: true,
+      },
+    })
+
+    // Now create options with the actual category IDs
+    // Match options to categories by order if categoryId is not provided
+    if (options && options.length > 0) {
+      const categoryMap = new Map(meal.categories.map(cat => [cat.order, cat.id]))
+      
+      await prisma.mealOption.createMany({
+        data: options.map((opt: { menuItemId: string; categoryId?: string; categoryOrder?: number; additionalPrice: number }) => {
+          // Use categoryId if provided, otherwise match by order
+          const categoryId = opt.categoryId || (opt.categoryOrder ? categoryMap.get(opt.categoryOrder) : null)
+          if (!categoryId) {
+            throw new Error(`Could not find category for option: ${JSON.stringify(opt)}`)
+          }
+          return {
+            mealId: meal.id,
+            menuItemId: opt.menuItemId,
+            categoryId: categoryId,
+            additionalPrice: parseFloat(opt.additionalPrice?.toString() || '0'),
+          }
+        }),
+      })
+    }
+
+    // Fetch the complete meal with all relations
+    const completeMeal = await prisma.meal.findUnique({
+      where: { id: meal.id },
       include: {
         categories: {
           orderBy: { order: 'asc' },
@@ -172,7 +195,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json(meal)
+    return NextResponse.json(completeMeal)
   } catch (error: any) {
     console.error('Error creating meal:', error)
     return NextResponse.json(
