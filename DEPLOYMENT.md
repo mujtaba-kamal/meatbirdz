@@ -24,7 +24,7 @@ Vercel is made by the creators of Next.js and offers the best integration.
    - Create a new repository on GitHub
    - Push your code:
    ```bash
-   git remote add origin https://github.com/yourusername/meatbirdz.git
+   git remote add origin https://github.com/yourusername/birminghamWebProject.git
    git push -u origin main
    ```
 

@@ -36,7 +36,7 @@ git push -u origin main
 
 ### Step 2: Update Remote to SSH
 ```bash
-git remote set-url origin git@github.com:mujtaba-kamal/meatbirdz.git
+git remote set-url origin git@github.com:mujtaba-kamal/birminghamWebProject.git
 git push -u origin main
 ```
 
@@ -47,7 +47,7 @@ git push -u origin main
 1. Download: https://desktop.github.com
 2. Sign in with GitHub
 3. File → Add Local Repository
-4. Select: `/Users/mujtaba/newapp/meatbirdz`
+4. Select: `/Users/mujtaba/birminghamWebProject`
 5. Click "Publish repository"
 
 ---
@@ -62,5 +62,5 @@ git push -u origin main
 # When asked for password, use your Personal Access Token
 ```
 
-Your repository URL: https://github.com/mujtaba-kamal/meatbirdz
+Your repository URL: https://github.com/mujtaba-kamal/birminghamWebProject
 

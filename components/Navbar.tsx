@@ -6,6 +6,7 @@ import { useSession, signOut } from 'next-auth/react'
 import { ShoppingCart, Home, User, LogOut, ChefHat, Menu, X } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useRouter } from 'next/navigation'
+import Logo from './Logo'
 
 export default function Navbar() {
   const { data: session, status } = useSession()
@@ -51,14 +52,7 @@ export default function Navbar() {
     <nav className={`shadow-lg sticky top-0 z-50 border-b relative ${isAdmin ? 'bg-primary-900 border-primary-800' : 'bg-white border-gray-100'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <Link href={isAdmin ? "/admin" : "/"} className="flex items-center space-x-2 group">
-            <div className={`p-2 rounded-lg transition-colors ${isAdmin ? 'bg-primary-700 group-hover:bg-primary-600' : 'bg-primary-600 group-hover:bg-primary-700'}`}>
-              <ChefHat className="w-6 h-6 text-white" />
-            </div>
-            <span className={`text-xl sm:text-2xl font-bold bg-clip-text text-transparent ${isAdmin ? 'text-white' : 'bg-gradient-to-r from-primary-600 to-primary-800'}`}>
-              {isAdmin ? 'Admin Portal' : 'MeatBirdz'}
-            </span>
-          </Link>
+          <Logo isAdmin={isAdmin} showText={!isAdmin} />
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center space-x-4">

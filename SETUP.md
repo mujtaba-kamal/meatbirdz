@@ -12,7 +12,7 @@ npm install
 
 2. Update the `.env` file with your database URL:
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/meatbirdz?schema=public"
+DATABASE_URL="postgresql://user:password@localhost:5432/birminghamWebProject?schema=public"
 ```
 
 3. Push the Prisma schema to your database:

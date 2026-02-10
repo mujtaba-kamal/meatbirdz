@@ -44,7 +44,7 @@ Create a `.env` file in the root directory:
 
 ```env
 # Database
-DATABASE_URL="postgresql://user:password@localhost:5432/meatbirdz?schema=public"
+DATABASE_URL="postgresql://user:password@localhost:5432/birminghamWebProject?schema=public"
 
 # Stripe
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
@@ -85,7 +85,7 @@ npm run dev
 ## Project Structure
 
 ```
-meatbirdz/
+birminghamWebProject/
 ├── app/
 │   ├── api/          # API routes
 │   ├── admin/        # Admin dashboard

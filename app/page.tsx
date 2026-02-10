@@ -1,14 +1,45 @@
 'use client'
 
-import { useEffect } from 'react'
+'use client'
+
+import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Menu, ShoppingCart, Clock, MapPin, ChefHat, Star, Shield, Zap } from 'lucide-react'
 
 export default function Home() {
   const { data: session } = useSession()
   const router = useRouter()
+  const [logoError, setLogoError] = useState(true) // Start with true to show fallback
+  const [logoLoaded, setLogoLoaded] = useState(false)
+  const [logoSrc, setLogoSrc] = useState('/logo.png')
+
+  useEffect(() => {
+    // Check if logo exists by trying to load it (try PNG first, then SVG)
+    const img = new window.Image()
+    img.onload = () => {
+      setLogoSrc('/logo.png')
+      setLogoLoaded(true)
+      setLogoError(false)
+    }
+    img.onerror = () => {
+      // Try SVG as fallback
+      const svgImg = new window.Image()
+      svgImg.onload = () => {
+        setLogoSrc('/logo.svg')
+        setLogoLoaded(true)
+        setLogoError(false)
+      }
+      svgImg.onerror = () => {
+        setLogoError(true)
+        setLogoLoaded(false)
+      }
+      svgImg.src = '/logo.svg'
+    }
+    img.src = '/logo.png'
+  }, [])
 
   useEffect(() => {
     if (session?.user?.role === 'ADMIN') {
@@ -36,9 +67,22 @@ export default function Home() {
         <div className="absolute inset-0 bg-black opacity-10"></div>
         <div className="relative max-w-6xl mx-auto text-center">
           <div className="flex justify-center mb-4 sm:mb-6">
-            <div className="bg-white/20 backdrop-blur-sm p-3 sm:p-4 rounded-full">
-              <ChefHat className="w-12 h-12 sm:w-16 sm:h-16 text-white" />
-            </div>
+            {logoLoaded && !logoError ? (
+              <div className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48">
+                <Image
+                  src={logoSrc}
+                  alt="MEATBIRDZ Logo - SMASH FRIED FIRE"
+                  fill
+                  className="object-contain drop-shadow-2xl"
+                  priority
+                  onError={() => setLogoError(true)}
+                />
+              </div>
+            ) : (
+              <div className="bg-white/20 backdrop-blur-sm p-3 sm:p-4 rounded-full">
+                <ChefHat className="w-12 h-12 sm:w-16 sm:h-16 text-white" />
+              </div>
+            )}
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-extrabold mb-4 sm:mb-6 drop-shadow-lg px-2">
             Welcome to MeatBirdz

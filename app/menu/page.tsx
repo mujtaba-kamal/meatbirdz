@@ -22,7 +22,10 @@ const categories = [
   { id: 'burger', name: 'Burgers', emoji: '🍔' },
   { id: 'wrap', name: 'Wraps', emoji: '🌯' },
   { id: 'fries', name: 'Fries', emoji: '🍟' },
+  { id: 'side', name: 'Sides', emoji: '🥔' },
+  { id: 'box', name: 'Boxes', emoji: '📦' },
   { id: 'drink', name: 'Drinks', emoji: '🥤' },
+  { id: 'dip', name: 'Dips', emoji: '🥣' },
 ]
 
 export default function MenuPage() {
@@ -59,16 +62,28 @@ export default function MenuPage() {
   const fetchMenuItems = async () => {
     try {
       const response = await fetch('/api/menu')
+      if (!response.ok) {
+        throw new Error('Failed to fetch menu')
+      }
       const data = await response.json()
-      setMenuItems(data)
-      // Initialize quantities to 1 for all items
-      const initialQuantities: Record<string, number> = {}
-      data.forEach((item: MenuItem) => {
-        initialQuantities[item.id] = 1
-      })
-      setItemQuantities(initialQuantities)
+      // Ensure data is an array
+      if (Array.isArray(data)) {
+        setMenuItems(data)
+        // Initialize quantities to 1 for all items
+        const initialQuantities: Record<string, number> = {}
+        data.forEach((item: MenuItem) => {
+          initialQuantities[item.id] = 1
+        })
+        setItemQuantities(initialQuantities)
+      } else {
+        console.error('Menu API returned non-array data:', data)
+        toast.error('Failed to load menu: Invalid data format')
+        setMenuItems([])
+      }
     } catch (error) {
+      console.error('Error fetching menu:', error)
       toast.error('Failed to load menu')
+      setMenuItems([])
     } finally {
       setLoading(false)
     }
@@ -183,37 +198,39 @@ export default function MenuPage() {
           </div>
         )}
 
-        <div className="text-center mb-8 sm:mb-12">
+        <div className="text-center mb-6 sm:mb-12">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 mb-2 sm:mb-4">Our Menu</h1>
           <p className="text-base sm:text-lg md:text-xl text-gray-600">Delicious food made fresh for you</p>
         </div>
 
-        {/* Category Filter */}
-        <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-8 sm:mb-12">
-          <button
-            onClick={() => setSelectedCategory('all')}
-            className={`px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all transform hover:scale-105 ${
-              selectedCategory === 'all'
-                ? 'bg-primary-600 text-white shadow-lg'
-                : 'bg-white text-gray-700 hover:bg-gray-50 shadow-md'
-            }`}
-          >
-            All Items
-          </button>
-          {categories.map((category) => (
+        {/* Category Filter - Sticky and Scrollable on Mobile */}
+        <div className="sticky top-16 sm:top-20 z-40 bg-gradient-to-br from-gray-50 via-white to-primary-50 pb-4 sm:pb-0 -mx-4 sm:mx-0 px-4 sm:px-0 mb-6 sm:mb-12">
+          <div className="flex overflow-x-auto gap-2 sm:gap-3 pb-2 sm:pb-0 sm:flex-wrap sm:justify-center scrollbar-hide">
             <button
-              key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
-              className={`px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all transform hover:scale-105 ${
-                selectedCategory === category.id
+              onClick={() => setSelectedCategory('all')}
+              className={`flex-shrink-0 px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all transform hover:scale-105 whitespace-nowrap ${
+                selectedCategory === 'all'
                   ? 'bg-primary-600 text-white shadow-lg'
                   : 'bg-white text-gray-700 hover:bg-gray-50 shadow-md'
               }`}
             >
-              <span className="text-lg sm:text-xl mr-2">{category.emoji}</span>
-              {category.name}
+              All Items
             </button>
-          ))}
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                className={`flex-shrink-0 px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all transform hover:scale-105 whitespace-nowrap ${
+                  selectedCategory === category.id
+                    ? 'bg-primary-600 text-white shadow-lg'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 shadow-md'
+                }`}
+              >
+                <span className="text-lg sm:text-xl mr-2">{category.emoji}</span>
+                {category.name}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Menu Items List */}

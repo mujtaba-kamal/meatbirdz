@@ -13,7 +13,7 @@ Follow these steps to deploy your restaurant ordering website for FREE!
 git remote -v
 
 # If no remote, add it:
-git remote add origin https://github.com/mujtaba-kamal/meatbirdz.git
+git remote add origin https://github.com/mujtaba-kamal/birminghamWebProject.git
 
 # Push your code
 git push -u origin main
@@ -35,7 +35,7 @@ git push -u origin main
 1. **Go to Supabase**: https://supabase.com
 2. **Sign Up** (free account)
 3. **Create New Project**:
-   - Project name: `meatbirdz`
+   - Project name: `birminghamWebProject`
    - Database password: **SAVE THIS PASSWORD!** (you'll need it)
    - Region: Choose closest to you (e.g., `West US` or `Europe West`)
    - Click "Create new project"
@@ -55,7 +55,7 @@ git push -u origin main
 2. **Sign Up** → Click "Sign Up" → Choose "Continue with GitHub"
 3. **Import Project**:
    - Click "Add New..." → "Project"
-   - Find your `meatbirdz` repository
+   - Find your `birminghamWebProject` repository
    - Click "Import"
 4. **Configure Project**:
    - Framework Preset: **Next.js** (auto-detected)
@@ -132,7 +132,7 @@ npm i -g vercel
 vercel login
 
 # Link to your project
-cd /Users/mujtaba/newapp/meatbirdz
+cd /Users/mujtaba/birminghamWebProject
 vercel link
 
 # Pull environment variables
