@@ -1,11 +1,11 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -17,7 +17,34 @@ export async function GET() {
       )
     }
 
+    const { searchParams } = new URL(request.url)
+    const fromParam = searchParams.get('from')
+    const toParam = searchParams.get('to')
+
+    // Build date filter
+    const whereClause: any = {}
+    
+    if (fromParam || toParam) {
+      whereClause.createdAt = {}
+      if (fromParam) {
+        whereClause.createdAt.gte = new Date(fromParam)
+      }
+      if (toParam) {
+        whereClause.createdAt.lte = new Date(toParam)
+      }
+    } else {
+      // Default to last 24 hours if no date range specified
+      const now = new Date()
+      const yesterday = new Date(now)
+      yesterday.setHours(now.getHours() - 24)
+      whereClause.createdAt = {
+        gte: yesterday,
+        lte: now,
+      }
+    }
+
     const orders = await prisma.order.findMany({
+      where: whereClause,
       include: {
         items: {
           include: {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle, XCircle, Clock, Package, Bell, BellRing, X, Banknote, CreditCard, DollarSign } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Package, Bell, BellRing, X, Banknote, CreditCard, DollarSign, Calendar, Filter } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface OrderItem {
@@ -43,12 +43,18 @@ const statusColors: Record<string, string> = {
   CANCELLED: 'bg-red-100 text-red-800',
 }
 
+type DateFilter = '24h' | '3d' | '7d' | '15d' | '30d' | '6m' | '1y' | 'custom'
+
 export default function AdminPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [dateFilter, setDateFilter] = useState<DateFilter>('24h')
+  const [customFromDate, setCustomFromDate] = useState<string>('')
+  const [customToDate, setCustomToDate] = useState<string>('')
+  const [showCustomPicker, setShowCustomPicker] = useState(false)
 
   useEffect(() => {
     // Only redirect if we're sure the user is not authenticated or not an admin
@@ -74,11 +80,59 @@ export default function AdminPage() {
       const interval = setInterval(fetchOrders, 30000)
       return () => clearInterval(interval)
     }
-  }, [session])
+  }, [session, dateFilter, customFromDate, customToDate])
+
+  const getDateRange = (): { from: Date; to: Date } => {
+    const now = new Date()
+    const to = new Date(now)
+    
+    if (dateFilter === 'custom') {
+      const from = customFromDate ? new Date(customFromDate) : new Date(now.getTime() - 24 * 60 * 60 * 1000)
+      const customTo = customToDate ? new Date(customToDate) : now
+      // Set time to end of day for 'to' date
+      customTo.setHours(23, 59, 59, 999)
+      return { from, to: customTo }
+    }
+
+    let from = new Date(now)
+    
+    switch (dateFilter) {
+      case '24h':
+        from.setHours(now.getHours() - 24)
+        break
+      case '3d':
+        from.setDate(now.getDate() - 3)
+        break
+      case '7d':
+        from.setDate(now.getDate() - 7)
+        break
+      case '15d':
+        from.setDate(now.getDate() - 15)
+        break
+      case '30d':
+        from.setDate(now.getDate() - 30)
+        break
+      case '6m':
+        from.setMonth(now.getMonth() - 6)
+        break
+      case '1y':
+        from.setFullYear(now.getFullYear() - 1)
+        break
+      default:
+        from.setHours(now.getHours() - 24)
+    }
+    
+    return { from, to }
+  }
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('/api/orders')
+      const { from, to } = getDateRange()
+      const params = new URLSearchParams({
+        from: from.toISOString(),
+        to: to.toISOString(),
+      })
+      const response = await fetch(`/api/orders?${params.toString()}`)
       const data = await response.json()
       setOrders(data)
     } catch (error) {
@@ -86,6 +140,28 @@ export default function AdminPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleDateFilterChange = (filter: DateFilter) => {
+    setDateFilter(filter)
+    if (filter !== 'custom') {
+      setShowCustomPicker(false)
+    } else {
+      setShowCustomPicker(true)
+    }
+  }
+
+  const applyCustomDateFilter = () => {
+    if (!customFromDate || !customToDate) {
+      toast.error('Please select both from and to dates')
+      return
+    }
+    if (new Date(customFromDate) > new Date(customToDate)) {
+      toast.error('From date must be before to date')
+      return
+    }
+    setDateFilter('custom')
+    setShowCustomPicker(false)
   }
 
   const updateOrderStatus = async (orderId: string, status: string) => {
@@ -197,6 +273,115 @@ export default function AdminPage() {
             Admin Dashboard
           </h1>
           <p className="text-sm sm:text-base text-gray-600">Manage orders and track deliveries</p>
+        </div>
+
+        {/* Date Filter Section */}
+        <div className="mb-6 bg-white rounded-lg shadow-md p-4 border border-gray-200">
+          <div className="flex items-center gap-2 mb-4">
+            <Filter className="w-5 h-5 text-gray-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Filter Orders by Date</h2>
+          </div>
+          
+          {/* Quick Filter Buttons */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {(['24h', '3d', '7d', '15d', '30d', '6m', '1y'] as DateFilter[]).map((filter) => (
+              <button
+                key={filter}
+                onClick={() => handleDateFilterChange(filter)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  dateFilter === filter
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {filter === '24h' ? '24 Hours' :
+                 filter === '3d' ? '3 Days' :
+                 filter === '7d' ? '7 Days' :
+                 filter === '15d' ? '15 Days' :
+                 filter === '30d' ? '30 Days' :
+                 filter === '6m' ? '6 Months' :
+                 filter === '1y' ? '1 Year' : filter}
+              </button>
+            ))}
+            <button
+              onClick={() => handleDateFilterChange('custom')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                dateFilter === 'custom'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              Custom
+            </button>
+          </div>
+
+          {/* Custom Date Picker */}
+          {showCustomPicker && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-300">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    From Date
+                  </label>
+                  <input
+                    type="date"
+                    value={customFromDate}
+                    onChange={(e) => setCustomFromDate(e.target.value)}
+                    max={customToDate || new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    To Date
+                  </label>
+                  <input
+                    type="date"
+                    value={customToDate}
+                    onChange={(e) => setCustomToDate(e.target.value)}
+                    min={customFromDate}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={applyCustomDateFilter}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Apply Filter
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCustomPicker(false)
+                    setCustomFromDate('')
+                    setCustomToDate('')
+                    setDateFilter('24h')
+                  }}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Active Filter Display */}
+          {dateFilter !== 'custom' && (
+            <div className="text-sm text-gray-600 mt-2">
+              Showing orders from: {(() => {
+                const { from } = getDateRange()
+                return from.toLocaleDateString() + ' to ' + new Date().toLocaleDateString()
+              })()}
+            </div>
+          )}
+          {dateFilter === 'custom' && customFromDate && customToDate && (
+            <div className="text-sm text-gray-600 mt-2">
+              Showing orders from: {new Date(customFromDate).toLocaleDateString()} to {new Date(customToDate).toLocaleDateString()}
+            </div>
+          )}
         </div>
 
         {/* Arrival Notifications Banner - Prominent Display */}
