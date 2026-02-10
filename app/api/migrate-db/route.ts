@@ -186,6 +186,25 @@ export async function POST(request: NextRequest) {
     } else {
       console.log('Meal table already exists. Checking for schema updates...')
       
+      // Quick check: if all required columns exist, skip migration
+      const checkAllColumns = await prisma.$queryRawUnsafe(`
+        SELECT 
+          EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Meal' AND column_name = 'basePrice') as has_base_price,
+          EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Meal' AND column_name = 'category1Name') as has_cat1,
+          EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Meal' AND column_name = 'category2Name') as has_cat2,
+          EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Meal' AND column_name = 'category3Name') as has_cat3,
+          EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'MealOption') as has_meal_option;
+      `)
+      const cols = (checkAllColumns as any[])[0]
+      if (cols?.has_base_price && cols?.has_cat1 && cols?.has_cat2 && cols?.has_cat3 && cols?.has_meal_option) {
+        console.log('✅ All required columns and tables already exist. Migration complete.')
+        return NextResponse.json({
+          success: true,
+          message: 'Database schema is already up to date',
+          alreadyMigrated: true,
+        })
+      }
+      
       // Check what columns exist
       const checkPriceColumn = await prisma.$queryRawUnsafe(`
         SELECT EXISTS (
