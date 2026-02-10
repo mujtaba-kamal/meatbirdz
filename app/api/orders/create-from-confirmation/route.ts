@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     // For Stripe payments, verify payment was successful
-    let paymentStatus = 'PENDING'
+    let paymentStatus: 'PENDING' | 'PAID' = 'PENDING'
     let stripePaymentId: string | null = null
 
     if (paymentIntentId && stripe) {
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         postalCode: customerInfo.postalCode || null,
         totalAmount: total,
         status: paymentStatus === 'PAID' ? 'CONFIRMED' : 'PENDING',
-        paymentStatus: paymentStatus,
+        paymentStatus: paymentStatus as 'PENDING' | 'PAID',
         stripePaymentId: stripePaymentId,
         items: {
           create: items.map((item: any) => ({
