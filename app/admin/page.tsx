@@ -48,11 +48,20 @@ export default function AdminPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
 
   useEffect(() => {
+    // Only redirect if we're sure the user is not authenticated or not an admin
     if (status === 'unauthenticated') {
       router.push('/login')
-    } else if (status === 'authenticated' && session.user.role !== 'ADMIN') {
-      router.push('/')
+      return
     }
+    
+    // Only redirect non-admin users if they're authenticated but not admin
+    if (status === 'authenticated' && session?.user?.role !== 'ADMIN') {
+      router.push('/')
+      return
+    }
+    
+    // If authenticated and admin, stay on admin page
+    // Don't redirect if already on admin page
   }, [status, session, router])
 
   useEffect(() => {
@@ -108,6 +117,17 @@ export default function AdminPage() {
     )
   }
 
+  // Show loading while checking authentication
+  if (status === 'unauthenticated') {
+    return null // Will redirect via useEffect
+  }
+
+  // If authenticated but not admin, return null (will redirect via useEffect)
+  if (status === 'authenticated' && session?.user?.role !== 'ADMIN') {
+    return null
+  }
+
+  // If no session or not admin after loading, don't render
   if (!session || session.user.role !== 'ADMIN') {
     return null
   }

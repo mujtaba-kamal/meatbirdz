@@ -1,8 +1,22 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
+import { authOptions } from '@/lib/auth'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions)
+
+    // Check if user is authenticated and is an admin
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Unauthorized. Admin access required.' },
+        { status: 401 }
+      )
+    }
+
     const orders = await prisma.order.findMany({
       include: {
         items: {
