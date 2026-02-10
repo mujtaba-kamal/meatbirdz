@@ -111,11 +111,22 @@ export default function CheckoutPage() {
         throw new Error(data.error || 'Failed to create payment')
       }
 
+      // Store order data temporarily for confirmation page
+      if (typeof window !== 'undefined' && data.paymentIntentId) {
+        sessionStorage.setItem('pendingOrderData', JSON.stringify({
+          items,
+          customerInfo: formData,
+          total,
+          paymentIntentId: data.paymentIntentId,
+          orderType: orderType,
+        }))
+      }
+
       // Redirect to Stripe Checkout
       if (data.clientSecret) {
         // For Stripe Elements integration - pass orderType
         const orderTypeParam = orderType ? `&orderType=${orderType}` : ''
-        router.push(`/payment?clientSecret=${data.clientSecret}&orderId=${data.orderId}${orderTypeParam}`)
+        router.push(`/payment?clientSecret=${data.clientSecret}&paymentIntentId=${data.paymentIntentId}${orderTypeParam}`)
       } else if (data.checkoutUrl) {
         // For Stripe Checkout redirect
         if (typeof window !== 'undefined') {

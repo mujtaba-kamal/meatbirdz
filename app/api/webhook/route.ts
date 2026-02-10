@@ -38,31 +38,16 @@ export async function POST(request: NextRequest) {
   }
 
   // Handle the event
+  // Note: Orders are now created on confirmation page, not here
+  // This webhook can be used for additional processing if needed
   if (event.type === 'payment_intent.succeeded') {
     const paymentIntent = event.data.object as Stripe.PaymentIntent
-    const orderId = paymentIntent.metadata.orderId
-
-    if (orderId) {
-      await prisma.order.update({
-        where: { id: orderId },
-        data: {
-          paymentStatus: 'PAID',
-          status: 'CONFIRMED',
-        },
-      })
-    }
+    // Order will be created when user reaches confirmation page
+    // We can update it here if it exists, but it might not exist yet
+    console.log('Payment succeeded:', paymentIntent.id)
   } else if (event.type === 'payment_intent.payment_failed') {
     const paymentIntent = event.data.object as Stripe.PaymentIntent
-    const orderId = paymentIntent.metadata.orderId
-
-    if (orderId) {
-      await prisma.order.update({
-        where: { id: orderId },
-        data: {
-          paymentStatus: 'FAILED',
-        },
-      })
-    }
+    console.log('Payment failed:', paymentIntent.id)
   }
 
   return NextResponse.json({ received: true })

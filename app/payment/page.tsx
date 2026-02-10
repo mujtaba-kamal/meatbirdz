@@ -17,13 +17,14 @@ const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
   : null
 
-function CheckoutForm({ orderId, orderType }: { orderId: string; orderType: string | null }) {
+function CheckoutForm({ paymentIntentId, orderType }: { paymentIntentId: string | null; orderType: string | null }) {
   const stripe = useStripe()
   const elements = useElements()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [codLoading, setCodLoading] = useState(false)
   const clearCart = useCartStore((state) => state.clearCart)
+  const { items, getTotal } = useCartStore()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,7 +39,7 @@ function CheckoutForm({ orderId, orderType }: { orderId: string; orderType: stri
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/order-confirmation?orderId=${orderId}`,
+          return_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/order-confirmation?paymentIntentId=${paymentIntentId}`,
         },
         redirect: 'if_required',
       })
@@ -49,7 +50,7 @@ function CheckoutForm({ orderId, orderType }: { orderId: string; orderType: stri
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         clearCart()
         toast.success('Payment successful!')
-        router.push(`/order-confirmation?orderId=${orderId}`)
+        router.push(`/order-confirmation?paymentIntentId=${paymentIntentId}`)
       }
     } catch (err: any) {
       toast.error(err.message || 'Payment failed')
@@ -60,46 +61,34 @@ function CheckoutForm({ orderId, orderType }: { orderId: string; orderType: stri
   const handleCOD = async () => {
     setCodLoading(true)
     try {
-      // Fetch the existing order to get customer info and items
-      const orderResponse = await fetch(`/api/orders/${orderId}`)
-      if (!orderResponse.ok) {
-        throw new Error('Failed to fetch order details')
+      // Get customer info from sessionStorage (stored when creating payment intent)
+      const storedData = sessionStorage.getItem('pendingOrderData')
+      if (!storedData) {
+        throw new Error('Order data not found. Please go back to checkout.')
       }
-      const order = await orderResponse.json()
-
-      // Create new COD order using the same customer info and items
-      const response = await fetch('/api/orders/create-cod', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: order.items.map((item: any) => ({
-            id: item.menuItem.id,
-            quantity: item.quantity,
-            price: item.price,
-          })),
-          customerInfo: {
-            customerName: order.customerName,
-            customerEmail: order.customerEmail,
-            customerPhone: order.customerPhone,
-            deliveryAddress: order.deliveryAddress,
-            city: order.city,
-            postalCode: order.postalCode,
-          },
-          total: order.totalAmount,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create COD order')
+      
+      const checkoutData = JSON.parse(storedData)
+      
+      // Store COD order data temporarily
+      const codOrderData = {
+        items: items.map(item => ({
+          id: item.id,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        total: getTotal(),
+        orderType: orderType,
+      }
+      
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('pendingCODOrder', JSON.stringify(codOrderData))
       }
 
       clearCart()
       toast.success(orderType === 'delivery' ? 'Order placed! Pay cash on delivery.' : 'Order placed! Pay at collection.')
-      router.push(`/order-confirmation?orderId=${data.orderId}`)
+      router.push(`/order-confirmation?cod=true`)
     } catch (error: any) {
-      console.error('Error creating COD order:', error)
+      console.error('Error processing COD order:', error)
       toast.error(error.message || 'Failed to place order')
       setCodLoading(false)
     }
@@ -191,7 +180,7 @@ function CheckoutForm({ orderId, orderType }: { orderId: string; orderType: stri
 function PaymentPageContent() {
   const searchParams = useSearchParams()
   const clientSecret = searchParams.get('clientSecret')
-  const orderId = searchParams.get('orderId')
+  const paymentIntentId = searchParams.get('paymentIntentId')
   const orderType = searchParams.get('orderType')
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
@@ -201,10 +190,10 @@ function PaymentPageContent() {
   }, [])
 
   useEffect(() => {
-    if (!orderId) {
+    if (!clientSecret && !paymentIntentId) {
       router.push('/cart')
     }
-  }, [orderId, router])
+  }, [clientSecret, paymentIntentId, router])
 
   // Get orderType from localStorage if not in URL
   const getOrderType = () => {
@@ -221,7 +210,7 @@ function PaymentPageContent() {
     return null
   }
 
-  if (!orderId) {
+  if (!clientSecret && !paymentIntentId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -251,7 +240,7 @@ function PaymentPageContent() {
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold mb-8">Complete Your Order</h1>
           <div className="bg-white rounded-lg shadow-md p-6">
-            <CheckoutForm orderId={orderId} orderType={finalOrderType} />
+            <CheckoutForm paymentIntentId={paymentIntentId} orderType={finalOrderType} />
           </div>
         </div>
       </div>
@@ -272,10 +261,10 @@ function PaymentPageContent() {
         <div className="bg-white rounded-lg shadow-md p-6">
           {clientSecret && stripePromise ? (
             <Elements stripe={stripePromise} options={options}>
-              <CheckoutForm orderId={orderId} orderType={finalOrderType} />
+              <CheckoutForm paymentIntentId={paymentIntentId} orderType={finalOrderType} />
             </Elements>
           ) : (
-            <CheckoutForm orderId={orderId} orderType={finalOrderType} />
+            <CheckoutForm paymentIntentId={paymentIntentId} orderType={finalOrderType} />
           )}
         </div>
       </div>

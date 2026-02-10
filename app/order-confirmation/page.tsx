@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { CheckCircle, MapPin, Phone, Mail } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 interface OrderItem {
   id: string
@@ -34,14 +35,98 @@ interface Order {
 function OrderConfirmationContent() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get('orderId')
+  const paymentIntentId = searchParams.get('paymentIntentId')
+  const cod = searchParams.get('cod')
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Create order if it doesn't exist yet
     if (orderId) {
       fetchOrder(orderId)
+    } else if (paymentIntentId || cod) {
+      createOrderFromConfirmation()
+    } else {
+      setLoading(false)
     }
-  }, [orderId])
+  }, [orderId, paymentIntentId, cod])
+
+  const createOrderFromConfirmation = async () => {
+    try {
+      let orderData: any = null
+
+      if (cod) {
+        // Get COD order data from sessionStorage
+        const codData = sessionStorage.getItem('pendingCODOrder')
+        if (!codData) {
+          throw new Error('Order data not found')
+        }
+        const codOrderData = JSON.parse(codData)
+        
+        // Get customer info from checkout form (stored in sessionStorage)
+        const checkoutData = sessionStorage.getItem('pendingOrderData')
+        if (!checkoutData) {
+          throw new Error('Customer info not found')
+        }
+        const checkout = JSON.parse(checkoutData)
+        
+        orderData = {
+          items: codOrderData.items,
+          customerInfo: checkout.customerInfo,
+          total: codOrderData.total,
+          orderType: codOrderData.orderType,
+        }
+      } else if (paymentIntentId) {
+        // Get order data from sessionStorage
+        const storedData = sessionStorage.getItem('pendingOrderData')
+        if (!storedData) {
+          throw new Error('Order data not found')
+        }
+        orderData = JSON.parse(storedData)
+        orderData.paymentIntentId = paymentIntentId
+      }
+
+      if (!orderData) {
+        throw new Error('No order data available')
+      }
+
+      // Create order
+      const response = await fetch('/api/orders/create-from-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create order')
+      }
+
+      // Clear sessionStorage
+      sessionStorage.removeItem('pendingOrderData')
+      sessionStorage.removeItem('pendingCODOrder')
+
+      // Store order ID in localStorage for guest orders
+      if (typeof window !== 'undefined' && data.order) {
+        const guestOrders = JSON.parse(localStorage.getItem('guestOrders') || '[]')
+        if (!guestOrders.includes(data.orderId)) {
+          guestOrders.push(data.orderId)
+          localStorage.setItem('guestOrders', JSON.stringify(guestOrders))
+        }
+        if (data.order.customerEmail) {
+          localStorage.setItem('guestOrderEmail', data.order.customerEmail)
+        }
+      }
+
+      setOrder(data.order)
+    } catch (error: any) {
+      console.error('Error creating order:', error)
+      toast.error(error.message || 'Failed to create order')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const fetchOrder = async (id: string) => {
     try {

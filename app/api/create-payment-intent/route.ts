@@ -19,63 +19,23 @@ export async function POST(request: NextRequest) {
     }
 
     const { items, customerInfo, total } = await request.json()
-    const session = await getServerSession(authOptions)
 
-    // Validate userId exists if provided
-    let validUserId: string | null = null
-    if (session?.user?.id) {
-      const userExists = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { id: true },
-      })
-      if (userExists) {
-        validUserId = session.user.id
-      } else {
-        console.warn(`User ID ${session.user.id} from session does not exist in database, creating order without userId`)
-      }
-    }
-
-    // Create order in database
-    const order = await prisma.order.create({
-      data: {
-        userId: validUserId,
-        customerName: customerInfo.customerName,
-        customerEmail: customerInfo.customerEmail,
-        customerPhone: customerInfo.customerPhone,
-        deliveryAddress: customerInfo.deliveryAddress,
-        city: customerInfo.city,
-        postalCode: customerInfo.postalCode || null,
-        totalAmount: total,
-        status: 'PENDING',
-        paymentStatus: 'PENDING',
-        items: {
-          create: items.map((item: any) => ({
-            menuItemId: item.id,
-            quantity: item.quantity,
-            price: item.price,
-          })),
-        },
-      },
-    })
-
-    // Create Stripe Payment Intent
+    // Create Stripe Payment Intent without creating order yet
+    // Order will be created on confirmation page
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(total * 100), // Convert to cents
       currency: 'usd',
       metadata: {
-        orderId: order.id,
+        // Store order data in metadata for later use
+        items: JSON.stringify(items),
+        customerInfo: JSON.stringify(customerInfo),
+        total: total.toString(),
       },
-    })
-
-    // Update order with payment intent ID
-    await prisma.order.update({
-      where: { id: order.id },
-      data: { stripePaymentId: paymentIntent.id },
     })
 
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
-      orderId: order.id,
+      paymentIntentId: paymentIntent.id,
     })
   } catch (error: any) {
     console.error('Error creating payment intent:', error)
