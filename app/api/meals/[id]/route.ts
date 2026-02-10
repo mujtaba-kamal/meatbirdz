@@ -92,10 +92,10 @@ export async function PUT(
             return {
               mealId,
               menuItemId: opt.menuItemId,
-              categoryId: categoryId,
+              categoryId: categoryId as string, // Type assertion since we've validated it's not null
               additionalPrice: parseFloat(opt.additionalPrice?.toString() || '0'),
             }
-          }).filter(opt => opt.categoryId !== null), // Filter out any that couldn't be resolved
+          }).filter((opt): opt is { mealId: string; menuItemId: string; categoryId: string; additionalPrice: number } => opt.categoryId !== null), // Filter out any that couldn't be resolved
         })
       }
     }

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     console.log('Starting database migration to v2 (dynamic meals)...')
 
-    // Check if MealCategory table exists
+    // Check if MealCategory table exists AND MealOption has categoryId column
     const checkMealCategoryTable = await prisma.$queryRawUnsafe(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
@@ -32,14 +32,38 @@ export async function POST(request: NextRequest) {
     
     const mealCategoryTableExists = (checkMealCategoryTable as any[])[0]?.exists || false
 
-    if (mealCategoryTableExists) {
-      console.log('MealCategory table already exists. Migration may have already been run.')
+    // Check if MealOption has categoryId column
+    const checkCategoryIdColumn = await prisma.$queryRawUnsafe(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'MealOption' 
+        AND column_name = 'categoryId'
+      );
+    `)
+    const hasCategoryIdColumn = (checkCategoryIdColumn as any[])[0]?.exists || false
+
+    // Check if MealOption still has old category column
+    const checkOldCategoryColumn = await prisma.$queryRawUnsafe(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'MealOption' 
+        AND column_name = 'category'
+      );
+    `)
+    const hasOldCategoryColumn = (checkOldCategoryColumn as any[])[0]?.exists || false
+
+    if (mealCategoryTableExists && hasCategoryIdColumn && !hasOldCategoryColumn) {
+      console.log('Database schema v2 is already fully migrated.')
       return NextResponse.json({
         success: true,
         message: 'Database schema v2 is already up-to-date',
         alreadyMigrated: true,
       })
     }
+
+    console.log('Migration needed. Status:', { mealCategoryTableExists, hasCategoryIdColumn, hasOldCategoryColumn })
 
     // Create MealCategory table
     console.log('Creating MealCategory table...')
