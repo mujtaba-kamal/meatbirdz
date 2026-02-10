@@ -214,28 +214,33 @@ export async function POST(request: NextRequest) {
 
       // Remove availableInMeal and mealCategory columns from MenuItem if they exist (no longer needed)
       console.log('Removing old columns from "MenuItem" table...')
-      await prisma.$executeRawUnsafe(`
-        DO $$ 
-        BEGIN
-          IF EXISTS (
-            SELECT 1 FROM information_schema.columns 
-            WHERE table_schema = 'public' 
-            AND table_name = 'MenuItem' 
-            AND column_name = 'availableInMeal'
-          ) THEN
-            ALTER TABLE "MenuItem" DROP COLUMN "availableInMeal";
-          END IF;
-          
-          IF EXISTS (
-            SELECT 1 FROM information_schema.columns 
-            WHERE table_schema = 'public' 
-            AND table_name = 'MenuItem' 
-            AND column_name = 'mealCategory'
-          ) THEN
-            ALTER TABLE "MenuItem" DROP COLUMN "mealCategory";
-          END IF;
-        END $$;
+      
+      // Check and drop availableInMeal column
+      const checkAvailableInMeal = await prisma.$queryRawUnsafe(`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_schema = 'public' 
+          AND table_name = 'MenuItem' 
+          AND column_name = 'availableInMeal'
+        );
       `)
+      if ((checkAvailableInMeal as any[])[0]?.exists) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "MenuItem" DROP COLUMN "availableInMeal";`)
+      }
+      
+      // Check and drop mealCategory column
+      const checkMealCategory = await prisma.$queryRawUnsafe(`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_schema = 'public' 
+          AND table_name = 'MenuItem' 
+          AND column_name = 'mealCategory'
+        );
+      `)
+      if ((checkMealCategory as any[])[0]?.exists) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "MenuItem" DROP COLUMN "mealCategory";`)
+      }
+      
       console.log('✅ Old columns removed from "MenuItem" table (if existed).')
 
       // Remove quantity column from MealItem if it exists (no longer needed)
