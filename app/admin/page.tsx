@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle, XCircle, Clock, Package, Bell, BellRing, X } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Package, Bell, BellRing, X, Banknote, CreditCard, DollarSign } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface OrderItem {
@@ -27,6 +27,7 @@ interface Order {
   totalAmount: number
   status: string
   paymentStatus: string
+  stripePaymentId: string | null
   arrivalNotification: string | null
   arrivalAcknowledged: boolean
   items: OrderItem[]
@@ -108,6 +109,31 @@ export default function AdminPage() {
       }
     } catch (error) {
       toast.error('Failed to update order status')
+    }
+  }
+
+  const markAsPaid = async (orderId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      const response = await fetch(`/api/orders/${orderId}/mark-paid`, {
+        method: 'POST',
+      })
+
+      if (response.ok) {
+        toast.success('Order marked as paid')
+        fetchOrders()
+        // Update selected order if it's the one being marked as paid
+        if (selectedOrder?.id === orderId) {
+          const updatedOrder = orders.find(o => o.id === orderId)
+          if (updatedOrder) {
+            setSelectedOrder({ ...updatedOrder, paymentStatus: 'PAID' })
+          }
+        }
+      } else {
+        toast.error('Failed to mark order as paid')
+      }
+    } catch (error) {
+      toast.error('Failed to mark order as paid')
     }
   }
 
@@ -270,15 +296,33 @@ export default function AdminPage() {
                           </span>
                         )}
                         {order.paymentStatus === 'PAID' ? (
-                          <span className="flex items-center text-green-600 text-sm">
+                          <span className="flex items-center text-green-600 text-sm font-semibold">
                             <CheckCircle className="w-4 h-4 mr-1" />
                             Paid
                           </span>
                         ) : (
-                          <span className="flex items-center text-red-600 text-sm">
-                            <XCircle className="w-4 h-4 mr-1" />
-                            {order.paymentStatus}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            {!order.stripePaymentId ? (
+                              <span className="flex items-center bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-semibold">
+                                {order.deliveryAddress.includes('High Street') || order.deliveryAddress.includes('Hagley Road') || order.deliveryAddress.includes('Digbeth') ? (
+                                  <>
+                                    <CreditCard className="w-3 h-3 mr-1" />
+                                    Pay at Collection
+                                  </>
+                                ) : (
+                                  <>
+                                    <Banknote className="w-3 h-3 mr-1" />
+                                    COD
+                                  </>
+                                )}
+                              </span>
+                            ) : (
+                              <span className="flex items-center text-red-600 text-sm">
+                                <XCircle className="w-4 h-4 mr-1" />
+                                {order.paymentStatus}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -309,6 +353,54 @@ export default function AdminPage() {
                       <br />
                       {selectedOrder.city} {selectedOrder.postalCode}
                     </p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-2">Payment Status</h3>
+                    <div className="mb-3">
+                      {selectedOrder.paymentStatus === 'PAID' ? (
+                        <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-center">
+                            <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+                            <span className="font-semibold text-green-800">Paid</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center">
+                              {!selectedOrder.stripePaymentId ? (
+                                <>
+                                  {selectedOrder.deliveryAddress.includes('High Street') || selectedOrder.deliveryAddress.includes('Hagley Road') || selectedOrder.deliveryAddress.includes('Digbeth') ? (
+                                    <>
+                                      <CreditCard className="w-5 h-5 text-orange-600 mr-2" />
+                                      <span className="font-semibold text-orange-800">Pay at Collection</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Banknote className="w-5 h-5 text-orange-600 mr-2" />
+                                      <span className="font-semibold text-orange-800">Cash on Delivery</span>
+                                    </>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <DollarSign className="w-5 h-5 text-orange-600 mr-2" />
+                                  <span className="font-semibold text-orange-800">Online Payment - {selectedOrder.paymentStatus}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => markAsPaid(selectedOrder.id, e)}
+                            className="mt-2 w-full bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <DollarSign className="w-4 h-4" />
+                            Mark as Paid
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div>
