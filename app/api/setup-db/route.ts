@@ -25,120 +25,179 @@ export async function POST(request: Request) {
     console.log('📋 Creating database tables...')
     
     // Create enum types (ignore if they exist)
-    await prisma.$executeRawUnsafe(`
-      DO $$ BEGIN
-        CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED');
-      EXCEPTION
-        WHEN duplicate_object THEN null;
-      END $$;
-    `).catch(() => {})
+    try {
+      await prisma.$executeRawUnsafe(`
+        DO $$ BEGIN
+          CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED');
+        EXCEPTION
+          WHEN duplicate_object THEN null;
+        END $$;
+      `)
+      console.log('✅ Created OrderStatus enum')
+    } catch (error: any) {
+      console.log('⚠️ OrderStatus enum:', error.message)
+    }
     
-    await prisma.$executeRawUnsafe(`
-      DO $$ BEGIN
-        CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'PAID', 'FAILED', 'REFUNDED');
-      EXCEPTION
-        WHEN duplicate_object THEN null;
-      END $$;
-    `).catch(() => {})
+    try {
+      await prisma.$executeRawUnsafe(`
+        DO $$ BEGIN
+          CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'PAID', 'FAILED', 'REFUNDED');
+        EXCEPTION
+          WHEN duplicate_object THEN null;
+        END $$;
+      `)
+      console.log('✅ Created PaymentStatus enum')
+    } catch (error: any) {
+      console.log('⚠️ PaymentStatus enum:', error.message)
+    }
     
-    await prisma.$executeRawUnsafe(`
-      DO $$ BEGIN
-        CREATE TYPE "UserRole" AS ENUM ('CUSTOMER', 'ADMIN');
-      EXCEPTION
-        WHEN duplicate_object THEN null;
-      END $$;
-    `).catch(() => {})
+    try {
+      await prisma.$executeRawUnsafe(`
+        DO $$ BEGIN
+          CREATE TYPE "UserRole" AS ENUM ('CUSTOMER', 'ADMIN');
+        EXCEPTION
+          WHEN duplicate_object THEN null;
+        END $$;
+      `)
+      console.log('✅ Created UserRole enum')
+    } catch (error: any) {
+      console.log('⚠️ UserRole enum:', error.message)
+    }
 
     // Create tables (ignore if they exist)
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "MenuItem" (
-        "id" TEXT NOT NULL,
-        "name" TEXT NOT NULL,
-        "description" TEXT,
-        "price" DOUBLE PRECISION NOT NULL,
-        "category" TEXT NOT NULL,
-        "image" TEXT,
-        "available" BOOLEAN NOT NULL DEFAULT true,
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP(3) NOT NULL,
-        CONSTRAINT "MenuItem_pkey" PRIMARY KEY ("id")
-      );
-    `).catch(() => {})
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "MenuItem" (
+          "id" TEXT NOT NULL,
+          "name" TEXT NOT NULL,
+          "description" TEXT,
+          "price" DOUBLE PRECISION NOT NULL,
+          "category" TEXT NOT NULL,
+          "image" TEXT,
+          "available" BOOLEAN NOT NULL DEFAULT true,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "MenuItem_pkey" PRIMARY KEY ("id")
+        );
+      `)
+      console.log('✅ Created MenuItem table')
+    } catch (error: any) {
+      console.error('❌ Error creating MenuItem table:', error.message)
+      throw error
+    }
 
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "User" (
-        "id" TEXT NOT NULL,
-        "name" TEXT,
-        "email" TEXT NOT NULL,
-        "password" TEXT NOT NULL,
-        "role" "UserRole" NOT NULL DEFAULT 'CUSTOMER',
-        "phone" TEXT,
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP(3) NOT NULL,
-        CONSTRAINT "User_pkey" PRIMARY KEY ("id")
-      );
-    `).catch(() => {})
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "User" (
+          "id" TEXT NOT NULL,
+          "name" TEXT,
+          "email" TEXT NOT NULL,
+          "password" TEXT NOT NULL,
+          "role" "UserRole" NOT NULL DEFAULT 'CUSTOMER',
+          "phone" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+        );
+      `)
+      console.log('✅ Created User table')
+    } catch (error: any) {
+      console.error('❌ Error creating User table:', error.message)
+      throw error
+    }
 
-    await prisma.$executeRawUnsafe(`
-      CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email");
-    `).catch(() => {})
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email");
+      `)
+      console.log('✅ Created User email index')
+    } catch (error: any) {
+      console.log('⚠️ User email index:', error.message)
+    }
 
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "Order" (
-        "id" TEXT NOT NULL,
-        "userId" TEXT,
-        "customerName" TEXT NOT NULL,
-        "customerEmail" TEXT NOT NULL,
-        "customerPhone" TEXT NOT NULL,
-        "deliveryAddress" TEXT NOT NULL,
-        "city" TEXT NOT NULL,
-        "postalCode" TEXT,
-        "totalAmount" DOUBLE PRECISION NOT NULL,
-        "status" "OrderStatus" NOT NULL DEFAULT 'PENDING',
-        "paymentStatus" "PaymentStatus" NOT NULL DEFAULT 'PENDING',
-        "stripePaymentId" TEXT,
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP(3) NOT NULL,
-        CONSTRAINT "Order_pkey" PRIMARY KEY ("id")
-      );
-    `).catch(() => {})
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "Order" (
+          "id" TEXT NOT NULL,
+          "userId" TEXT,
+          "customerName" TEXT NOT NULL,
+          "customerEmail" TEXT NOT NULL,
+          "customerPhone" TEXT NOT NULL,
+          "deliveryAddress" TEXT NOT NULL,
+          "city" TEXT NOT NULL,
+          "postalCode" TEXT,
+          "totalAmount" DOUBLE PRECISION NOT NULL,
+          "status" "OrderStatus" NOT NULL DEFAULT 'PENDING',
+          "paymentStatus" "PaymentStatus" NOT NULL DEFAULT 'PENDING',
+          "stripePaymentId" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "Order_pkey" PRIMARY KEY ("id")
+        );
+      `)
+      console.log('✅ Created Order table')
+    } catch (error: any) {
+      console.error('❌ Error creating Order table:', error.message)
+      throw error
+    }
 
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "OrderItem" (
-        "id" TEXT NOT NULL,
-        "orderId" TEXT NOT NULL,
-        "menuItemId" TEXT NOT NULL,
-        "quantity" INTEGER NOT NULL,
-        "price" DOUBLE PRECISION NOT NULL,
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "OrderItem_pkey" PRIMARY KEY ("id")
-      );
-    `).catch(() => {})
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "OrderItem" (
+          "id" TEXT NOT NULL,
+          "orderId" TEXT NOT NULL,
+          "menuItemId" TEXT NOT NULL,
+          "quantity" INTEGER NOT NULL,
+          "price" DOUBLE PRECISION NOT NULL,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "OrderItem_pkey" PRIMARY KEY ("id")
+        );
+      `)
+      console.log('✅ Created OrderItem table')
+    } catch (error: any) {
+      console.error('❌ Error creating OrderItem table:', error.message)
+      throw error
+    }
 
     // Add foreign keys (ignore if they exist)
-    await prisma.$executeRawUnsafe(`
-      DO $$ BEGIN
-        ALTER TABLE "Order" ADD CONSTRAINT "Order_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-      EXCEPTION
-        WHEN duplicate_object THEN null;
-      END $$;
-    `).catch(() => {})
+    try {
+      await prisma.$executeRawUnsafe(`
+        DO $$ BEGIN
+          ALTER TABLE "Order" ADD CONSTRAINT "Order_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+        EXCEPTION
+          WHEN duplicate_object THEN null;
+        END $$;
+      `)
+      console.log('✅ Added Order foreign keys')
+    } catch (error: any) {
+      console.log('⚠️ Order foreign keys:', error.message)
+    }
 
-    await prisma.$executeRawUnsafe(`
-      DO $$ BEGIN
-        ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-      EXCEPTION
-        WHEN duplicate_object THEN null;
-      END $$;
-    `).catch(() => {})
+    try {
+      await prisma.$executeRawUnsafe(`
+        DO $$ BEGIN
+          ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+        EXCEPTION
+          WHEN duplicate_object THEN null;
+        END $$;
+      `)
+      console.log('✅ Added OrderItem orderId foreign key')
+    } catch (error: any) {
+      console.log('⚠️ OrderItem orderId foreign key:', error.message)
+    }
 
-    await prisma.$executeRawUnsafe(`
-      DO $$ BEGIN
-        ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_menuItemId_fkey" FOREIGN KEY ("menuItemId") REFERENCES "MenuItem"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-      EXCEPTION
-        WHEN duplicate_object THEN null;
-      END $$;
-    `).catch(() => {})
+    try {
+      await prisma.$executeRawUnsafe(`
+        DO $$ BEGIN
+          ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_menuItemId_fkey" FOREIGN KEY ("menuItemId") REFERENCES "MenuItem"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+        EXCEPTION
+          WHEN duplicate_object THEN null;
+        END $$;
+      `)
+      console.log('✅ Added OrderItem menuItemId foreign key')
+    } catch (error: any) {
+      console.log('⚠️ OrderItem menuItemId foreign key:', error.message)
+    }
 
     console.log('✅ Tables created')
 
@@ -233,7 +292,11 @@ export async function POST(request: Request) {
     }
     console.log(`✅ Created ${menuItems.length} menu items`)
 
-    await prisma.$disconnect()
+    // Verify data was created
+    const verifyMenuItems = await prisma.menuItem.count()
+    const verifyUsers = await prisma.user.count()
+    
+    console.log(`✅ Verification: ${verifyMenuItems} menu items, ${verifyUsers} users in database`)
 
     return NextResponse.json({
       success: true,
@@ -241,6 +304,10 @@ export async function POST(request: Request) {
       details: {
         usersCreated: 2,
         menuItemsCreated: menuItems.length,
+        verified: {
+          menuItemsInDb: verifyMenuItems,
+          usersInDb: verifyUsers,
+        },
         testUsers: {
           admin: 'admin@meatbirdz.com / admin123',
           customer: 'customer@meatbirdz.com / customer123',
