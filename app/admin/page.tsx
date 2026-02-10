@@ -324,6 +324,12 @@ export default function AdminPage() {
     }
 
     try {
+      // Prepare categories array
+      const categoriesToSend = mealCategories.map(cat => ({
+        name: cat.name,
+        order: cat.order,
+      }))
+
       // For new meals, we need to map temporary category IDs to category orders
       // The API will create categories and we'll match options by order
       // For existing meals, we can use the actual category IDs
@@ -338,44 +344,45 @@ export default function AdminPage() {
         }))
       } else {
         // New meal: map by category order (temporary IDs start with "temp_")
-        // We'll send options with a reference that the API can resolve
-        // Actually, we need to create categories first, then options
-        // For now, let's use the order to match - the API will need to handle this
+        // Match options to categories by finding the category with matching temp ID or order
         optionsToSend = mealOptions.map(opt => {
-          // Find which category this option belongs to by matching the temp ID
-          const categoryIndex = mealCategories.findIndex(cat => {
+          // Find which category this option belongs to
+          const category = mealCategories.find(cat => {
             const tempId = `temp_${mealCategories.indexOf(cat)}_${cat.order}`
             return opt.categoryId === tempId || opt.categoryId === cat.id
           })
-          const category = mealCategories[categoryIndex]
           
-          // For new meals, we'll send the order and let the API match it
-          // The API will create categories first, then match options by order
+          if (!category) {
+            console.error('Could not find category for option:', opt)
+            return null
+          }
+          
+          // For new meals, send the order and let the API match it
           return {
             menuItemId: opt.menuItemId,
-            categoryOrder: category?.order, // Send order for matching
-            categoryId: category?.id || undefined, // Send ID if exists
+            categoryOrder: category.order, // Send order for matching
             additionalPrice: opt.additionalPrice,
           }
-        })
+        }).filter(Boolean) // Remove any null entries
       }
 
       // Use PUT endpoint if meal exists, POST if new
       const url = meal ? `/api/meals/${meal.id}` : '/api/meals'
       const method = meal ? 'PUT' : 'POST'
       
+      const requestBody = {
+        ...mealForm,
+        categories: categoriesToSend,
+        options: optionsToSend,
+        menuItemIds: linkedMenuItems,
+      }
+
+      console.log('Saving meal with data:', requestBody) // Debug log
+      
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...mealForm,
-          categories: mealCategories.map(cat => ({
-            name: cat.name,
-            order: cat.order,
-          })),
-          options: optionsToSend,
-          menuItemIds: linkedMenuItems,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       if (response.ok) {
