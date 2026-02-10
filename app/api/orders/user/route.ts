@@ -12,26 +12,18 @@ export async function GET(request: NextRequest) {
     const orderIds = searchParams.get('orderIds') // Comma-separated order IDs for guest orders
     const email = searchParams.get('email') // Email for guest orders
 
+    console.log('Fetching orders - Session userId:', session?.user?.id)
+    console.log('Fetching orders - OrderIds param:', orderIds)
+    console.log('Fetching orders - Email param:', email)
+
     // If user is logged in, fetch their orders
     if (session?.user?.id) {
+      console.log('Fetching orders for logged-in user:', session.user.id)
       const orders = await prisma.order.findMany({
         where: {
           userId: session.user.id,
         },
-        select: {
-          id: true,
-          customerName: true,
-          customerEmail: true,
-          customerPhone: true,
-          deliveryAddress: true,
-          city: true,
-          postalCode: true,
-          totalAmount: true,
-          status: true,
-          paymentStatus: true,
-          arrivalNotification: true,
-          arrivalAcknowledged: true,
-          createdAt: true,
+        include: {
           items: {
             include: {
               menuItem: {
@@ -47,6 +39,7 @@ export async function GET(request: NextRequest) {
         },
       })
 
+      console.log(`Found ${orders.length} orders for user ${session.user.id}`)
       return NextResponse.json(orders)
     }
 
@@ -57,20 +50,7 @@ export async function GET(request: NextRequest) {
         where: {
           id: { in: ids },
         },
-        select: {
-          id: true,
-          customerName: true,
-          customerEmail: true,
-          customerPhone: true,
-          deliveryAddress: true,
-          city: true,
-          postalCode: true,
-          totalAmount: true,
-          status: true,
-          paymentStatus: true,
-          arrivalNotification: true,
-          arrivalAcknowledged: true,
-          createdAt: true,
+        include: {
           items: {
             include: {
               menuItem: {
@@ -96,20 +76,7 @@ export async function GET(request: NextRequest) {
           customerEmail: email,
           userId: null, // Only guest orders
         },
-        select: {
-          id: true,
-          customerName: true,
-          customerEmail: true,
-          customerPhone: true,
-          deliveryAddress: true,
-          city: true,
-          postalCode: true,
-          totalAmount: true,
-          status: true,
-          paymentStatus: true,
-          arrivalNotification: true,
-          arrivalAcknowledged: true,
-          createdAt: true,
+        include: {
           items: {
             include: {
               menuItem: {
