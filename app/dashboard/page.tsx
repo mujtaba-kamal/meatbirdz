@@ -83,15 +83,8 @@ export default function DashboardPage() {
       
       if (session?.user?.id) {
         // Fetch orders for logged-in user
-        console.log('Dashboard: Fetching orders for logged-in user:', session.user.id)
         const response = await fetch('/api/orders/user')
-        if (!response.ok) {
-          console.error('Failed to fetch orders:', response.status, response.statusText)
-          const errorData = await response.json().catch(() => ({}))
-          console.error('Error data:', errorData)
-        }
         const data = await response.json()
-        console.log('Dashboard: Received orders:', data?.length || 0, 'orders')
         setOrders(Array.isArray(data) ? data : [])
       } else {
         // Fetch guest orders from localStorage

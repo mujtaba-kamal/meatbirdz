@@ -12,13 +12,8 @@ export async function GET(request: NextRequest) {
     const orderIds = searchParams.get('orderIds') // Comma-separated order IDs for guest orders
     const email = searchParams.get('email') // Email for guest orders
 
-    console.log('Fetching orders - Session userId:', session?.user?.id)
-    console.log('Fetching orders - OrderIds param:', orderIds)
-    console.log('Fetching orders - Email param:', email)
-
     // If user is logged in, fetch their orders
     if (session?.user?.id) {
-      console.log('Fetching orders for logged-in user:', session.user.id)
       const orders = await prisma.order.findMany({
         where: {
           userId: session.user.id,
@@ -39,7 +34,6 @@ export async function GET(request: NextRequest) {
         },
       })
 
-      console.log(`Found ${orders.length} orders for user ${session.user.id}`)
       return NextResponse.json(orders)
     }
 
