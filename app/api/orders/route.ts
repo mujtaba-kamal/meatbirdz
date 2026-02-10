@@ -28,29 +28,6 @@ export async function GET() {
       orderBy: {
         createdAt: 'desc',
       },
-      select: {
-        id: true,
-        userId: true,
-        customerName: true,
-        customerEmail: true,
-        customerPhone: true,
-        deliveryAddress: true,
-        city: true,
-        postalCode: true,
-        totalAmount: true,
-        status: true,
-        paymentStatus: true,
-        stripePaymentId: true,
-        arrivalNotification: true,
-        arrivalAcknowledged: true,
-        createdAt: true,
-        updatedAt: true,
-        items: {
-          include: {
-            menuItem: true,
-          },
-        },
-      },
     })
     return NextResponse.json(orders)
   } catch (error) {
