@@ -81,21 +81,33 @@ export async function POST(request: Request) {
     let updated = 0
     let notFound = 0
 
-    // Update each menu item with its image
+    // Update each menu item with its image using updateMany for better performance
     for (const item of allMenuItems) {
       const imageUrl = menuItemImages[item.name]
       if (imageUrl) {
-        await prisma.menuItem.update({
-          where: { id: item.id },
-          data: { image: imageUrl },
-        })
-        updated++
-        console.log(`✅ Updated ${item.name}`)
+        try {
+          const result = await prisma.menuItem.update({
+            where: { id: item.id },
+            data: { image: imageUrl },
+          })
+          updated++
+          console.log(`✅ Updated ${item.name} with image: ${imageUrl.substring(0, 50)}...`)
+        } catch (error: any) {
+          console.error(`❌ Failed to update ${item.name}:`, error.message)
+          notFound++
+        }
       } else {
         notFound++
         console.log(`⚠️ No image found for: ${item.name}`)
       }
     }
+    
+    // Verify updates by fetching one item
+    const verifyItem = await prisma.menuItem.findFirst({
+      where: { name: 'Angus Classic' },
+      select: { name: true, image: true },
+    })
+    console.log('Verification - Angus Classic image:', verifyItem?.image || 'NULL')
 
     return NextResponse.json({
       success: true,
