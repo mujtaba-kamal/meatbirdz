@@ -83,12 +83,12 @@ export async function DELETE(
     }
 
     // Check if menu item is used in any meals
-    const mealItems = await prisma.mealItem.findMany({
+    const mealOptions = await prisma.mealOption.findMany({
       where: { menuItemId },
       take: 1,
     })
 
-    if (mealItems.length > 0) {
+    if (mealOptions.length > 0) {
       return NextResponse.json(
         { error: 'Cannot delete menu item that is part of a meal. Remove it from meals first.' },
         { status: 400 }
