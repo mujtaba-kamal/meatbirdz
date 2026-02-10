@@ -70,9 +70,22 @@ export async function POST(request: NextRequest) {
     if (hasOldCategoryColumn) {
       console.log('Old category column detected. Dropping it first...')
       try {
+        // First, make the column nullable to remove NOT NULL constraint
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "MealOption" ALTER COLUMN "category" DROP NOT NULL;
+        `).catch(() => {
+          // Ignore if already nullable or constraint doesn't exist
+          console.log('Column may already be nullable or constraint doesn\'t exist')
+        })
+        
         // Drop any constraints/indexes that reference the old category column
         await prisma.$executeRawUnsafe(`
           DROP INDEX IF EXISTS "MealOption_mealId_menuItemId_category_key";
+        `)
+        
+        // Drop any unique constraints
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "MealOption" DROP CONSTRAINT IF EXISTS "MealOption_mealId_menuItemId_category_key";
         `)
         
         // Try to drop the column
@@ -92,7 +105,16 @@ export async function POST(request: NextRequest) {
         `)
         const stillExists = (checkAfterDrop as any[])[0]?.exists || false
         if (stillExists) {
-          console.log('⚠️ Old category column still exists. May need manual intervention.')
+          console.log('⚠️ Old category column still exists. Attempting force drop...')
+          // Force drop by setting all values to NULL first, then dropping
+          await prisma.$executeRawUnsafe(`
+            UPDATE "MealOption" SET "category" = NULL WHERE "category" IS NOT NULL;
+          `).catch(() => {})
+          await prisma.$executeRawUnsafe(`
+            ALTER TABLE "MealOption" DROP COLUMN "category" CASCADE;
+          `).catch((err: any) => {
+            console.error('Force drop failed:', err.message)
+          })
         }
       } catch (error: any) {
         console.error('Error dropping old category column:', error.message)
