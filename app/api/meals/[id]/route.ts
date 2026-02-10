@@ -21,20 +21,32 @@ export async function PUT(
     }
 
     const mealId = params.id
-    const { name, description, price, image, available, mainLabel, sideLabel, drinkLabel, itemIds } = await request.json()
+    const { 
+      name, 
+      description, 
+      basePrice, 
+      image, 
+      available, 
+      category1Name, 
+      category2Name, 
+      category3Name,
+      options 
+    } = await request.json()
 
-    // If itemIds are provided, update them
-    if (itemIds && Array.isArray(itemIds)) {
-      // Delete existing meal items
-      await prisma.mealItem.deleteMany({
+    // If options are provided, update them
+    if (options && Array.isArray(options)) {
+      // Delete existing meal options
+      await prisma.mealOption.deleteMany({
         where: { mealId },
       })
 
-      // Create new meal items
-      await prisma.mealItem.createMany({
-        data: itemIds.map((menuItemId: string) => ({
+      // Create new meal options
+      await prisma.mealOption.createMany({
+        data: options.map((opt: { menuItemId: string; category: number; additionalPrice: number }) => ({
           mealId,
-          menuItemId,
+          menuItemId: opt.menuItemId,
+          category: opt.category,
+          additionalPrice: parseFloat(opt.additionalPrice?.toString() || '0'),
         })),
       })
     }
@@ -43,21 +55,25 @@ export async function PUT(
     const updateData: any = {}
     if (name) updateData.name = name
     if (description !== undefined) updateData.description = description || null
-    if (price !== undefined) updateData.price = parseFloat(price)
+    if (basePrice !== undefined) updateData.basePrice = parseFloat(basePrice)
     if (image !== undefined) updateData.image = image || null
     if (available !== undefined) updateData.available = available
-    if (mainLabel !== undefined) updateData.mainLabel = mainLabel
-    if (sideLabel !== undefined) updateData.sideLabel = sideLabel
-    if (drinkLabel !== undefined) updateData.drinkLabel = drinkLabel
+    if (category1Name !== undefined) updateData.category1Name = category1Name
+    if (category2Name !== undefined) updateData.category2Name = category2Name
+    if (category3Name !== undefined) updateData.category3Name = category3Name
 
     const meal = await prisma.meal.update({
       where: { id: mealId },
       data: updateData,
       include: {
-        items: {
+        options: {
           include: {
             menuItem: true,
           },
+          orderBy: [
+            { category: 'asc' },
+            { additionalPrice: 'asc' },
+          ],
         },
       },
     })
@@ -120,4 +136,3 @@ export async function DELETE(
     )
   }
 }
-

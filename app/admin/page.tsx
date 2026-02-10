@@ -85,20 +85,24 @@ export default function AdminPage() {
     category: '',
     image: '',
     available: true,
-    availableInMeal: false,
-    mealCategory: '',
   })
   
   const [mealForm, setMealForm] = useState({
     name: 'Meal Deal',
     description: '',
-    price: '',
+    basePrice: '',
     image: '',
     available: true,
-    mainLabel: 'Main',
-    sideLabel: 'Side',
-    drinkLabel: 'Drink',
+    category1Name: 'Fries',
+    category2Name: 'Drink',
+    category3Name: 'Side',
   })
+  
+  const [mealOptions, setMealOptions] = useState<Array<{
+    menuItemId: string
+    category: number
+    additionalPrice: number
+  }>>([])
   
   const categories = [
     { id: 'burger', name: 'Burgers' },
@@ -198,7 +202,7 @@ export default function AdminPage() {
       if (response.ok) {
         toast.success('Menu item added successfully')
         setShowAddMenuItem(false)
-        setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true, availableInMeal: false, mealCategory: '' })
+        setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true })
         setSelectedCategory('')
         fetchMenuItems()
       } else {
@@ -223,7 +227,7 @@ export default function AdminPage() {
       if (response.ok) {
         toast.success('Menu item updated successfully')
         setEditingMenuItem(null)
-        setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true, availableInMeal: false, mealCategory: '' })
+        setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true })
         setSelectedCategory('')
         fetchMenuItems()
       } else {
@@ -256,15 +260,10 @@ export default function AdminPage() {
   }
 
   const handleSaveMeal = async () => {
-    if (!mealForm.name || !mealForm.price) {
-      toast.error('Please fill in name and price')
+    if (!mealForm.name || !mealForm.basePrice) {
+      toast.error('Please fill in name and base price')
       return
     }
-
-    // Get all menu items that are marked as available in meal
-    const mealItemIds = menuItems
-      .filter(item => item.availableInMeal)
-      .map(item => item.id)
 
     try {
       const response = await fetch('/api/meals', {
@@ -272,7 +271,7 @@ export default function AdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...mealForm,
-          itemIds: mealItemIds,
+          options: mealOptions,
         }),
       })
 
@@ -280,7 +279,6 @@ export default function AdminPage() {
         toast.success('Meal saved successfully')
         setShowMealEditor(false)
         fetchMeal()
-        fetchMenuItems() // Refresh to update checkboxes
       } else {
         const error = await response.json()
         toast.error(error.error || 'Failed to save meal')
@@ -290,29 +288,31 @@ export default function AdminPage() {
     }
   }
 
-  const handleToggleMealItem = async (menuItemId: string, availableInMeal: boolean, mealCategory: string) => {
-    try {
-      const response = await fetch(`/api/menu-items/${menuItemId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          availableInMeal,
-          mealCategory: availableInMeal ? mealCategory : null,
-        }),
-      })
+  const addMealOption = (menuItemId: string, category: number) => {
+    const menuItem = menuItems.find(item => item.id === menuItemId)
+    if (!menuItem) return
 
-      if (response.ok) {
-        fetchMenuItems() // Refresh menu items
-        if (meal) {
-          // If meal exists, update it to include/exclude this item
-          handleSaveMeal()
-        }
-      } else {
-        toast.error('Failed to update menu item')
-      }
-    } catch (error) {
-      toast.error('Failed to update menu item')
+    // Check if this menu item is already in this category
+    if (mealOptions.some(opt => opt.menuItemId === menuItemId && opt.category === category)) {
+      toast.error('This item is already in this category')
+      return
     }
+
+    setMealOptions([...mealOptions, {
+      menuItemId,
+      category,
+      additionalPrice: 0,
+    }])
+  }
+
+  const removeMealOption = (index: number) => {
+    setMealOptions(mealOptions.filter((_, i) => i !== index))
+  }
+
+  const updateMealOptionPrice = (index: number, additionalPrice: number) => {
+    const updated = [...mealOptions]
+    updated[index].additionalPrice = additionalPrice
+    setMealOptions(updated)
   }
 
   const getDateRange = (): { from: Date; to: Date } => {
@@ -1071,7 +1071,7 @@ export default function AdminPage() {
                         onClick={() => {
                           setShowAddMenuItem(true)
                           setEditingMenuItem(null)
-                          setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true, availableInMeal: false, mealCategory: '' })
+                          setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true })
                           setSelectedCategory('')
                         }}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -1203,7 +1203,7 @@ export default function AdminPage() {
                       onClick={() => {
                         setShowAddMenuItem(false)
                         setEditingMenuItem(null)
-                        setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true, availableInMeal: false, mealCategory: '' })
+                        setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true })
                         setSelectedCategory('')
                       }}
                       className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
@@ -1254,8 +1254,6 @@ export default function AdminPage() {
                             category: item.category,
                             image: item.image || '',
                             available: item.available,
-                            availableInMeal: item.availableInMeal || false,
-                            mealCategory: item.mealCategory || '',
                           })
                           setSelectedCategory(item.category)
                         }}
@@ -1394,71 +1392,155 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  {/* Meal Items by Category */}
+                  {/* Meal Options by Category */}
                   <div className="mb-4">
                     <p className="text-sm text-gray-600 mb-4">
-                      Mark menu items as "Available in Meal" and select their category. Items marked will appear as choices in the meal.
+                      Add menu items to each category. Set additional price (0 for included items, or extra amount for premium options).
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* Main Items */}
+                      {/* Category 1 Options */}
                       <div className="p-4 bg-white rounded-lg border border-gray-300">
-                        <h4 className="font-semibold mb-3">{mealForm.mainLabel || 'Main'}</h4>
-                        <div className="space-y-2 max-h-64 overflow-y-auto">
-                          {menuItems.filter(item => item.availableInMeal && item.mealCategory === 'main').map(item => (
-                            <label key={item.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={true}
-                                onChange={() => handleToggleMealItem(item.id, false, '')}
-                                className="w-4 h-4"
-                              />
-                              <span className="text-sm">{item.name}</span>
-                            </label>
+                        <h4 className="font-semibold mb-3">{mealForm.category1Name || 'Category 1'}</h4>
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              addMealOption(e.target.value, 1)
+                              e.target.value = ''
+                            }
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 text-sm"
+                        >
+                          <option value="">Add menu item...</option>
+                          {menuItems.filter(item => item.available && !mealOptions.some(opt => opt.menuItemId === item.id && opt.category === 1)).map(item => (
+                            <option key={item.id} value={item.id}>{item.name}</option>
                           ))}
-                          {menuItems.filter(item => item.availableInMeal && item.mealCategory === 'main').length === 0 && (
-                            <p className="text-xs text-gray-500">No items in this category</p>
+                        </select>
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {mealOptions.filter(opt => opt.category === 1).map((opt, idx) => {
+                            const menuItem = menuItems.find(item => item.id === opt.menuItemId)
+                            const actualIdx = mealOptions.findIndex(o => o === opt)
+                            return (
+                              <div key={idx} className="p-2 bg-gray-50 rounded flex items-center justify-between gap-2">
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium">{menuItem?.name}</p>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={opt.additionalPrice}
+                                    onChange={(e) => updateMealOptionPrice(actualIdx, parseFloat(e.target.value) || 0)}
+                                    className="w-full mt-1 px-2 py-1 text-xs border border-gray-300 rounded"
+                                    placeholder="Extra price"
+                                  />
+                                </div>
+                                <button
+                                  onClick={() => removeMealOption(actualIdx)}
+                                  className="text-red-600 hover:text-red-800"
+                                >
+                                  <XIcon className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )
+                          })}
+                          {mealOptions.filter(opt => opt.category === 1).length === 0 && (
+                            <p className="text-xs text-gray-500 text-center py-2">No items added</p>
                           )}
                         </div>
                       </div>
 
-                      {/* Side Items */}
+                      {/* Category 2 Options */}
                       <div className="p-4 bg-white rounded-lg border border-gray-300">
-                        <h4 className="font-semibold mb-3">{mealForm.sideLabel || 'Side'}</h4>
-                        <div className="space-y-2 max-h-64 overflow-y-auto">
-                          {menuItems.filter(item => item.availableInMeal && item.mealCategory === 'side').map(item => (
-                            <label key={item.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={true}
-                                onChange={() => handleToggleMealItem(item.id, false, '')}
-                                className="w-4 h-4"
-                              />
-                              <span className="text-sm">{item.name}</span>
-                            </label>
+                        <h4 className="font-semibold mb-3">{mealForm.category2Name || 'Category 2'}</h4>
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              addMealOption(e.target.value, 2)
+                              e.target.value = ''
+                            }
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 text-sm"
+                        >
+                          <option value="">Add menu item...</option>
+                          {menuItems.filter(item => item.available && !mealOptions.some(opt => opt.menuItemId === item.id && opt.category === 2)).map(item => (
+                            <option key={item.id} value={item.id}>{item.name}</option>
                           ))}
-                          {menuItems.filter(item => item.availableInMeal && item.mealCategory === 'side').length === 0 && (
-                            <p className="text-xs text-gray-500">No items in this category</p>
+                        </select>
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {mealOptions.filter(opt => opt.category === 2).map((opt, idx) => {
+                            const menuItem = menuItems.find(item => item.id === opt.menuItemId)
+                            const actualIdx = mealOptions.findIndex(o => o === opt)
+                            return (
+                              <div key={idx} className="p-2 bg-gray-50 rounded flex items-center justify-between gap-2">
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium">{menuItem?.name}</p>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={opt.additionalPrice}
+                                    onChange={(e) => updateMealOptionPrice(actualIdx, parseFloat(e.target.value) || 0)}
+                                    className="w-full mt-1 px-2 py-1 text-xs border border-gray-300 rounded"
+                                    placeholder="Extra price"
+                                  />
+                                </div>
+                                <button
+                                  onClick={() => removeMealOption(actualIdx)}
+                                  className="text-red-600 hover:text-red-800"
+                                >
+                                  <XIcon className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )
+                          })}
+                          {mealOptions.filter(opt => opt.category === 2).length === 0 && (
+                            <p className="text-xs text-gray-500 text-center py-2">No items added</p>
                           )}
                         </div>
                       </div>
 
-                      {/* Drink Items */}
+                      {/* Category 3 Options */}
                       <div className="p-4 bg-white rounded-lg border border-gray-300">
-                        <h4 className="font-semibold mb-3">{mealForm.drinkLabel || 'Drink'}</h4>
-                        <div className="space-y-2 max-h-64 overflow-y-auto">
-                          {menuItems.filter(item => item.availableInMeal && item.mealCategory === 'drink').map(item => (
-                            <label key={item.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={true}
-                                onChange={() => handleToggleMealItem(item.id, false, '')}
-                                className="w-4 h-4"
-                              />
-                              <span className="text-sm">{item.name}</span>
-                            </label>
+                        <h4 className="font-semibold mb-3">{mealForm.category3Name || 'Category 3'}</h4>
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              addMealOption(e.target.value, 3)
+                              e.target.value = ''
+                            }
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 text-sm"
+                        >
+                          <option value="">Add menu item...</option>
+                          {menuItems.filter(item => item.available && !mealOptions.some(opt => opt.menuItemId === item.id && opt.category === 3)).map(item => (
+                            <option key={item.id} value={item.id}>{item.name}</option>
                           ))}
-                          {menuItems.filter(item => item.availableInMeal && item.mealCategory === 'drink').length === 0 && (
-                            <p className="text-xs text-gray-500">No items in this category</p>
+                        </select>
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {mealOptions.filter(opt => opt.category === 3).map((opt, idx) => {
+                            const menuItem = menuItems.find(item => item.id === opt.menuItemId)
+                            const actualIdx = mealOptions.findIndex(o => o === opt)
+                            return (
+                              <div key={idx} className="p-2 bg-gray-50 rounded flex items-center justify-between gap-2">
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium">{menuItem?.name}</p>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={opt.additionalPrice}
+                                    onChange={(e) => updateMealOptionPrice(actualIdx, parseFloat(e.target.value) || 0)}
+                                    className="w-full mt-1 px-2 py-1 text-xs border border-gray-300 rounded"
+                                    placeholder="Extra price"
+                                  />
+                                </div>
+                                <button
+                                  onClick={() => removeMealOption(actualIdx)}
+                                  className="text-red-600 hover:text-red-800"
+                                >
+                                  <XIcon className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )
+                          })}
+                          {mealOptions.filter(opt => opt.category === 3).length === 0 && (
+                            <p className="text-xs text-gray-500 text-center py-2">No items added</p>
                           )}
                         </div>
                       </div>
@@ -1495,7 +1577,7 @@ export default function AdminPage() {
                       <h4 className="font-semibold">{meal.name}</h4>
                       <p className="text-sm text-gray-600">{meal.description}</p>
                       <div className="flex items-center gap-4 mt-1">
-                        <span className="text-sm font-medium text-green-600">${meal.price.toFixed(2)}</span>
+                        <span className="text-sm font-medium text-green-600">Base: ${meal.basePrice?.toFixed(2) || '0.00'}</span>
                         {!meal.available && (
                           <span className="text-xs text-red-600 font-medium">Unavailable</span>
                         )}
@@ -1503,7 +1585,12 @@ export default function AdminPage() {
                     </div>
                   </div>
                   <div className="mt-3 text-sm text-gray-600">
-                    <p>Items available in meal: {menuItems.filter(item => item.availableInMeal).length}</p>
+                    <p>Options: {meal.options?.length || 0} items across 3 categories</p>
+                    <div className="mt-2 text-xs">
+                      <p>{meal.category1Name}: {meal.options?.filter((opt: any) => opt.category === 1).length || 0} options</p>
+                      <p>{meal.category2Name}: {meal.options?.filter((opt: any) => opt.category === 2).length || 0} options</p>
+                      <p>{meal.category3Name}: {meal.options?.filter((opt: any) => opt.category === 3).length || 0} options</p>
+                    </div>
                   </div>
                 </div>
               )}

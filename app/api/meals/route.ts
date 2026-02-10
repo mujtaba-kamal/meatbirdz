@@ -11,10 +11,14 @@ export async function GET() {
     // Get the first (and only) meal, or return null if none exists
     const meal = await prisma.meal.findFirst({
       include: {
-        items: {
+        options: {
           include: {
             menuItem: true,
           },
+          orderBy: [
+            { category: 'asc' },
+            { additionalPrice: 'asc' },
+          ],
         },
       },
     })
@@ -42,11 +46,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { name, description, price, image, available, mainLabel, sideLabel, drinkLabel, itemIds } = await request.json()
+    const { 
+      name, 
+      description, 
+      basePrice, 
+      image, 
+      available, 
+      category1Name, 
+      category2Name, 
+      category3Name,
+      options // Array of { menuItemId, category (1-3), additionalPrice }
+    } = await request.json()
 
-    if (!name || price === undefined) {
+    if (!name || basePrice === undefined) {
       return NextResponse.json(
-        { error: 'Name and price are required' },
+        { error: 'Name and base price are required' },
         { status: 400 }
       )
     }
@@ -57,64 +71,76 @@ export async function POST(request: NextRequest) {
     let meal
     if (existingMeal) {
       // Update existing meal
-      // Delete existing meal items
-      await prisma.mealItem.deleteMany({
+      // Delete existing meal options
+      await prisma.mealOption.deleteMany({
         where: { mealId: existingMeal.id },
       })
 
-      // Update meal and create new items
+      // Update meal and create new options
       const updateData: any = {
         name,
         description: description || null,
-        price: parseFloat(price),
+        basePrice: parseFloat(basePrice),
         image: image || null,
         available: available !== undefined ? available : true,
-        items: {
-          create: (itemIds || []).map((menuItemId: string) => ({
-            menuItemId,
+        category1Name: category1Name || 'Fries',
+        category2Name: category2Name || 'Drink',
+        category3Name: category3Name || 'Side',
+        options: {
+          create: (options || []).map((opt: { menuItemId: string; category: number; additionalPrice: number }) => ({
+            menuItemId: opt.menuItemId,
+            category: opt.category,
+            additionalPrice: parseFloat(opt.additionalPrice?.toString() || '0'),
           })),
         },
       }
-
-      // Only include label fields if they are provided
-      if (mainLabel !== undefined) updateData.mainLabel = mainLabel || 'Main'
-      if (sideLabel !== undefined) updateData.sideLabel = sideLabel || 'Side'
-      if (drinkLabel !== undefined) updateData.drinkLabel = drinkLabel || 'Drink'
 
       meal = await prisma.meal.update({
         where: { id: existingMeal.id },
         data: updateData,
         include: {
-          items: {
+          options: {
             include: {
               menuItem: true,
             },
+            orderBy: [
+              { category: 'asc' },
+              { additionalPrice: 'asc' },
+            ],
           },
         },
       })
     } else {
       // Create new meal
-      meal = await prisma.meal.create({
-        data: {
-          name,
-          description: description || null,
-          price: parseFloat(price),
-          image: image || null,
-          available: available !== undefined ? available : true,
-          mainLabel: mainLabel || 'Main',
-          sideLabel: sideLabel || 'Side',
-          drinkLabel: drinkLabel || 'Drink',
-          items: {
-            create: (itemIds || []).map((menuItemId: string) => ({
-              menuItemId,
-            })),
-          },
+      const createData: any = {
+        name,
+        description: description || null,
+        basePrice: parseFloat(basePrice),
+        image: image || null,
+        available: available !== undefined ? available : true,
+        category1Name: category1Name || 'Fries',
+        category2Name: category2Name || 'Drink',
+        category3Name: category3Name || 'Side',
+        options: {
+          create: (options || []).map((opt: { menuItemId: string; category: number; additionalPrice: number }) => ({
+            menuItemId: opt.menuItemId,
+            category: opt.category,
+            additionalPrice: parseFloat(opt.additionalPrice?.toString() || '0'),
+          })),
         },
+      }
+
+      meal = await prisma.meal.create({
+        data: createData,
         include: {
-          items: {
+          options: {
             include: {
               menuItem: true,
             },
+            orderBy: [
+              { category: 'asc' },
+              { additionalPrice: 'asc' },
+            ],
           },
         },
       })
@@ -129,4 +155,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-

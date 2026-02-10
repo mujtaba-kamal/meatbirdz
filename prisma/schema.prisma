@@ -25,7 +25,7 @@ model MenuItem {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   orderItems      OrderItem[]
-  mealItems       MealItem[]
+  mealOptions     MealOption[]
 }
 
 model User {
@@ -78,27 +78,29 @@ model Meal {
   id          String   @id @default(cuid())
   name        String   @default("Meal Deal")
   description String?
-  price       Float
+  basePrice   Float    // Base price of the meal
   image       String?
   available   Boolean  @default(true)
-  mainLabel   String   @default("Main")
-  sideLabel   String   @default("Side")
-  drinkLabel  String   @default("Drink")
+  category1Name String @default("Fries") // Name of first category
+  category2Name String @default("Drink") // Name of second category
+  category3Name String @default("Side")  // Name of third category
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  items       MealItem[]
+  options     MealOption[]
   orderItems  OrderItem[]
 }
 
-model MealItem {
+model MealOption {
   id          String   @id @default(cuid())
   mealId      String
   menuItemId  String
+  category    Int      // 1, 2, or 3 - which category this option belongs to
+  additionalPrice Float @default(0) // Additional price on top of base meal price (can be 0 for included items)
   meal        Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
   menuItem    MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   
-  @@unique([mealId, menuItemId])
+  @@unique([mealId, menuItemId, category])
 }
 
 enum OrderStatus {
