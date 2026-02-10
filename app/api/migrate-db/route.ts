@@ -211,27 +211,31 @@ export async function POST(request: NextRequest) {
         `)
       }
 
-      // Add new columns to MenuItem table if they don't exist
-      const checkAvailableInMeal = await prisma.$queryRawUnsafe(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.columns 
-          WHERE table_schema = 'public' 
-          AND table_name = 'MenuItem' 
-          AND column_name = 'availableInMeal'
-        );
+      // Remove availableInMeal and mealCategory columns from MenuItem if they exist (no longer needed)
+      console.log('Removing old columns from "MenuItem" table...')
+      await prisma.$executeRawUnsafe(`
+        DO $$ 
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'MenuItem' 
+            AND column_name = 'availableInMeal'
+          ) THEN
+            ALTER TABLE "MenuItem" DROP COLUMN "availableInMeal";
+          END IF;
+          
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'MenuItem' 
+            AND column_name = 'mealCategory'
+          ) THEN
+            ALTER TABLE "MenuItem" DROP COLUMN "mealCategory";
+          END IF;
+        END $$;
       `)
-      
-      if (!(checkAvailableInMeal as any[])[0]?.exists) {
-        console.log('Adding availableInMeal and mealCategory to MenuItem table...')
-        await prisma.$executeRawUnsafe(`
-          ALTER TABLE "MenuItem" 
-          ADD COLUMN IF NOT EXISTS "availableInMeal" BOOLEAN NOT NULL DEFAULT false;
-        `)
-        await prisma.$executeRawUnsafe(`
-          ALTER TABLE "MenuItem" 
-          ADD COLUMN IF NOT EXISTS "mealCategory" TEXT;
-        `)
-      }
+      console.log('✅ Old columns removed from "MenuItem" table (if existed).')
 
       // Remove quantity column from MealItem if it exists (no longer needed)
       const checkQuantity = await prisma.$queryRawUnsafe(`
