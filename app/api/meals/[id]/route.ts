@@ -80,9 +80,9 @@ export async function PUT(
         await prisma.mealOption.createMany({
           data: options.map((opt: { menuItemId: string; categoryId?: string; categoryOrder?: number; additionalPrice: number }) => {
             // Use categoryId if provided, otherwise resolve from categoryOrder
-            let categoryId = opt.categoryId
+            let categoryId: string | undefined = opt.categoryId
             if (!categoryId && opt.categoryOrder !== undefined) {
-              categoryId = categoryMap.get(opt.categoryOrder) || null
+              categoryId = categoryMap.get(opt.categoryOrder)
             }
             
             if (!categoryId) {
@@ -92,10 +92,10 @@ export async function PUT(
             return {
               mealId,
               menuItemId: opt.menuItemId,
-              categoryId: categoryId as string, // Type assertion since we've validated it's not null
+              categoryId: categoryId, // categoryId is guaranteed to be string here due to the check above
               additionalPrice: parseFloat(opt.additionalPrice?.toString() || '0'),
             }
-          }).filter((opt): opt is { mealId: string; menuItemId: string; categoryId: string; additionalPrice: number } => opt.categoryId !== null), // Filter out any that couldn't be resolved
+          }), // No need to filter since we throw an error if categoryId can't be resolved
         })
       }
     }
