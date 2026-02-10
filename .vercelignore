@@ -1,6 +1,5 @@
-node_modules
-.next
+# Vercel ignore file
 .env
 .env.local
-.vercel
-
+.env.production.local
+.env.development.local
