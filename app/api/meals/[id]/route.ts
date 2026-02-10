@@ -32,20 +32,39 @@ export async function PUT(
       menuItemIds, // Array of menu item IDs to link this meal to
     } = await request.json()
 
-    // Update categories if provided
+    // Update categories if provided - must be done first so we have category IDs for options
+    let categoryMap = new Map<number, string>() // Map order -> categoryId
+    
     if (categories && Array.isArray(categories)) {
       // Delete existing categories (cascade will delete options)
       await prisma.mealCategory.deleteMany({
         where: { mealId },
       })
 
-      // Create new categories
-      await prisma.mealCategory.createMany({
-        data: categories.map((cat: { name: string; order: number }) => ({
-          mealId,
-          name: cat.name,
-          order: cat.order,
-        })),
+      // Create new categories and get their IDs
+      const createdCategories = await Promise.all(
+        categories.map((cat: { name: string; order: number }) =>
+          prisma.mealCategory.create({
+            data: {
+              mealId,
+              name: cat.name,
+              order: cat.order,
+            },
+          })
+        )
+      )
+      
+      // Build map of order -> categoryId
+      createdCategories.forEach(cat => {
+        categoryMap.set(cat.order, cat.id)
+      })
+    } else {
+      // If categories not provided, fetch existing ones to build the map
+      const existingCategories = await prisma.mealCategory.findMany({
+        where: { mealId },
+      })
+      existingCategories.forEach(cat => {
+        categoryMap.set(cat.order, cat.id)
       })
     }
 
@@ -56,15 +75,29 @@ export async function PUT(
         where: { mealId },
       })
 
-      // Create new meal options
-      await prisma.mealOption.createMany({
-        data: options.map((opt: { menuItemId: string; categoryId: string; additionalPrice: number }) => ({
-          mealId,
-          menuItemId: opt.menuItemId,
-          categoryId: opt.categoryId,
-          additionalPrice: parseFloat(opt.additionalPrice?.toString() || '0'),
-        })),
-      })
+      // Create new meal options - resolve categoryId from categoryOrder if needed
+      if (options.length > 0) {
+        await prisma.mealOption.createMany({
+          data: options.map((opt: { menuItemId: string; categoryId?: string; categoryOrder?: number; additionalPrice: number }) => {
+            // Use categoryId if provided, otherwise resolve from categoryOrder
+            let categoryId = opt.categoryId
+            if (!categoryId && opt.categoryOrder !== undefined) {
+              categoryId = categoryMap.get(opt.categoryOrder) || null
+            }
+            
+            if (!categoryId) {
+              throw new Error(`Could not resolve categoryId for option: ${JSON.stringify(opt)}. Available categories: ${Array.from(categoryMap.entries()).map(([order, id]) => `order ${order} -> ${id}`).join(', ')}`)
+            }
+            
+            return {
+              mealId,
+              menuItemId: opt.menuItemId,
+              categoryId: categoryId,
+              additionalPrice: parseFloat(opt.additionalPrice?.toString() || '0'),
+            }
+          }).filter(opt => opt.categoryId !== null), // Filter out any that couldn't be resolved
+        })
+      }
     }
 
     // Update menu item links if provided
