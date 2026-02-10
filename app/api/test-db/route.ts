@@ -8,7 +8,7 @@ export async function GET() {
     
     // Try a simple query
     const result = await prisma.$queryRaw<Array<{ version: string }>>`SELECT version() as version`
-    const version = result[0]?.version || 'Unknown'
+    const version = (result[0] as { version: string } | undefined)?.version || 'Unknown'
     
     // Check if tables exist
     const tables = await prisma.$queryRaw<Array<{ table_name: string }>>`
