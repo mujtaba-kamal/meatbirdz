@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/lib/auth'
 import { stripe } from '@/lib/stripe'
+import { PaymentStatus } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,8 +34,6 @@ export async function POST(request: NextRequest) {
         if (paymentIntent.status === 'succeeded') {
           paymentStatus = PaymentStatus.PAID
           stripePaymentId = paymentIntent.id
-        } else if (paymentIntent.status === 'failed') {
-          paymentStatus = PaymentStatus.FAILED
         }
       } catch (error) {
         console.error('Error verifying payment intent:', error)
@@ -69,15 +68,6 @@ export async function POST(request: NextRequest) {
         items: {
           include: {
             menuItem: true,
-            meal: {
-              include: {
-                items: {
-                  include: {
-                    menuItem: true,
-                  },
-                },
-              },
-            },
           },
         },
       },
