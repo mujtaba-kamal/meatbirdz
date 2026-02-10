@@ -39,11 +39,14 @@ export async function POST(request: NextRequest) {
       await prisma.$executeRawUnsafe(`
         CREATE TABLE IF NOT EXISTS "Meal" (
           "id" TEXT NOT NULL,
-          "name" TEXT NOT NULL,
+          "name" TEXT NOT NULL DEFAULT 'Meal Deal',
           "description" TEXT,
           "price" DOUBLE PRECISION NOT NULL,
           "image" TEXT,
           "available" BOOLEAN NOT NULL DEFAULT true,
+          "mainLabel" TEXT NOT NULL DEFAULT 'Main',
+          "sideLabel" TEXT NOT NULL DEFAULT 'Side',
+          "drinkLabel" TEXT NOT NULL DEFAULT 'Drink',
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           "updatedAt" TIMESTAMP(3) NOT NULL,
           CONSTRAINT "Meal_pkey" PRIMARY KEY ("id")
@@ -180,10 +183,77 @@ export async function POST(request: NextRequest) {
         ],
       })
     } else {
-      console.log('Meal table already exists. Migration may have already been run.')
+      console.log('Meal table already exists. Checking for new columns...')
+      
+      // Add new columns to Meal table if they don't exist
+      const checkMainLabel = await prisma.$queryRawUnsafe(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_schema = 'public' 
+          AND table_name = 'Meal' 
+          AND column_name = 'mainLabel'
+        );
+      `)
+      
+      if (!(checkMainLabel as any[])[0]?.exists) {
+        console.log('Adding mainLabel, sideLabel, drinkLabel to Meal table...')
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "Meal" 
+          ADD COLUMN IF NOT EXISTS "mainLabel" TEXT NOT NULL DEFAULT 'Main';
+        `)
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "Meal" 
+          ADD COLUMN IF NOT EXISTS "sideLabel" TEXT NOT NULL DEFAULT 'Side';
+        `)
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "Meal" 
+          ADD COLUMN IF NOT EXISTS "drinkLabel" TEXT NOT NULL DEFAULT 'Drink';
+        `)
+      }
+
+      // Add new columns to MenuItem table if they don't exist
+      const checkAvailableInMeal = await prisma.$queryRawUnsafe(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_schema = 'public' 
+          AND table_name = 'MenuItem' 
+          AND column_name = 'availableInMeal'
+        );
+      `)
+      
+      if (!(checkAvailableInMeal as any[])[0]?.exists) {
+        console.log('Adding availableInMeal and mealCategory to MenuItem table...')
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "MenuItem" 
+          ADD COLUMN IF NOT EXISTS "availableInMeal" BOOLEAN NOT NULL DEFAULT false;
+        `)
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "MenuItem" 
+          ADD COLUMN IF NOT EXISTS "mealCategory" TEXT;
+        `)
+      }
+
+      // Remove quantity column from MealItem if it exists (no longer needed)
+      const checkQuantity = await prisma.$queryRawUnsafe(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_schema = 'public' 
+          AND table_name = 'MealItem' 
+          AND column_name = 'quantity'
+        );
+      `)
+      
+      if ((checkQuantity as any[])[0]?.exists) {
+        console.log('Removing quantity column from MealItem table...')
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "MealItem" 
+          DROP COLUMN IF EXISTS "quantity";
+        `)
+      }
+
       return NextResponse.json({
         success: true,
-        message: 'Database schema is up to date. Migration already completed.',
+        message: 'Database schema updated successfully',
         alreadyMigrated: true,
       })
     }
