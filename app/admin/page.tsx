@@ -62,6 +62,7 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null)
   const [dateFilter, setDateFilter] = useState<DateFilter>('24h')
   const [customFromDate, setCustomFromDate] = useState<string>('')
   const [customToDate, setCustomToDate] = useState<string>('')
@@ -284,10 +285,23 @@ export default function AdminPage() {
     <div className="min-h-screen py-6 sm:py-8 px-4 bg-gradient-to-br from-blue-50 via-white to-blue-50">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-            Admin Dashboard
-          </h1>
-          <p className="text-sm sm:text-base text-gray-600">Manage orders and track deliveries</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                Admin Dashboard
+              </h1>
+              <p className="text-sm sm:text-base text-gray-600">Manage orders and track deliveries</p>
+            </div>
+            {lastUpdateTime && (
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span>Live updates</span>
+                <span className="text-gray-400">
+                  {lastUpdateTime.toLocaleTimeString()}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Date Filter Section */}
