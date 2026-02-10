@@ -267,6 +267,12 @@ export default function AdminPage() {
     order => order.arrivalNotification && !order.arrivalAcknowledged
   )
 
+  // Calculate order counts by status
+  const orderCountsByStatus = orderStatuses.reduce((acc, status) => {
+    acc[status] = orders.filter(order => order.status === status).length
+    return acc
+  }, {} as Record<string, number>)
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -471,7 +477,31 @@ export default function AdminPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {/* Orders List */}
           <div className="lg:col-span-2">
-            <h2 className="text-xl font-semibold mb-4">Recent Orders ({orders.length})</h2>
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold mb-3">Recent Orders ({orders.length})</h2>
+              
+              {/* Status Tags with Counts */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {orderStatuses.map((status) => {
+                  const count = orderCountsByStatus[status] || 0
+                  if (count === 0) return null
+                  
+                  return (
+                    <div
+                      key={status}
+                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold ${
+                        statusColors[status] || statusColors.PENDING
+                      }`}
+                    >
+                      <span>{status}</span>
+                      <span className="bg-white/50 px-2 py-0.5 rounded-full text-xs font-bold">
+                        {count}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
             <div className="space-y-3">
               {orders.length === 0 ? (
                 <div className="bg-white rounded-2xl shadow-lg p-8 text-center border border-primary-100">
