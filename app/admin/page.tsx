@@ -336,12 +336,27 @@ export default function AdminPage() {
       let optionsToSend
       
       if (meal && meal.id) {
-        // Existing meal: use actual category IDs
-        optionsToSend = mealOptions.map(opt => ({
-          menuItemId: opt.menuItemId,
-          categoryId: opt.categoryId,
-          additionalPrice: opt.additionalPrice,
-        }))
+        // Existing meal: resolve categoryId from categoryOrder since categories may have been recreated
+        // Match each option to its category by finding the category with matching ID or by order
+        optionsToSend = mealOptions.map(opt => {
+          // Find which category this option belongs to
+          const category = mealCategories.find(cat => {
+            return opt.categoryId === cat.id || opt.categoryId === `temp_${mealCategories.indexOf(cat)}_${cat.order}`
+          })
+          
+          if (!category) {
+            console.error('Could not find category for option:', opt)
+            return null
+          }
+          
+          // Always send categoryOrder for updates to ensure proper resolution
+          return {
+            menuItemId: opt.menuItemId,
+            categoryOrder: category.order, // Always use order for updates
+            categoryId: category.id, // Include ID as fallback
+            additionalPrice: opt.additionalPrice,
+          }
+        }).filter(Boolean) // Remove any null entries
       } else {
         // New meal: map by category order (temporary IDs start with "temp_")
         // Match options to categories by finding the category with matching temp ID or order
@@ -528,7 +543,7 @@ export default function AdminPage() {
       const data = await response.json()
       // Ensure data is always an array
       if (Array.isArray(data)) {
-        setOrders(data)
+      setOrders(data)
       } else {
         console.error('Expected array but got:', data)
         setOrders([])
@@ -540,7 +555,7 @@ export default function AdminPage() {
     } catch (error) {
       // Don't show error toast on every failed request (too noisy)
       if (orders.length === 0) {
-        toast.error('Failed to load orders')
+      toast.error('Failed to load orders')
       }
     } finally {
       setLoading(false)
@@ -685,10 +700,10 @@ export default function AdminPage() {
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                Admin Dashboard
-              </h1>
-              <p className="text-sm sm:text-base text-gray-600">Manage orders and track deliveries</p>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+            Admin Dashboard
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600">Manage orders and track deliveries</p>
             </div>
             {lastUpdateTime && activeTab === 'orders' && (
               <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -699,7 +714,7 @@ export default function AdminPage() {
                 </span>
               </div>
             )}
-          </div>
+        </div>
           
           {/* Tabs */}
           <div className="flex gap-2 mt-4 border-b border-gray-200">
@@ -932,8 +947,8 @@ export default function AdminPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-bold text-lg text-gray-900 truncate">
-                            {order.customerName}
-                          </h3>
+                          {order.customerName}
+                        </h3>
                           <span className="text-xs text-gray-500">#{order.id.slice(-8)}</span>
                           {order.arrivalNotification && !order.arrivalAcknowledged && (
                             <span className="flex items-center bg-orange-500 text-white px-2 py-0.5 rounded text-xs font-bold animate-pulse">
@@ -956,8 +971,8 @@ export default function AdminPage() {
                             value={order.status}
                             onChange={(e) => updateOrderStatus(order.id, e.target.value)}
                             className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                              statusColors[order.status] || statusColors.PENDING
-                            }`}
+                            statusColors[order.status] || statusColors.PENDING
+                          }`}
                             onClick={(e) => e.stopPropagation()}
                           >
                             {orderStatuses.map((status) => (
@@ -967,8 +982,8 @@ export default function AdminPage() {
                             ))}
                           </select>
                           <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-600" />
-                        </div>
                       </div>
+                    </div>
                     </div>
 
                     {/* Information Grid */}
@@ -1011,10 +1026,10 @@ export default function AdminPage() {
                     {/* Footer Row */}
                     <div className="flex items-center justify-between pt-2 border-t border-gray-200">
                       <div className="flex items-center gap-3">
-                        {order.paymentStatus === 'PAID' ? (
+                      {order.paymentStatus === 'PAID' ? (
                           <span className="flex items-center text-green-600 text-sm font-semibold">
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Paid
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Paid
                           </span>
                         ) : (
                           <div className="flex items-center gap-2">
@@ -1031,13 +1046,13 @@ export default function AdminPage() {
                                     COD
                                   </>
                                 )}
-                              </span>
-                            ) : (
-                              <span className="flex items-center text-red-600 text-sm">
-                                <XCircle className="w-4 h-4 mr-1" />
-                                {order.paymentStatus}
-                              </span>
-                            )}
+                        </span>
+                      ) : (
+                        <span className="flex items-center text-red-600 text-sm">
+                          <XCircle className="w-4 h-4 mr-1" />
+                          {order.paymentStatus}
+                        </span>
+                      )}
                           </div>
                         )}
                       </div>
@@ -1228,7 +1243,7 @@ export default function AdminPage() {
                   <Plus className="w-4 h-4" />
                   Add Menu Item
                 </button>
-              </div>
+      </div>
 
               {/* Add/Edit Menu Item Form */}
               {(showAddMenuItem || editingMenuItem) && (
@@ -1574,8 +1589,8 @@ export default function AdminPage() {
                                     >
                                       <XIcon className="w-4 h-4" />
                                     </button>
-                                  </div>
-                                )
+    </div>
+  )
                               })}
                               {categoryOptions.length === 0 && (
                                 <p className="text-xs text-gray-500 text-center py-2">No items added</p>

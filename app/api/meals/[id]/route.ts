@@ -78,15 +78,47 @@ export async function PUT(
       // Create new meal options - resolve categoryId from categoryOrder if needed
       // Use raw SQL to avoid Prisma trying to use the old 'category' column
       if (options.length > 0) {
+        // Always re-fetch categories to ensure we have the latest IDs after creation
+        const currentCategories = await prisma.$queryRawUnsafe(`
+          SELECT id, "order" FROM "MealCategory" WHERE "mealId" = $1 ORDER BY "order" ASC;
+        `, mealId) as Array<{ id: string; order: number }>
+        
+        // Rebuild category map with fresh data
+        const freshCategoryMap = new Map<number, string>()
+        currentCategories.forEach(cat => {
+          freshCategoryMap.set(cat.order, cat.id)
+        })
+        
+        // Also create a reverse map: categoryId -> order (to validate provided categoryIds)
+        const categoryIdToOrder = new Map<string, number>()
+        currentCategories.forEach(cat => {
+          categoryIdToOrder.set(cat.id, cat.order)
+        })
+        
+        console.log('Category map for meal:', Array.from(freshCategoryMap.entries()))
+        console.log('Options to create:', JSON.stringify(options, null, 2))
+        
         for (const opt of options) {
-          // Use categoryId if provided, otherwise resolve from categoryOrder
-          let categoryId: string | undefined = opt.categoryId
-          if (!categoryId && opt.categoryOrder !== undefined) {
-            categoryId = categoryMap.get(opt.categoryOrder)
+          // Resolve categoryId: prefer categoryOrder, then validate categoryId if provided
+          let categoryId: string | undefined = undefined
+          
+          if (opt.categoryOrder !== undefined) {
+            // Use categoryOrder to resolve categoryId (most reliable)
+            categoryId = freshCategoryMap.get(opt.categoryOrder)
+          } else if (opt.categoryId) {
+            // If categoryId is provided, validate it exists in current categories
+            if (categoryIdToOrder.has(opt.categoryId)) {
+              categoryId = opt.categoryId
+            } else {
+              // Invalid categoryId (probably from old categories), try to find by matching order
+              console.warn(`Invalid categoryId ${opt.categoryId} provided, attempting to resolve by other means`)
+            }
           }
           
           if (!categoryId) {
-            throw new Error(`Could not resolve categoryId for option: ${JSON.stringify(opt)}. Available categories: ${Array.from(categoryMap.entries()).map(([order, id]) => `order ${order} -> ${id}`).join(', ')}`)
+            const errorMsg = `Could not resolve categoryId for option: ${JSON.stringify(opt)}. Available categories: ${Array.from(freshCategoryMap.entries()).map(([order, id]) => `order ${order} -> ${id}`).join(', ')}`
+            console.error(errorMsg)
+            throw new Error(errorMsg)
           }
           
           // Use raw SQL to insert, explicitly specifying only the columns we want
