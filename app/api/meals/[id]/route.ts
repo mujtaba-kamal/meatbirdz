@@ -40,18 +40,19 @@ export async function PUT(
     }
 
     // Update meal details
+    const updateData: any = {}
+    if (name) updateData.name = name
+    if (description !== undefined) updateData.description = description || null
+    if (price !== undefined) updateData.price = parseFloat(price)
+    if (image !== undefined) updateData.image = image || null
+    if (available !== undefined) updateData.available = available
+    if (mainLabel !== undefined) updateData.mainLabel = mainLabel
+    if (sideLabel !== undefined) updateData.sideLabel = sideLabel
+    if (drinkLabel !== undefined) updateData.drinkLabel = drinkLabel
+
     const meal = await prisma.meal.update({
       where: { id: mealId },
-      data: {
-        ...(name && { name }),
-        ...(description !== undefined && { description: description || null }),
-        ...(price !== undefined && { price: parseFloat(price) }),
-        ...(image !== undefined && { image: image || null }),
-        ...(available !== undefined && { available }),
-        ...(mainLabel && { mainLabel }),
-        ...(sideLabel && { sideLabel }),
-        ...(drinkLabel && { drinkLabel }),
-      },
+      data: updateData,
       include: {
         items: {
           include: {

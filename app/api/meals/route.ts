@@ -63,23 +63,27 @@ export async function POST(request: NextRequest) {
       })
 
       // Update meal and create new items
+      const updateData: any = {
+        name,
+        description: description || null,
+        price: parseFloat(price),
+        image: image || null,
+        available: available !== undefined ? available : true,
+        items: {
+          create: (itemIds || []).map((menuItemId: string) => ({
+            menuItemId,
+          })),
+        },
+      }
+
+      // Only include label fields if they are provided
+      if (mainLabel !== undefined) updateData.mainLabel = mainLabel || 'Main'
+      if (sideLabel !== undefined) updateData.sideLabel = sideLabel || 'Side'
+      if (drinkLabel !== undefined) updateData.drinkLabel = drinkLabel || 'Drink'
+
       meal = await prisma.meal.update({
         where: { id: existingMeal.id },
-        data: {
-          name,
-          description: description || null,
-          price: parseFloat(price),
-          image: image || null,
-          available: available !== undefined ? available : true,
-          mainLabel: mainLabel || 'Main',
-          sideLabel: sideLabel || 'Side',
-          drinkLabel: drinkLabel || 'Drink',
-          items: {
-            create: (itemIds || []).map((menuItemId: string) => ({
-              menuItemId,
-            })),
-          },
-        },
+        data: updateData,
         include: {
           items: {
             include: {
