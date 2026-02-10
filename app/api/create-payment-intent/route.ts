@@ -21,10 +21,24 @@ export async function POST(request: NextRequest) {
     const { items, customerInfo, total } = await request.json()
     const session = await getServerSession(authOptions)
 
+    // Validate userId exists if provided
+    let validUserId: string | null = null
+    if (session?.user?.id) {
+      const userExists = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { id: true },
+      })
+      if (userExists) {
+        validUserId = session.user.id
+      } else {
+        console.warn(`User ID ${session.user.id} from session does not exist in database, creating order without userId`)
+      }
+    }
+
     // Create order in database
     const order = await prisma.order.create({
       data: {
-        userId: session?.user?.id || null,
+        userId: validUserId,
         customerName: customerInfo.customerName,
         customerEmail: customerInfo.customerEmail,
         customerPhone: customerInfo.customerPhone,
