@@ -42,10 +42,10 @@ export async function POST(
       )
     }
 
-    // Allow arrival notification for orders that are CONFIRMED, PREPARING, or READY
-    if (order.status !== 'CONFIRMED' && order.status !== 'PREPARING' && order.status !== 'READY') {
+    // Allow arrival notification for orders that are PENDING, CONFIRMED, PREPARING, or READY
+    if (order.status !== 'PENDING' && order.status !== 'CONFIRMED' && order.status !== 'PREPARING' && order.status !== 'READY') {
       return NextResponse.json(
-        { error: 'You can only mark arrival for orders that are CONFIRMED, PREPARING, or READY' },
+        { error: 'You can only mark arrival for orders that are PENDING, CONFIRMED, PREPARING, or READY' },
         { status: 400 }
       )
     }

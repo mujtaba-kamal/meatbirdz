@@ -200,8 +200,8 @@ export default function DashboardPage() {
                     </p>
                   </div>
 
-                  {/* Arrival Button - Show for CONFIRMED, PREPARING, or READY orders (not DELIVERED or CANCELLED) */}
-                  {(order.status === 'CONFIRMED' || order.status === 'PREPARING' || order.status === 'READY') && (
+                  {/* Arrival Button - Show for PENDING, CONFIRMED, PREPARING, or READY orders (not DELIVERED or CANCELLED) */}
+                  {(order.status === 'PENDING' || order.status === 'CONFIRMED' || order.status === 'PREPARING' || order.status === 'READY') && (
                     <div className="border-t pt-4">
                       {order.arrivalNotification ? (
                         <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
