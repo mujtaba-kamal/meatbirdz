@@ -10,9 +10,6 @@ export async function POST(request: NextRequest) {
     const { items, customerInfo, total } = await request.json()
     const session = await getServerSession(authOptions)
 
-    console.log('COD Order Creation - Session:', session?.user?.id ? 'User logged in' : 'Guest order')
-    console.log('COD Order Creation - Customer Email:', customerInfo.customerEmail)
-
     // Validate userId exists if provided
     let validUserId: string | null = null
     if (session?.user?.id) {
@@ -22,7 +19,6 @@ export async function POST(request: NextRequest) {
       })
       if (userExists) {
         validUserId = session.user.id
-        console.log('COD Order Creation - Linking to userId:', validUserId)
       } else {
         console.warn(`User ID ${session.user.id} from session does not exist in database, creating order without userId`)
       }
