@@ -7,9 +7,9 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // Vercel Postgres automatically sets POSTGRES_URL
-  // For other providers, set DATABASE_URL to the same value
-  url      = env("POSTGRES_URL")
+  // Use DATABASE_URL (works with Neon, Supabase, Railway, etc.)
+  // For Vercel Postgres, set DATABASE_URL to the same value as POSTGRES_URL
+  url      = env("DATABASE_URL")
 }
 
 model MenuItem {
