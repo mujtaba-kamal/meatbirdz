@@ -76,27 +76,26 @@ export async function PUT(
       })
 
       // Create new meal options - resolve categoryId from categoryOrder if needed
+      // Use raw SQL to avoid Prisma trying to use the old 'category' column
       if (options.length > 0) {
-        await prisma.mealOption.createMany({
-          data: options.map((opt: { menuItemId: string; categoryId?: string; categoryOrder?: number; additionalPrice: number }) => {
-            // Use categoryId if provided, otherwise resolve from categoryOrder
-            let categoryId: string | undefined = opt.categoryId
-            if (!categoryId && opt.categoryOrder !== undefined) {
-              categoryId = categoryMap.get(opt.categoryOrder)
-            }
-            
-            if (!categoryId) {
-              throw new Error(`Could not resolve categoryId for option: ${JSON.stringify(opt)}. Available categories: ${Array.from(categoryMap.entries()).map(([order, id]) => `order ${order} -> ${id}`).join(', ')}`)
-            }
-            
-            return {
-              mealId,
-              menuItemId: opt.menuItemId,
-              categoryId: categoryId, // categoryId is guaranteed to be string here due to the check above
-              additionalPrice: parseFloat(opt.additionalPrice?.toString() || '0'),
-            }
-          }), // No need to filter since we throw an error if categoryId can't be resolved
-        })
+        for (const opt of options) {
+          // Use categoryId if provided, otherwise resolve from categoryOrder
+          let categoryId: string | undefined = opt.categoryId
+          if (!categoryId && opt.categoryOrder !== undefined) {
+            categoryId = categoryMap.get(opt.categoryOrder)
+          }
+          
+          if (!categoryId) {
+            throw new Error(`Could not resolve categoryId for option: ${JSON.stringify(opt)}. Available categories: ${Array.from(categoryMap.entries()).map(([order, id]) => `order ${order} -> ${id}`).join(', ')}`)
+          }
+          
+          // Use raw SQL to insert, explicitly specifying only the columns we want
+          await prisma.$executeRawUnsafe(`
+            INSERT INTO "MealOption" (id, "mealId", "menuItemId", "categoryId", "additionalPrice", "createdAt")
+            VALUES (gen_random_uuid()::text, $1, $2, $3, $4, CURRENT_TIMESTAMP)
+            ON CONFLICT ("mealId", "categoryId", "menuItemId") DO NOTHING;
+          `, mealId, opt.menuItemId, categoryId, parseFloat(opt.additionalPrice?.toString() || '0'))
+        }
       }
     }
 

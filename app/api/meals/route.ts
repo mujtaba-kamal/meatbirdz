@@ -149,24 +149,24 @@ export async function POST(request: NextRequest) {
 
     // Now create options with the actual category IDs
     // Match options to categories by order if categoryId is not provided
+    // Use raw SQL to avoid Prisma trying to use the old 'category' column
     if (options && options.length > 0) {
-      const categoryMap = new Map(meal.categories.map(cat => [cat.order, cat.id]))
+      const categoryMap = new Map(meal.categories.map((cat: any) => [cat.order, cat.id]))
       
-      await prisma.mealOption.createMany({
-        data: options.map((opt: { menuItemId: string; categoryId?: string; categoryOrder?: number; additionalPrice: number }) => {
-          // Use categoryId if provided, otherwise match by order
-          const categoryId = opt.categoryId || (opt.categoryOrder ? categoryMap.get(opt.categoryOrder) : null)
-          if (!categoryId) {
-            throw new Error(`Could not find category for option: ${JSON.stringify(opt)}`)
-          }
-          return {
-            mealId: meal.id,
-            menuItemId: opt.menuItemId,
-            categoryId: categoryId,
-            additionalPrice: parseFloat(opt.additionalPrice?.toString() || '0'),
-          }
-        }),
-      })
+      for (const opt of options) {
+        // Use categoryId if provided, otherwise match by order
+        const categoryId = opt.categoryId || (opt.categoryOrder ? categoryMap.get(opt.categoryOrder) : null)
+        if (!categoryId) {
+          throw new Error(`Could not find category for option: ${JSON.stringify(opt)}`)
+        }
+        
+        // Use raw SQL to insert, explicitly specifying only the columns we want
+        await prisma.$executeRawUnsafe(`
+          INSERT INTO "MealOption" (id, "mealId", "menuItemId", "categoryId", "additionalPrice", "createdAt")
+          VALUES (gen_random_uuid()::text, $1, $2, $3, $4, CURRENT_TIMESTAMP)
+          ON CONFLICT ("mealId", "categoryId", "menuItemId") DO NOTHING;
+        `, meal.id, opt.menuItemId, categoryId, parseFloat(opt.additionalPrice?.toString() || '0'))
+      }
     }
 
     // Fetch the complete meal with all relations
