@@ -201,6 +201,41 @@ export async function POST(request: Request) {
 
     console.log('✅ Tables created')
 
+    // Add new columns to Order table if they don't exist
+    try {
+      await prisma.$executeRawUnsafe(`
+        DO $$ 
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'Order' AND column_name = 'arrivalNotification'
+          ) THEN
+            ALTER TABLE "Order" ADD COLUMN "arrivalNotification" TIMESTAMP(3);
+          END IF;
+        END $$;
+      `)
+      console.log('✅ Added arrivalNotification column')
+    } catch (error: any) {
+      console.log('⚠️ arrivalNotification column:', error.message)
+    }
+
+    try {
+      await prisma.$executeRawUnsafe(`
+        DO $$ 
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'Order' AND column_name = 'arrivalAcknowledged'
+          ) THEN
+            ALTER TABLE "Order" ADD COLUMN "arrivalAcknowledged" BOOLEAN NOT NULL DEFAULT false;
+          END IF;
+        END $$;
+      `)
+      console.log('✅ Added arrivalAcknowledged column')
+    } catch (error: any) {
+      console.log('⚠️ arrivalAcknowledged column:', error.message)
+    }
+
     // Clear existing data
     await prisma.orderItem.deleteMany().catch(() => {})
     await prisma.order.deleteMany().catch(() => {})
