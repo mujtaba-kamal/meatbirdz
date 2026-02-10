@@ -113,8 +113,9 @@ export default function CheckoutPage() {
 
       // Redirect to Stripe Checkout
       if (data.clientSecret) {
-        // For Stripe Elements integration
-        router.push(`/payment?clientSecret=${data.clientSecret}&orderId=${data.orderId}`)
+        // For Stripe Elements integration - pass orderType
+        const orderTypeParam = orderType ? `&orderType=${orderType}` : ''
+        router.push(`/payment?clientSecret=${data.clientSecret}&orderId=${data.orderId}${orderTypeParam}`)
       } else if (data.checkoutUrl) {
         // For Stripe Checkout redirect
         if (typeof window !== 'undefined') {
