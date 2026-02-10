@@ -5,36 +5,83 @@ import { authOptions } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
-// GET - Fetch the single meal (there should only be one)
-export async function GET() {
+// GET - Fetch all meals
+export async function GET(request: NextRequest) {
   try {
-    // Get the first (and only) meal, or return null if none exists
-    const meal = await prisma.meal.findFirst({
+    const { searchParams } = new URL(request.url)
+    const menuItemId = searchParams.get('menuItemId') // Optional: filter meals linked to a menu item
+
+    if (menuItemId) {
+      // Fetch meals linked to a specific menu item
+      const menuItemMeals = await prisma.menuItemMeal.findMany({
+        where: { menuItemId },
+        include: {
+          meal: {
+            include: {
+              categories: {
+                orderBy: { order: 'asc' },
+              },
+              options: {
+                include: {
+                  menuItem: true,
+                  category: true,
+                },
+                orderBy: [
+                  { category: { order: 'asc' } },
+                  { additionalPrice: 'asc' },
+                ],
+              },
+            },
+          },
+        },
+      })
+
+      return NextResponse.json(menuItemMeals.map((mim) => mim.meal))
+    }
+
+    // Fetch all meals
+    const meals = await prisma.meal.findMany({
       include: {
+        categories: {
+          orderBy: { order: 'asc' },
+        },
         options: {
           include: {
             menuItem: true,
+            category: true,
           },
           orderBy: [
-            { category: 'asc' },
+            { category: { order: 'asc' } },
             { additionalPrice: 'asc' },
           ],
         },
+        menuItems: {
+          include: {
+            menuItem: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     })
 
-    // If no meal exists, return null (frontend will handle creating it)
-    return NextResponse.json(meal)
+    return NextResponse.json(meals)
   } catch (error) {
-    console.error('Error fetching meal:', error)
+    console.error('Error fetching meals:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch meal' },
+      { error: 'Failed to fetch meals' },
       { status: 500 }
     )
   }
 }
 
-// POST - Create or update the single meal
+// POST - Create a new meal
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -51,11 +98,10 @@ export async function POST(request: NextRequest) {
       description, 
       basePrice, 
       image, 
-      available, 
-      category1Name, 
-      category2Name, 
-      category3Name,
-      options // Array of { menuItemId, category (1-3), additionalPrice }
+      available,
+      categories, // Array of { name, order }
+      options, // Array of { menuItemId, categoryId, additionalPrice }
+      menuItemIds, // Array of menu item IDs to link this meal to
     } = await request.json()
 
     if (!name || basePrice === undefined) {
@@ -65,92 +111,72 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if meal already exists
-    const existingMeal = await prisma.meal.findFirst()
-
-    let meal
-    if (existingMeal) {
-      // Update existing meal
-      // Delete existing meal options
-      await prisma.mealOption.deleteMany({
-        where: { mealId: existingMeal.id },
-      })
-
-      // Update meal and create new options
-      const updateData: any = {
-        name,
-        description: description || null,
-        basePrice: parseFloat(basePrice),
-        image: image || null,
-        available: available !== undefined ? available : true,
-        category1Name: category1Name || 'Fries',
-        category2Name: category2Name || 'Drink',
-        category3Name: category3Name || 'Side',
-        options: {
-          create: (options || []).map((opt: { menuItemId: string; category: number; additionalPrice: number }) => ({
-            menuItemId: opt.menuItemId,
-            category: opt.category,
-            additionalPrice: parseFloat(opt.additionalPrice?.toString() || '0'),
-          })),
-        },
-      }
-
-      meal = await prisma.meal.update({
-        where: { id: existingMeal.id },
-        data: updateData,
-        include: {
-          options: {
-            include: {
-              menuItem: true,
-            },
-            orderBy: [
-              { category: 'asc' },
-              { additionalPrice: 'asc' },
-            ],
-          },
-        },
-      })
-    } else {
-      // Create new meal
-      const createData: any = {
-        name,
-        description: description || null,
-        basePrice: parseFloat(basePrice),
-        image: image || null,
-        available: available !== undefined ? available : true,
-        category1Name: category1Name || 'Fries',
-        category2Name: category2Name || 'Drink',
-        category3Name: category3Name || 'Side',
-        options: {
-          create: (options || []).map((opt: { menuItemId: string; category: number; additionalPrice: number }) => ({
-            menuItemId: opt.menuItemId,
-            category: opt.category,
-            additionalPrice: parseFloat(opt.additionalPrice?.toString() || '0'),
-          })),
-        },
-      }
-
-      meal = await prisma.meal.create({
-        data: createData,
-        include: {
-          options: {
-            include: {
-              menuItem: true,
-            },
-            orderBy: [
-              { category: 'asc' },
-              { additionalPrice: 'asc' },
-            ],
-          },
-        },
-      })
+    if (!categories || categories.length === 0) {
+      return NextResponse.json(
+        { error: 'At least one category is required' },
+        { status: 400 }
+      )
     }
+
+    // Create meal with categories and options
+    const meal = await prisma.meal.create({
+      data: {
+        name,
+        description: description || null,
+        basePrice: parseFloat(basePrice),
+        image: image || null,
+        available: available !== undefined ? available : true,
+        categories: {
+          create: categories.map((cat: { name: string; order: number }) => ({
+            name: cat.name,
+            order: cat.order,
+          })),
+        },
+        options: {
+          create: (options || []).map((opt: { menuItemId: string; categoryId: string; additionalPrice: number }) => ({
+            menuItemId: opt.menuItemId,
+            categoryId: opt.categoryId,
+            additionalPrice: parseFloat(opt.additionalPrice?.toString() || '0'),
+          })),
+        },
+        menuItems: menuItemIds && menuItemIds.length > 0 ? {
+          create: menuItemIds.map((menuItemId: string) => ({
+            menuItemId,
+          })),
+        } : undefined,
+      },
+      include: {
+        categories: {
+          orderBy: { order: 'asc' },
+        },
+        options: {
+          include: {
+            menuItem: true,
+            category: true,
+          },
+          orderBy: [
+            { category: { order: 'asc' } },
+            { additionalPrice: 'asc' },
+          ],
+        },
+        menuItems: {
+          include: {
+            menuItem: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    })
 
     return NextResponse.json(meal)
   } catch (error: any) {
-    console.error('Error creating/updating meal:', error)
+    console.error('Error creating meal:', error)
     return NextResponse.json(
-      { error: 'Failed to create/update meal', details: error.message },
+      { error: 'Failed to create meal', details: error.message },
       { status: 500 }
     )
   }

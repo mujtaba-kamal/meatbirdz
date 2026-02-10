@@ -26,14 +26,30 @@ export async function PUT(
       description, 
       basePrice, 
       image, 
-      available, 
-      category1Name, 
-      category2Name, 
-      category3Name,
-      options 
+      available,
+      categories, // Array of { id?, name, order } - if id exists, update; if not, create
+      options, // Array of { menuItemId, categoryId, additionalPrice }
+      menuItemIds, // Array of menu item IDs to link this meal to
     } = await request.json()
 
-    // If options are provided, update them
+    // Update categories if provided
+    if (categories && Array.isArray(categories)) {
+      // Delete existing categories (cascade will delete options)
+      await prisma.mealCategory.deleteMany({
+        where: { mealId },
+      })
+
+      // Create new categories
+      await prisma.mealCategory.createMany({
+        data: categories.map((cat: { name: string; order: number }) => ({
+          mealId,
+          name: cat.name,
+          order: cat.order,
+        })),
+      })
+    }
+
+    // Update options if provided
     if (options && Array.isArray(options)) {
       // Delete existing meal options
       await prisma.mealOption.deleteMany({
@@ -42,11 +58,27 @@ export async function PUT(
 
       // Create new meal options
       await prisma.mealOption.createMany({
-        data: options.map((opt: { menuItemId: string; category: number; additionalPrice: number }) => ({
+        data: options.map((opt: { menuItemId: string; categoryId: string; additionalPrice: number }) => ({
           mealId,
           menuItemId: opt.menuItemId,
-          category: opt.category,
+          categoryId: opt.categoryId,
           additionalPrice: parseFloat(opt.additionalPrice?.toString() || '0'),
+        })),
+      })
+    }
+
+    // Update menu item links if provided
+    if (menuItemIds && Array.isArray(menuItemIds)) {
+      // Delete existing links
+      await prisma.menuItemMeal.deleteMany({
+        where: { mealId },
+      })
+
+      // Create new links
+      await prisma.menuItemMeal.createMany({
+        data: menuItemIds.map((menuItemId: string) => ({
+          mealId,
+          menuItemId,
         })),
       })
     }
@@ -58,22 +90,33 @@ export async function PUT(
     if (basePrice !== undefined) updateData.basePrice = parseFloat(basePrice)
     if (image !== undefined) updateData.image = image || null
     if (available !== undefined) updateData.available = available
-    if (category1Name !== undefined) updateData.category1Name = category1Name
-    if (category2Name !== undefined) updateData.category2Name = category2Name
-    if (category3Name !== undefined) updateData.category3Name = category3Name
 
     const meal = await prisma.meal.update({
       where: { id: mealId },
       data: updateData,
       include: {
+        categories: {
+          orderBy: { order: 'asc' },
+        },
         options: {
           include: {
             menuItem: true,
+            category: true,
           },
           orderBy: [
-            { category: 'asc' },
+            { category: { order: 'asc' } },
             { additionalPrice: 'asc' },
           ],
+        },
+        menuItems: {
+          include: {
+            menuItem: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
         },
       },
     })
