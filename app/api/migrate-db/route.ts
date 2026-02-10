@@ -184,9 +184,24 @@ export async function POST(request: NextRequest) {
         ],
       })
     } else {
-      console.log('Meal table already exists. Checking for new columns...')
+      console.log('Meal table already exists. Checking for schema updates...')
       
-      // Add new columns to Meal table if they don't exist
+      // Check if table has old schema (price instead of basePrice)
+      const checkPriceColumn = await prisma.$queryRawUnsafe(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_schema = 'public' 
+          AND table_name = 'Meal' 
+          AND column_name = 'price'
+        );
+      `)
+      
+      if ((checkPriceColumn as any[])[0]?.exists) {
+        console.log('Migrating from old schema: renaming price to basePrice...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" RENAME COLUMN "price" TO "basePrice";`)
+      }
+      
+      // Check if table has old label columns and migrate to new category names
       const checkMainLabel = await prisma.$queryRawUnsafe(`
         SELECT EXISTS (
           SELECT FROM information_schema.columns 
@@ -196,19 +211,82 @@ export async function POST(request: NextRequest) {
         );
       `)
       
-      if (!(checkMainLabel as any[])[0]?.exists) {
-        console.log('Adding mainLabel, sideLabel, drinkLabel to Meal table...')
+      if ((checkMainLabel as any[])[0]?.exists) {
+        console.log('Migrating from old schema: renaming label columns to category names...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" RENAME COLUMN "mainLabel" TO "category1Name";`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" RENAME COLUMN "sideLabel" TO "category3Name";`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" RENAME COLUMN "drinkLabel" TO "category2Name";`)
+      }
+      
+      // Add new columns if they don't exist
+      const checkBasePrice = await prisma.$queryRawUnsafe(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_schema = 'public' 
+          AND table_name = 'Meal' 
+          AND column_name = 'basePrice'
+        );
+      `)
+      
+      if (!(checkBasePrice as any[])[0]?.exists) {
+        console.log('Adding basePrice column to Meal table...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN "basePrice" DOUBLE PRECISION NOT NULL DEFAULT 0;`)
+      }
+      
+      const checkCategory1Name = await prisma.$queryRawUnsafe(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_schema = 'public' 
+          AND table_name = 'Meal' 
+          AND column_name = 'category1Name'
+        );
+      `)
+      
+      if (!(checkCategory1Name as any[])[0]?.exists) {
+        console.log('Adding category name columns to Meal table...')
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN IF NOT EXISTS "category1Name" TEXT NOT NULL DEFAULT 'Fries';`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN IF NOT EXISTS "category2Name" TEXT NOT NULL DEFAULT 'Drink';`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Meal" ADD COLUMN IF NOT EXISTS "category3Name" TEXT NOT NULL DEFAULT 'Side';`)
+      }
+      
+      // Check if MealOption table exists, if not create it
+      const checkMealOptionTable = await prisma.$queryRawUnsafe(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'MealOption'
+        );
+      `)
+      
+      if (!(checkMealOptionTable as any[])[0]?.exists) {
+        console.log('Creating MealOption table...')
         await prisma.$executeRawUnsafe(`
-          ALTER TABLE "Meal" 
-          ADD COLUMN IF NOT EXISTS "mainLabel" TEXT NOT NULL DEFAULT 'Main';
+          CREATE TABLE "MealOption" (
+            "id" TEXT NOT NULL,
+            "mealId" TEXT NOT NULL,
+            "menuItemId" TEXT NOT NULL,
+            "category" INTEGER NOT NULL,
+            "additionalPrice" DOUBLE PRECISION NOT NULL DEFAULT 0,
+            "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT "MealOption_pkey" PRIMARY KEY ("id")
+          );
         `)
+        
         await prisma.$executeRawUnsafe(`
-          ALTER TABLE "Meal" 
-          ADD COLUMN IF NOT EXISTS "sideLabel" TEXT NOT NULL DEFAULT 'Side';
+          CREATE UNIQUE INDEX "MealOption_mealId_menuItemId_category_key" 
+          ON "MealOption"("mealId", "menuItemId", "category");
         `)
+        
         await prisma.$executeRawUnsafe(`
-          ALTER TABLE "Meal" 
-          ADD COLUMN IF NOT EXISTS "drinkLabel" TEXT NOT NULL DEFAULT 'Drink';
+          ALTER TABLE "MealOption" 
+          ADD CONSTRAINT "MealOption_mealId_fkey" 
+          FOREIGN KEY ("mealId") REFERENCES "Meal"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+        `)
+        
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "MealOption" 
+          ADD CONSTRAINT "MealOption_menuItemId_fkey" 
+          FOREIGN KEY ("menuItemId") REFERENCES "MenuItem"("id") ON DELETE CASCADE ON UPDATE CASCADE;
         `)
       }
 
