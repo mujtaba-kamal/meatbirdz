@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle, XCircle, Clock, Package, Bell, BellRing, X, Banknote, CreditCard, DollarSign, Calendar, Filter } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Package, Bell, BellRing, X, Banknote, CreditCard, DollarSign, Calendar, Filter, ChevronDown, Mail, Phone, MapPin } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface OrderItem {
@@ -42,6 +42,17 @@ const statusColors: Record<string, string> = {
   DELIVERED: 'bg-gray-100 text-gray-800',
   CANCELLED: 'bg-red-100 text-red-800',
 }
+
+const statusRowColors: Record<string, string> = {
+  PENDING: 'bg-yellow-50 border-l-4 border-yellow-500',
+  CONFIRMED: 'bg-blue-50 border-l-4 border-blue-500',
+  PREPARING: 'bg-purple-50 border-l-4 border-purple-500',
+  READY: 'bg-green-50 border-l-4 border-green-500',
+  DELIVERED: 'bg-gray-50 border-l-4 border-gray-500',
+  CANCELLED: 'bg-red-50 border-l-4 border-red-500',
+}
+
+const orderStatuses = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED']
 
 type DateFilter = '24h' | '3d' | '7d' | '15d' | '30d' | '6m' | '1y' | 'custom'
 
@@ -164,7 +175,10 @@ export default function AdminPage() {
     setShowCustomPicker(false)
   }
 
-  const updateOrderStatus = async (orderId: string, status: string) => {
+  const updateOrderStatus = async (orderId: string, status: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation()
+    }
     try {
       const response = await fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
@@ -433,8 +447,8 @@ export default function AdminPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {/* Orders List */}
           <div className="lg:col-span-2">
-            <h2 className="text-xl font-semibold mb-4">Recent Orders</h2>
-            <div className="space-y-4">
+            <h2 className="text-xl font-semibold mb-4">Recent Orders ({orders.length})</h2>
+            <div className="space-y-3">
               {orders.length === 0 ? (
                 <div className="bg-white rounded-2xl shadow-lg p-8 text-center border border-primary-100">
                   <Package className="w-16 h-16 mx-auto text-primary-300 mb-4" />
@@ -444,42 +458,93 @@ export default function AdminPage() {
                 orders.map((order) => (
                   <div
                     key={order.id}
-                    className="bg-white rounded-2xl shadow-lg p-6 cursor-pointer hover:shadow-xl transition-all border border-primary-100 hover:border-primary-300"
+                    className={`bg-white rounded-lg shadow-md p-4 cursor-pointer hover:shadow-lg transition-all border ${statusRowColors[order.status] || statusRowColors.PENDING}`}
                     onClick={() => setSelectedOrder(order)}
                   >
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-2">
+                    {/* Header Row */}
+                    <div className="flex items-start justify-between mb-3">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-base sm:text-lg text-gray-900 truncate">
-                          {order.customerName}
-                        </h3>
-                        <p className="text-xs sm:text-sm text-gray-600">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-bold text-lg text-gray-900 truncate">
+                            {order.customerName}
+                          </h3>
+                          <span className="text-xs text-gray-500">#{order.id.slice(-8)}</span>
+                          {order.arrivalNotification && !order.arrivalAcknowledged && (
+                            <span className="flex items-center bg-orange-500 text-white px-2 py-0.5 rounded text-xs font-bold animate-pulse">
+                              <BellRing className="w-3 h-3 mr-1" />
+                              ARRIVED
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500">
                           {new Date(order.createdAt).toLocaleString()}
                         </p>
                       </div>
-                      <div className="text-left sm:text-right">
-                        <p className="font-bold text-base sm:text-lg text-primary-600">
+                      <div className="text-right ml-4">
+                        <p className="font-bold text-xl text-primary-600 mb-1">
                           ${order.totalAmount.toFixed(2)}
                         </p>
-                        <span
-                          className={`inline-block px-2 py-1 rounded text-xs font-semibold mt-1 ${
-                            statusColors[order.status] || statusColors.PENDING
-                          }`}
-                        >
-                          {order.status}
-                        </span>
+                        {/* Status Dropdown */}
+                        <div className="relative" onClick={(e) => e.stopPropagation()}>
+                          <select
+                            value={order.status}
+                            onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                            className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                              statusColors[order.status] || statusColors.PENDING
+                            }`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {orderStatuses.map((status) => (
+                              <option key={status} value={status}>
+                                {status}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-600" />
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-gray-600">
-                        {order.items.length} item(s)
-                      </p>
-                      <div className="flex items-center gap-2">
-                        {order.arrivalNotification && !order.arrivalAcknowledged && (
-                          <span className="flex items-center bg-orange-500 text-white px-2 py-1 rounded text-xs font-bold animate-pulse">
-                            <BellRing className="w-3 h-3 mr-1" />
-                            ARRIVED
-                          </span>
-                        )}
+
+                    {/* Information Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3 text-sm">
+                      <div className="flex items-start gap-2">
+                        <Mail className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs text-gray-500">Email</p>
+                          <p className="text-gray-900 truncate">{order.customerEmail}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Phone className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs text-gray-500">Phone</p>
+                          <p className="text-gray-900">{order.customerPhone}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs text-gray-500">Address</p>
+                          <p className="text-gray-900 truncate">{order.deliveryAddress}</p>
+                          <p className="text-gray-600 text-xs">{order.city}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Package className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs text-gray-500">Items</p>
+                          <p className="text-gray-900">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>
+                          <p className="text-gray-600 text-xs">
+                            {order.items.slice(0, 2).map(item => item.menuItem.name).join(', ')}
+                            {order.items.length > 2 && ` +${order.items.length - 2} more`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer Row */}
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                      <div className="flex items-center gap-3">
                         {order.paymentStatus === 'PAID' ? (
                           <span className="flex items-center text-green-600 text-sm font-semibold">
                             <CheckCircle className="w-4 h-4 mr-1" />
@@ -509,6 +574,9 @@ export default function AdminPage() {
                             )}
                           </div>
                         )}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Click to view details
                       </div>
                     </div>
                   </div>
