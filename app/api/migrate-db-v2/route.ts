@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
     `)
     const hasOldCategoryColumn = (checkOldCategoryColumn as any[])[0]?.exists || false
 
+    // If old category column exists, we need to drop it even if everything else is migrated
     if (mealCategoryTableExists && hasCategoryIdColumnEarly && !hasOldCategoryColumn) {
       console.log('Database schema v2 is already fully migrated.')
       return NextResponse.json({
@@ -64,6 +65,40 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Migration needed. Status:', { mealCategoryTableExists, hasCategoryIdColumn: hasCategoryIdColumnEarly, hasOldCategoryColumn })
+    
+    // If old column exists, drop it first before doing anything else
+    if (hasOldCategoryColumn) {
+      console.log('Old category column detected. Dropping it first...')
+      try {
+        // Drop any constraints/indexes that reference the old category column
+        await prisma.$executeRawUnsafe(`
+          DROP INDEX IF EXISTS "MealOption_mealId_menuItemId_category_key";
+        `)
+        
+        // Try to drop the column
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "MealOption" DROP COLUMN IF EXISTS "category";
+        `)
+        console.log('✅ Old category column dropped.')
+        
+        // Re-check if it was actually dropped
+        const checkAfterDrop = await prisma.$queryRawUnsafe(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'MealOption' 
+            AND column_name = 'category'
+          );
+        `)
+        const stillExists = (checkAfterDrop as any[])[0]?.exists || false
+        if (stillExists) {
+          console.log('⚠️ Old category column still exists. May need manual intervention.')
+        }
+      } catch (error: any) {
+        console.error('Error dropping old category column:', error.message)
+        // Continue with migration - we'll try again at the end
+      }
+    }
 
     // Create MealCategory table
     console.log('Creating MealCategory table...')
