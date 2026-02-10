@@ -21,6 +21,127 @@ export async function POST(request: Request) {
     await prisma.$connect()
     console.log('✅ Connected to database')
 
+    // Create tables if they don't exist using raw SQL
+    console.log('📋 Creating database tables...')
+    
+    // Create enum types (ignore if they exist)
+    await prisma.$executeRawUnsafe(`
+      DO $$ BEGIN
+        CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+    `).catch(() => {})
+    
+    await prisma.$executeRawUnsafe(`
+      DO $$ BEGIN
+        CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'PAID', 'FAILED', 'REFUNDED');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+    `).catch(() => {})
+    
+    await prisma.$executeRawUnsafe(`
+      DO $$ BEGIN
+        CREATE TYPE "UserRole" AS ENUM ('CUSTOMER', 'ADMIN');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+    `).catch(() => {})
+
+    // Create tables (ignore if they exist)
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "MenuItem" (
+        "id" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "description" TEXT,
+        "price" DOUBLE PRECISION NOT NULL,
+        "category" TEXT NOT NULL,
+        "image" TEXT,
+        "available" BOOLEAN NOT NULL DEFAULT true,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "MenuItem_pkey" PRIMARY KEY ("id")
+      );
+    `).catch(() => {})
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "User" (
+        "id" TEXT NOT NULL,
+        "name" TEXT,
+        "email" TEXT NOT NULL,
+        "password" TEXT NOT NULL,
+        "role" "UserRole" NOT NULL DEFAULT 'CUSTOMER',
+        "phone" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+      );
+    `).catch(() => {})
+
+    await prisma.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email");
+    `).catch(() => {})
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Order" (
+        "id" TEXT NOT NULL,
+        "userId" TEXT,
+        "customerName" TEXT NOT NULL,
+        "customerEmail" TEXT NOT NULL,
+        "customerPhone" TEXT NOT NULL,
+        "deliveryAddress" TEXT NOT NULL,
+        "city" TEXT NOT NULL,
+        "postalCode" TEXT,
+        "totalAmount" DOUBLE PRECISION NOT NULL,
+        "status" "OrderStatus" NOT NULL DEFAULT 'PENDING',
+        "paymentStatus" "PaymentStatus" NOT NULL DEFAULT 'PENDING',
+        "stripePaymentId" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "Order_pkey" PRIMARY KEY ("id")
+      );
+    `).catch(() => {})
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "OrderItem" (
+        "id" TEXT NOT NULL,
+        "orderId" TEXT NOT NULL,
+        "menuItemId" TEXT NOT NULL,
+        "quantity" INTEGER NOT NULL,
+        "price" DOUBLE PRECISION NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "OrderItem_pkey" PRIMARY KEY ("id")
+      );
+    `).catch(() => {})
+
+    // Add foreign keys (ignore if they exist)
+    await prisma.$executeRawUnsafe(`
+      DO $$ BEGIN
+        ALTER TABLE "Order" ADD CONSTRAINT "Order_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+    `).catch(() => {})
+
+    await prisma.$executeRawUnsafe(`
+      DO $$ BEGIN
+        ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+    `).catch(() => {})
+
+    await prisma.$executeRawUnsafe(`
+      DO $$ BEGIN
+        ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_menuItemId_fkey" FOREIGN KEY ("menuItemId") REFERENCES "MenuItem"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+    `).catch(() => {})
+
+    console.log('✅ Tables created')
+
     // Clear existing data
     await prisma.orderItem.deleteMany().catch(() => {})
     await prisma.order.deleteMany().catch(() => {})
