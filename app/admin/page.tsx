@@ -145,11 +145,20 @@ export default function AdminPage() {
         from: from.toISOString(),
         to: to.toISOString(),
       })
-      const response = await fetch(`/api/orders?${params.toString()}`)
+      const response = await fetch(`/api/orders?${params.toString()}&_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
       const data = await response.json()
       setOrders(data)
+      setLastUpdateTime(new Date())
     } catch (error) {
-      toast.error('Failed to load orders')
+      // Don't show error toast on every failed request (too noisy)
+      if (orders.length === 0) {
+        toast.error('Failed to load orders')
+      }
     } finally {
       setLoading(false)
     }
