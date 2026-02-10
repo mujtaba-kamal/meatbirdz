@@ -171,13 +171,21 @@ export default function AdminPage() {
           setMealForm({
             name: data.name || 'Meal Deal',
             description: data.description || '',
-            price: data.price?.toString() || '',
+            basePrice: data.basePrice?.toString() || '',
             image: data.image || '',
             available: data.available !== undefined ? data.available : true,
-            mainLabel: data.mainLabel || 'Main',
-            sideLabel: data.sideLabel || 'Side',
-            drinkLabel: data.drinkLabel || 'Drink',
+            category1Name: data.category1Name || 'Fries',
+            category2Name: data.category2Name || 'Drink',
+            category3Name: data.category3Name || 'Side',
           })
+          // Set meal options
+          if (data.options) {
+            setMealOptions(data.options.map((opt: any) => ({
+              menuItemId: opt.menuItemId,
+              category: opt.category,
+              additionalPrice: opt.additionalPrice || 0,
+            })))
+          }
         }
       }
     } catch (error) {
@@ -1163,33 +1171,7 @@ export default function AdminPage() {
                         />
                         <span className="text-sm font-medium text-gray-700">Available</span>
                       </label>
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={menuItemForm.availableInMeal}
-                          onChange={(e) => setMenuItemForm({ ...menuItemForm, availableInMeal: e.target.checked, mealCategory: e.target.checked ? (menuItemForm.mealCategory || 'main') : '' })}
-                          className="w-4 h-4"
-                        />
-                        <span className="text-sm font-medium text-gray-700">Available in Meal</span>
-                      </label>
                     </div>
-                    {menuItemForm.availableInMeal && (
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Meal Category *
-                        </label>
-                        <select
-                          value={menuItemForm.mealCategory}
-                          onChange={(e) => setMenuItemForm({ ...menuItemForm, mealCategory: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Select Category</option>
-                          <option value="main">Main</option>
-                          <option value="side">Side</option>
-                          <option value="drink">Drink</option>
-                        </select>
-                      </div>
-                    )}
                   </div>
                   <div className="flex gap-2 mt-4">
                     <button
@@ -1313,46 +1295,46 @@ export default function AdminPage() {
                       <input
                         type="number"
                         step="0.01"
-                        value={mealForm.price}
-                        onChange={(e) => setMealForm({ ...mealForm, price: e.target.value })}
+                        value={mealForm.basePrice}
+                        onChange={(e) => setMealForm({ ...mealForm, basePrice: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                         placeholder="0.00"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Main Label
+                        Category 1 Name (e.g., Fries)
                       </label>
                       <input
                         type="text"
-                        value={mealForm.mainLabel}
-                        onChange={(e) => setMealForm({ ...mealForm, mainLabel: e.target.value })}
+                        value={mealForm.category1Name}
+                        onChange={(e) => setMealForm({ ...mealForm, category1Name: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                        placeholder="Main"
+                        placeholder="Fries"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Side Label
+                        Category 2 Name (e.g., Drink)
                       </label>
                       <input
                         type="text"
-                        value={mealForm.sideLabel}
-                        onChange={(e) => setMealForm({ ...mealForm, sideLabel: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                        placeholder="Side"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Drink Label
-                      </label>
-                      <input
-                        type="text"
-                        value={mealForm.drinkLabel}
-                        onChange={(e) => setMealForm({ ...mealForm, drinkLabel: e.target.value })}
+                        value={mealForm.category2Name}
+                        onChange={(e) => setMealForm({ ...mealForm, category2Name: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                         placeholder="Drink"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Category 3 Name (e.g., Side)
+                      </label>
+                      <input
+                        type="text"
+                        value={mealForm.category3Name}
+                        onChange={(e) => setMealForm({ ...mealForm, category3Name: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                        placeholder="Side"
                       />
                     </div>
                     <div className="md:col-span-2">
