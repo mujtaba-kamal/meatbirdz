@@ -76,11 +76,14 @@ model OrderItem {
 
 model Meal {
   id          String   @id @default(cuid())
-  name        String
+  name        String   @default("Meal Deal")
   description String?
   price       Float
   image       String?
   available   Boolean  @default(true)
+  mainLabel   String   @default("Main")
+  sideLabel   String   @default("Side")
+  drinkLabel  String   @default("Drink")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   items       MealItem[]
