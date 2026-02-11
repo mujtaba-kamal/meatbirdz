@@ -1012,7 +1012,7 @@ export default function AdminPage() {
 
   // Calculate order counts by status
   const orderCountsByStatus = orderStatuses.reduce((acc, status) => {
-    acc[status] = orders.filter(order => order.status === status).length
+    acc[status] = orders.filter((order) => order.status === status).length
     return acc
   }, {} as Record<string, number>)
 
