@@ -19,6 +19,58 @@ export async function POST(request: NextRequest) {
 
     console.log('Starting Meal categoryFilter column migration...')
 
+    // First, check if Meal table exists
+    const checkMealTable = await prisma.$queryRawUnsafe(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'Meal'
+      );
+    `)
+    const mealTableExists = (checkMealTable as any[])[0]?.exists || false
+
+    if (!mealTableExists) {
+      console.log('Meal table does not exist. Creating Meal table first...')
+      
+      // Create Meal table
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "Meal" (
+          "id" TEXT NOT NULL,
+          "name" TEXT NOT NULL DEFAULT 'Meal Deal',
+          "description" TEXT,
+          "basePrice" DOUBLE PRECISION NOT NULL,
+          "image" TEXT,
+          "available" BOOLEAN NOT NULL DEFAULT true,
+          "categoryFilter" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL,
+          CONSTRAINT "Meal_pkey" PRIMARY KEY ("id")
+        )
+      `)
+      
+      // Create updatedAt trigger function
+      await prisma.$executeRawUnsafe(`
+        CREATE OR REPLACE FUNCTION update_updated_at_column()
+        RETURNS TRIGGER AS $$
+        BEGIN
+          NEW."updatedAt" = CURRENT_TIMESTAMP;
+          RETURN NEW;
+        END;
+        $$ language 'plpgsql'
+      `)
+      
+      // Drop trigger if exists
+      await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS update_meal_updated_at ON "Meal"`)
+      
+      // Create trigger
+      await prisma.$executeRawUnsafe(`
+        CREATE TRIGGER update_meal_updated_at BEFORE UPDATE ON "Meal"
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
+      `)
+      
+      console.log('✅ Created "Meal" table.')
+    }
+
     // Check if 'categoryFilter' column already exists
     const checkCategoryFilterColumn = await prisma.$queryRawUnsafe(`
       SELECT EXISTS (
