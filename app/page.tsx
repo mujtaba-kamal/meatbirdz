@@ -1,7 +1,5 @@
 'use client'
 
-'use client'
-
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -9,12 +7,29 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Menu, ShoppingCart, Clock, MapPin, ChefHat, Star, Shield, Zap } from 'lucide-react'
 
+// Hero carousel images
+const heroImages = [
+  {
+    url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1920&h=1080&fit=crop&q=80',
+    alt: 'Delicious burgers',
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=1920&h=1080&fit=crop&q=80',
+    alt: 'Fresh wraps',
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=1920&h=1080&fit=crop&q=80',
+    alt: 'Crispy fries',
+  },
+]
+
 export default function Home() {
   const { data: session } = useSession()
   const router = useRouter()
   const [logoError, setLogoError] = useState(true) // Start with true to show fallback
   const [logoLoaded, setLogoLoaded] = useState(false)
   const [logoSrc, setLogoSrc] = useState('/logo.png')
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
   useEffect(() => {
     // Check if logo exists by trying to load it (try PNG first, then SVG)
@@ -60,12 +75,46 @@ export default function Home() {
     }
   }, [])
 
+  // Auto-swipe carousel
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % heroImages.length)
+    }, 5000) // Change image every 5 seconds
+
+    return () => clearInterval(interval)
+  }, [])
+
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <section id="home" className="relative bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 text-white py-16 sm:py-20 lg:py-24 px-4 overflow-hidden scroll-mt-16">
-        <div className="absolute inset-0 bg-black opacity-10"></div>
-        <div className="relative max-w-6xl mx-auto text-center">
+      {/* Hero Section with Auto-Swiping Images */}
+      <section id="home" className="relative text-white py-16 sm:py-20 lg:py-24 px-4 overflow-hidden scroll-mt-16 h-[600px] sm:h-[700px] lg:h-[800px]">
+        {/* Background Images Carousel */}
+        <div className="absolute inset-0">
+          {heroImages.map((image, index) => (
+            <div
+              key={index}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              <Image
+                src={image.url}
+                alt={image.alt}
+                fill
+                className="object-cover"
+                priority={index === 0}
+                quality={90}
+                sizes="100vw"
+              />
+            </div>
+          ))}
+        </div>
+        
+        {/* Dark overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/60"></div>
+        
+        {/* Content */}
+        <div className="relative max-w-6xl mx-auto text-center h-full flex flex-col justify-center">
           <div className="flex justify-center mb-4 sm:mb-6">
             {logoLoaded && !logoError ? (
               <div className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48">
