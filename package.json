@@ -18,10 +18,12 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.4.0",
+    "@cloudinary/url-gen": "^1.22.0",
     "@prisma/client": "^6.19.2",
     "@stripe/react-stripe-js": "^2.4.0",
     "@stripe/stripe-js": "^2.4.0",
     "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.9.0",
     "lucide-react": "^0.303.0",
     "next": "14.0.4",
     "next-auth": "^4.24.5",
