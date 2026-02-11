@@ -1059,7 +1059,7 @@ export default function AdminPage() {
                 </span>
               </div>
             )}
-        </div>
+          </div>
           
           {/* Tabs */}
           <div className="flex gap-2 mt-4 border-b border-gray-200">
@@ -1086,6 +1086,7 @@ export default function AdminPage() {
               Menu Management
             </button>
           </div>
+        </div>
         </div>
 
         {/* Orders Tab Content */}
