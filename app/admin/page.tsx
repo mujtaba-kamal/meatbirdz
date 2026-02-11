@@ -1007,7 +1007,7 @@ export default function AdminPage() {
 
   // Get orders with unacknowledged arrivals
   const arrivalNotifications = orders.filter(
-    order => order.arrivalNotification && !order.arrivalAcknowledged
+    (order) => order.arrivalNotification && !order.arrivalAcknowledged
   )
 
   // Calculate order counts by status
