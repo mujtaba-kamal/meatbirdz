@@ -179,12 +179,298 @@ export default function AdminPage() {
       const response = await fetch('/api/menu-items')
       if (response.ok) {
         const data = await response.json()
-        setMenuItems(data)
+        // Sort by order, then by name
+        const sorted = data.sort((a: any, b: any) => {
+          if (a.order !== b.order) return (a.order || 0) - (b.order || 0)
+          return a.name.localeCompare(b.name)
+        })
+        setMenuItems(sorted)
       }
     } catch (error) {
       console.error('Error fetching menu items:', error)
       toast.error('Failed to fetch menu items')
     }
+  }
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      const oldIndex = menuItems.findIndex((item) => item.id === active.id)
+      const newIndex = menuItems.findIndex((item) => item.id === over.id)
+
+      const newItems = arrayMove(menuItems, oldIndex, newIndex)
+      
+      // Update order values
+      const itemOrders = newItems.map((item, index) => ({
+        id: item.id,
+        order: index,
+      }))
+
+      // Update in database
+      try {
+        const response = await fetch('/api/menu-items/reorder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemOrders }),
+        })
+
+        if (response.ok) {
+          setMenuItems(newItems)
+          toast.success('Menu items reordered')
+        } else {
+          toast.error('Failed to save new order')
+          fetchMenuItems() // Revert to original order
+        }
+      } catch (error) {
+        console.error('Error reordering:', error)
+        toast.error('Failed to save new order')
+        fetchMenuItems() // Revert to original order
+      }
+    }
+  }
+
+  // Sortable Menu Item Component
+  const SortableMenuItem = ({ item }: { item: any }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: item.id })
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    }
+
+    const isEditing = editingMenuItem?.id === item.id
+
+    return (
+      <div ref={setNodeRef} style={style} className="space-y-2">
+        {isEditing ? (
+          // Edit Form Inline
+          <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-300">
+            <h3 className="font-semibold mb-4 text-blue-900">Edit Menu Item</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Category *
+                </label>
+                <select
+                  value={selectedCategory || menuItemForm.category}
+                  onChange={(e) => {
+                    setSelectedCategory(e.target.value)
+                    setMenuItemForm({ ...menuItemForm, category: e.target.value })
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  value={menuItemForm.name}
+                  onChange={(e) => setMenuItemForm({ ...menuItemForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Item name"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={menuItemForm.description}
+                  onChange={(e) => setMenuItemForm({ ...menuItemForm, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Item description"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Price *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={menuItemForm.price}
+                  onChange={(e) => setMenuItemForm({ ...menuItemForm, price: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Image
+                </label>
+                <div className="space-y-2">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      if (file.size > 5 * 1024 * 1024) {
+                        toast.error('File too large. Maximum size is 5MB.')
+                        return
+                      }
+                      try {
+                        toast.loading('Uploading image...')
+                        const formData = new FormData()
+                        formData.append('file', file)
+                        const response = await fetch('/api/upload-image', {
+                          method: 'POST',
+                          body: formData,
+                        })
+                        const data = await response.json()
+                        if (response.ok && data.url) {
+                          setMenuItemForm({ ...menuItemForm, image: data.url })
+                          toast.dismiss()
+                          toast.success('Image uploaded successfully!')
+                        } else {
+                          toast.dismiss()
+                          toast.error(data.error || 'Failed to upload image')
+                        }
+                      } catch (error) {
+                        toast.dismiss()
+                        toast.error('Failed to upload image')
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <input
+                    type="url"
+                    value={menuItemForm.image}
+                    onChange={(e) => setMenuItemForm({ ...menuItemForm, image: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                    placeholder="Or paste image URL here"
+                  />
+                  {menuItemForm.image && (
+                    <div className="mt-2">
+                      <img
+                        src={menuItemForm.image}
+                        alt="Preview"
+                        className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="md:col-span-2 flex items-center gap-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={menuItemForm.available}
+                    onChange={(e) => setMenuItemForm({ ...menuItemForm, available: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Available</span>
+                </label>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={handleUpdateMenuItem}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Save className="w-4 h-4 inline mr-2" />
+                Update Item
+              </button>
+              <button
+                onClick={() => {
+                  setEditingMenuItem(null)
+                  setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true })
+                  setSelectedCategory('')
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                <XIcon className="w-4 h-4 inline mr-2" />
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          // Regular Item Display
+          <div
+            className={`p-4 border rounded-lg flex items-center justify-between ${
+              !item.available ? 'opacity-60 bg-gray-50' : 'bg-white'
+            }`}
+          >
+            <div className="flex items-center gap-3 flex-1">
+              <div
+                {...attributes}
+                {...listeners}
+                className="cursor-grab active:cursor-grabbing p-2 hover:bg-gray-100 rounded transition-colors"
+              >
+                <GripVertical className="w-5 h-5 text-gray-400" />
+              </div>
+              {item.image && (
+                <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded" />
+              )}
+              <div className="flex-1">
+                <h4 className="font-semibold">{item.name}</h4>
+                <p className="text-sm text-gray-600">{item.description}</p>
+                <div className="flex items-center gap-4 mt-1">
+                  <span className="text-sm font-medium text-blue-600">${item.price.toFixed(2)}</span>
+                  <span className="text-xs text-gray-500 capitalize">{item.category}</span>
+                  {!item.available && (
+                    <span className="text-xs text-red-600 font-medium">Unavailable</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setEditingMenuItem(item)
+                  setShowAddMenuItem(false)
+                  setMenuItemForm({
+                    name: item.name,
+                    description: item.description || '',
+                    price: item.price.toString(),
+                    category: item.category,
+                    image: item.image || '',
+                    available: item.available,
+                  })
+                  setSelectedCategory(item.category)
+                }}
+                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleDeleteMenuItem(item.id)}
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    )
   }
 
   const fetchMeal = async () => {
@@ -1425,65 +1711,26 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Menu Items List */}
-              <div className="space-y-2">
-                {menuItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`p-4 border rounded-lg flex items-center justify-between ${
-                      !item.available ? 'opacity-60 bg-gray-50' : 'bg-white'
-                    }`}
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        {item.image && (
-                          <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded" />
-                        )}
-                        <div>
-                          <h4 className="font-semibold">{item.name}</h4>
-                          <p className="text-sm text-gray-600">{item.description}</p>
-                          <div className="flex items-center gap-4 mt-1">
-                            <span className="text-sm font-medium text-blue-600">${item.price.toFixed(2)}</span>
-                            <span className="text-xs text-gray-500 capitalize">{item.category}</span>
-                            {!item.available && (
-                              <span className="text-xs text-red-600 font-medium">Unavailable</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          setEditingMenuItem(item)
-                          setShowAddMenuItem(false)
-                          setMenuItemForm({
-                            name: item.name,
-                            description: item.description || '',
-                            price: item.price.toString(),
-                            category: item.category,
-                            image: item.image || '',
-                            available: item.available,
-                          })
-                          setSelectedCategory(item.category)
-                        }}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteMenuItem(item.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+              {/* Menu Items List with Drag and Drop */}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={menuItems.map(item => item.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-2">
+                    {menuItems.map((item) => (
+                      <SortableMenuItem key={item.id} item={item} />
+                    ))}
+                    {menuItems.length === 0 && (
+                      <p className="text-center text-gray-500 py-8">No menu items yet</p>
+                    )}
                   </div>
-                ))}
-                {menuItems.length === 0 && (
-                  <p className="text-center text-gray-500 py-8">No menu items yet</p>
-                )}
-              </div>
+                </SortableContext>
+              </DndContext>
             </div>
 
             {/* Meal Section - Single Meal Editor */}
