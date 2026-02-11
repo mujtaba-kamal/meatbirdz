@@ -88,7 +88,8 @@ export default function AdminPage() {
   
   // Menu management state
   const [menuItems, setMenuItems] = useState<any[]>([])
-  const [meal, setMeal] = useState<any>(null)
+  const [meals, setMeals] = useState<any[]>([]) // All meals
+  const [selectedMeal, setSelectedMeal] = useState<any>(null) // Currently selected meal for editing
   const [showAddMenuItem, setShowAddMenuItem] = useState(false)
   const [showMealEditor, setShowMealEditor] = useState(false)
   const [editingMenuItem, setEditingMenuItem] = useState<any>(null)
@@ -170,7 +171,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (session?.user?.role === 'ADMIN' && activeTab === 'menu') {
       fetchMenuItems()
-      fetchMeal()
+      fetchMeals()
     }
   }, [session, activeTab])
 
@@ -473,72 +474,109 @@ export default function AdminPage() {
     )
   }
 
-  const fetchMeal = async () => {
+  const fetchMeals = async () => {
     try {
       const response = await fetch('/api/meals')
       if (response.ok) {
         const data = await response.json()
-        // API now returns an array, get the first meal or allow selecting
-        const meals = Array.isArray(data) ? data : [data].filter(Boolean)
-        if (meals.length > 0) {
-          const firstMeal = meals[0] // For now, use first meal. Later we can add meal selection
-          setMeal(firstMeal)
-          setMealForm({
-            name: firstMeal.name || 'Meal Deal',
-            description: firstMeal.description || '',
-            basePrice: firstMeal.basePrice?.toString() || '',
-            image: firstMeal.image || '',
-            available: firstMeal.available !== undefined ? firstMeal.available : true,
-          })
-          // Set categories from the meal
-          if (firstMeal.categories && Array.isArray(firstMeal.categories)) {
-            setMealCategories(firstMeal.categories.map((cat: any) => ({
-              id: cat.id,
-              name: cat.name,
-              order: cat.order,
-            })).sort((a: any, b: any) => a.order - b.order))
-          } else {
-            // Default categories if none exist
-            setMealCategories([
-              { name: 'Fries', order: 1 },
-              { name: 'Drink', order: 2 },
-              { name: 'Side', order: 3 },
-            ])
+        const mealsArray = Array.isArray(data) ? data : [data].filter(Boolean)
+        setMeals(mealsArray)
+        
+        // If a meal is selected, refresh its data
+        if (selectedMeal) {
+          const refreshedMeal = mealsArray.find((m: any) => m.id === selectedMeal.id)
+          if (refreshedMeal) {
+            loadMealIntoEditor(refreshedMeal)
           }
-          // Set meal options with categoryId
-          if (firstMeal.options) {
-            setMealOptions(firstMeal.options.map((opt: any) => ({
-              menuItemId: opt.menuItemId,
-              categoryId: opt.categoryId || opt.category?.id, // Support both old and new structure
-              additionalPrice: opt.additionalPrice || 0,
-            })))
-          }
-          // Set linked menu items
-          if (firstMeal.menuItems && Array.isArray(firstMeal.menuItems)) {
-            setLinkedMenuItems(firstMeal.menuItems.map((link: any) => link.menuItem?.id || link.menuItemId).filter(Boolean))
-          }
-        } else {
-          // No meals exist, reset to defaults
-          setMeal(null)
-          setMealForm({
-            name: 'Meal Deal',
-            description: '',
-            basePrice: '',
-            image: '',
-            available: true,
-          })
-          setMealCategories([
-            { name: 'Fries', order: 1 },
-            { name: 'Drink', order: 2 },
-            { name: 'Side', order: 3 },
-          ])
-          setMealOptions([])
-          setLinkedMenuItems([])
         }
       }
     } catch (error) {
-      console.error('Error fetching meal:', error)
-      toast.error('Failed to fetch meal')
+      console.error('Error fetching meals:', error)
+      toast.error('Failed to fetch meals')
+    }
+  }
+
+  const loadMealIntoEditor = (mealToLoad: any) => {
+    setSelectedMeal(mealToLoad)
+    setMealForm({
+      name: mealToLoad.name || 'Meal Deal',
+      description: mealToLoad.description || '',
+      basePrice: mealToLoad.basePrice?.toString() || '',
+      image: mealToLoad.image || '',
+      available: mealToLoad.available !== undefined ? mealToLoad.available : true,
+    })
+    // Set categories from the meal
+    if (mealToLoad.categories && Array.isArray(mealToLoad.categories)) {
+      setMealCategories(mealToLoad.categories.map((cat: any) => ({
+        id: cat.id,
+        name: cat.name,
+        order: cat.order,
+      })).sort((a: any, b: any) => a.order - b.order))
+    } else {
+      // Default categories if none exist
+      setMealCategories([
+        { name: 'Fries', order: 1 },
+        { name: 'Drink', order: 2 },
+        { name: 'Side', order: 3 },
+      ])
+    }
+    // Set meal options with categoryId
+    if (mealToLoad.options) {
+      setMealOptions(mealToLoad.options.map((opt: any) => ({
+        menuItemId: opt.menuItemId,
+        categoryId: opt.categoryId || opt.category?.id,
+        additionalPrice: opt.additionalPrice || 0,
+      })))
+    } else {
+      setMealOptions([])
+    }
+    // Set linked menu items
+    if (mealToLoad.menuItems && Array.isArray(mealToLoad.menuItems)) {
+      setLinkedMenuItems(mealToLoad.menuItems.map((link: any) => link.menuItem?.id || link.menuItemId).filter(Boolean))
+    } else {
+      setLinkedMenuItems([])
+    }
+  }
+
+  const resetMealEditor = () => {
+    setSelectedMeal(null)
+    setMealForm({
+      name: 'Meal Deal',
+      description: '',
+      basePrice: '',
+      image: '',
+      available: true,
+    })
+    setMealCategories([
+      { name: 'Fries', order: 1 },
+      { name: 'Drink', order: 2 },
+      { name: 'Side', order: 3 },
+    ])
+    setMealOptions([])
+    setLinkedMenuItems([])
+  }
+
+  const handleDeleteMeal = async (mealId: string) => {
+    if (!confirm('Are you sure you want to delete this meal?')) return
+
+    try {
+      const response = await fetch(`/api/meals/${mealId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        toast.success('Meal deleted successfully')
+        if (selectedMeal?.id === mealId) {
+          resetMealEditor()
+          setShowMealEditor(false)
+        }
+        fetchMeals()
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to delete meal')
+      }
+    } catch (error) {
+      toast.error('Failed to delete meal')
     }
   }
 
@@ -638,7 +676,7 @@ export default function AdminPage() {
       // For existing meals, we can use the actual category IDs
       let optionsToSend
       
-      if (meal && meal.id) {
+      if (selectedMeal && selectedMeal.id) {
         // Existing meal: resolve categoryId from categoryOrder since categories may have been recreated
         // Match each option to its category by finding the category with matching ID or by order
         optionsToSend = mealOptions.map(opt => {
@@ -685,8 +723,8 @@ export default function AdminPage() {
       }
 
       // Use PUT endpoint if meal exists, POST if new
-      const url = meal ? `/api/meals/${meal.id}` : '/api/meals'
-      const method = meal ? 'PUT' : 'POST'
+      const url = selectedMeal ? `/api/meals/${selectedMeal.id}` : '/api/meals'
+      const method = selectedMeal ? 'PUT' : 'POST'
       
       const requestBody = {
         name: mealForm.name,
@@ -709,8 +747,12 @@ export default function AdminPage() {
 
       if (response.ok) {
         toast.success('Meal saved successfully')
-        setShowMealEditor(false)
-        fetchMeal()
+        const savedMeal = await response.json()
+        fetchMeals()
+        // Load the saved meal into editor if it was a new meal
+        if (!selectedMeal) {
+          loadMealIntoEditor(savedMeal)
+        }
       } else {
         const error = await response.json()
         toast.error(error.error || 'Failed to save meal')
