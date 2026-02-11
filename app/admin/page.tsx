@@ -1087,7 +1087,6 @@ export default function AdminPage() {
             </button>
           </div>
         </div>
-        </div>
 
         {/* Orders Tab Content */}
         {activeTab === 'orders' && (
