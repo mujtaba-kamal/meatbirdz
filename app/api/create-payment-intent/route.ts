@@ -18,18 +18,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { items, customerInfo, total } = await request.json()
+    const { items, customerInfo, total, orderType } = await request.json()
 
     // Create Stripe Payment Intent without creating order yet
-    // Order will be created on confirmation page
+    // Order will be created on confirmation page from sessionStorage
+    // Store only minimal data in metadata (Stripe has 500 char limit per metadata value)
+    const itemCount = items.length
+    const itemSummary = items.slice(0, 3).map((item: any) => item.name).join(', ')
+    
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(total * 100), // Convert to cents
       currency: 'usd',
       metadata: {
-        // Store order data in metadata for later use
-        items: JSON.stringify(items),
-        customerInfo: JSON.stringify(customerInfo),
+        // Store only essential summary data (within 500 char limit)
+        itemCount: itemCount.toString(),
+        itemSummary: itemSummary.substring(0, 200), // Truncate if needed
         total: total.toString(),
+        orderType: orderType || 'delivery',
+        // Store customer email for reference (if available)
+        customerEmail: customerInfo?.customerEmail?.substring(0, 100) || '',
       },
     })
 
