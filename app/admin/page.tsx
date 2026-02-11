@@ -1307,15 +1307,70 @@ export default function AdminPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Image URL
+                        Image
                       </label>
-                      <input
-                        type="url"
-                        value={menuItemForm.image}
-                        onChange={(e) => setMenuItemForm({ ...menuItemForm, image: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        placeholder="https://example.com/image.jpg"
-                      />
+                      <div className="space-y-2">
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+
+                            // Validate file size (5MB max)
+                            if (file.size > 5 * 1024 * 1024) {
+                              toast.error('File too large. Maximum size is 5MB.')
+                              return
+                            }
+
+                            try {
+                              toast.loading('Uploading image...')
+                              const formData = new FormData()
+                              formData.append('file', file)
+
+                              const response = await fetch('/api/upload-image', {
+                                method: 'POST',
+                                body: formData,
+                              })
+
+                              const data = await response.json()
+
+                              if (response.ok && data.url) {
+                                setMenuItemForm({ ...menuItemForm, image: data.url })
+                                toast.dismiss()
+                                toast.success('Image uploaded successfully!')
+                              } else {
+                                toast.dismiss()
+                                toast.error(data.error || 'Failed to upload image')
+                              }
+                            } catch (error) {
+                              toast.dismiss()
+                              toast.error('Failed to upload image')
+                              console.error('Upload error:', error)
+                            }
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                        <input
+                          type="url"
+                          value={menuItemForm.image}
+                          onChange={(e) => setMenuItemForm({ ...menuItemForm, image: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="Or paste image URL here"
+                        />
+                        {menuItemForm.image && (
+                          <div className="mt-2">
+                            <img
+                              src={menuItemForm.image}
+                              alt="Preview"
+                              className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="md:col-span-2 flex items-center gap-4">
                       <label className="flex items-center gap-2">
