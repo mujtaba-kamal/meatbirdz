@@ -1775,18 +1775,92 @@ export default function AdminPage() {
               </DndContext>
             </div>
 
-            {/* Meal Section - Single Meal Editor */}
+            {/* Meals Section - Multiple Meals Management */}
             <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Meal Deal</h2>
+                <h2 className="text-xl font-semibold">Meals</h2>
                 <button
-                  onClick={() => setShowMealEditor(!showMealEditor)}
+                  onClick={() => {
+                    resetMealEditor()
+                    setShowMealEditor(true)
+                  }}
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
-                  {showMealEditor ? <XIcon className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
-                  {showMealEditor ? 'Close Editor' : meal ? 'Edit Meal' : 'Create Meal'}
+                  <Plus className="w-4 h-4" />
+                  Create New Meal
                 </button>
               </div>
+
+              {/* Meals List */}
+              {meals.length > 0 && (
+                <div className="mb-6 space-y-2">
+                  {meals.map((mealItem) => (
+                    <div
+                      key={mealItem.id}
+                      className={`p-4 border rounded-lg flex items-center justify-between ${
+                        selectedMeal?.id === mealItem.id ? 'border-green-500 bg-green-50' : 'bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        {mealItem.image && (
+                          <img src={mealItem.image} alt={mealItem.name} className="w-16 h-16 object-cover rounded" />
+                        )}
+                        <div>
+                          <h4 className="font-semibold">{mealItem.name}</h4>
+                          <p className="text-sm text-gray-600">{mealItem.description}</p>
+                          <div className="flex items-center gap-4 mt-1">
+                            <span className="text-sm font-medium text-green-600">Base: ${mealItem.basePrice?.toFixed(2) || '0.00'}</span>
+                            <span className="text-xs text-gray-500">
+                              {mealItem.categories?.length || 0} categories, {mealItem.options?.length || 0} options
+                            </span>
+                            {mealItem.menuItems && mealItem.menuItems.length > 0 && (
+                              <span className="text-xs text-blue-600">
+                                Linked to {mealItem.menuItems.length} menu item{mealItem.menuItems.length !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                            {!mealItem.available && (
+                              <span className="text-xs text-red-600 font-medium">Unavailable</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            loadMealIntoEditor(mealItem)
+                            setShowMealEditor(true)
+                          }}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMeal(mealItem.id)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Meal Editor Form */}
+              {showMealEditor && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-300">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold">{selectedMeal ? 'Edit Meal' : 'Create New Meal'}</h3>
+                    <button
+                      onClick={() => {
+                        setShowMealEditor(false)
+                        resetMealEditor()
+                      }}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <XIcon className="w-5 h-5" />
+                    </button>
+                  </div>
 
               {/* Meal Editor Form */}
               {showMealEditor && (
