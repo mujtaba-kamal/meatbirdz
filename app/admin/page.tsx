@@ -968,7 +968,7 @@ export default function AdminPage() {
         fetchOrders()
         // Update selected order if it's the one being marked as paid
         if (selectedOrder?.id === orderId) {
-          const updatedOrder = orders.find(o => o.id === orderId)
+          const updatedOrder = orders.find((o) => o.id === orderId)
           if (updatedOrder) {
             setSelectedOrder({ ...updatedOrder, paymentStatus: 'PAID' })
           }
@@ -992,7 +992,7 @@ export default function AdminPage() {
         toast.success('Arrival acknowledged')
         fetchOrders()
         if (selectedOrder?.id === orderId) {
-          const updatedOrder = orders.find(o => o.id === orderId)
+          const updatedOrder = orders.find((o) => o.id === orderId)
           if (updatedOrder) {
             setSelectedOrder({ ...updatedOrder, arrivalAcknowledged: true })
           }
