@@ -815,6 +815,8 @@ export default function AdminPage() {
   }
 
   const removeMealOption = (index: number) => {
+
+  const removeMealOption = (index: number) => {
     setMealOptions(mealOptions.filter((_, i) => i !== index))
   }
 
