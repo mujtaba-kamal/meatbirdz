@@ -2137,37 +2137,8 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Meal Display */}
-              {!showMealEditor && meal && (
-                <div className="p-4 border rounded-lg bg-white">
-                  <div className="flex items-center gap-3 mb-2">
-                    {meal.image && (
-                      <img src={meal.image} alt={meal.name} className="w-16 h-16 object-cover rounded" />
-                    )}
-                    <div>
-                      <h4 className="font-semibold">{meal.name}</h4>
-                      <p className="text-sm text-gray-600">{meal.description}</p>
-                      <div className="flex items-center gap-4 mt-1">
-                        <span className="text-sm font-medium text-green-600">Base: ${meal.basePrice?.toFixed(2) || '0.00'}</span>
-                        {!meal.available && (
-                          <span className="text-xs text-red-600 font-medium">Unavailable</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-3 text-sm text-gray-600">
-                    <p>Options: {meal.options?.length || 0} items across 3 categories</p>
-                    <div className="mt-2 text-xs">
-                      <p>{meal.category1Name}: {meal.options?.filter((opt: any) => opt.category === 1).length || 0} options</p>
-                      <p>{meal.category2Name}: {meal.options?.filter((opt: any) => opt.category === 2).length || 0} options</p>
-                      <p>{meal.category3Name}: {meal.options?.filter((opt: any) => opt.category === 3).length || 0} options</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {!showMealEditor && !meal && (
-                <p className="text-center text-gray-500 py-8">No meal configured yet. Click "Create Meal" to get started.</p>
+              {!showMealEditor && meals.length === 0 && (
+                <p className="text-center text-gray-500 py-8">No meals created yet. Click "Create New Meal" to get started.</p>
               )}
             </div>
           </div>
