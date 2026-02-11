@@ -88,7 +88,8 @@ export default function AdminPage() {
   
   // Menu management state
   const [menuItems, setMenuItems] = useState<any[]>([])
-  const [meal, setMeal] = useState<any>(null)
+  const [meal, setMeal] = useState<any>(null) // Currently editing meal
+  const [meals, setMeals] = useState<any[]>([]) // All meals list
   const [showAddMenuItem, setShowAddMenuItem] = useState(false)
   const [showMealEditor, setShowMealEditor] = useState(false)
   const [editingMenuItem, setEditingMenuItem] = useState<any>(null)
@@ -110,6 +111,7 @@ export default function AdminPage() {
     basePrice: '',
     image: '',
     available: true,
+    categoryFilter: '', // Category this meal applies to
   })
   
   const [mealCategories, setMealCategories] = useState<Array<{
@@ -170,7 +172,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (session?.user?.role === 'ADMIN' && activeTab === 'menu') {
       fetchMenuItems()
-      fetchMeal()
+      fetchMeals()
     }
   }, [session, activeTab])
 
@@ -473,72 +475,60 @@ export default function AdminPage() {
     )
   }
 
-  const fetchMeal = async () => {
+  const fetchMeals = async () => {
     try {
       const response = await fetch('/api/meals')
       if (response.ok) {
         const data = await response.json()
-        // API now returns an array, get the first meal or allow selecting
-        const meals = Array.isArray(data) ? data : [data].filter(Boolean)
-        if (meals.length > 0) {
-          const firstMeal = meals[0] // For now, use first meal. Later we can add meal selection
-          setMeal(firstMeal)
-          setMealForm({
-            name: firstMeal.name || 'Meal Deal',
-            description: firstMeal.description || '',
-            basePrice: firstMeal.basePrice?.toString() || '',
-            image: firstMeal.image || '',
-            available: firstMeal.available !== undefined ? firstMeal.available : true,
-          })
-          // Set categories from the meal
-          if (firstMeal.categories && Array.isArray(firstMeal.categories)) {
-            setMealCategories(firstMeal.categories.map((cat: any) => ({
-              id: cat.id,
-              name: cat.name,
-              order: cat.order,
-            })).sort((a: any, b: any) => a.order - b.order))
-          } else {
-            // Default categories if none exist
-            setMealCategories([
-              { name: 'Fries', order: 1 },
-              { name: 'Drink', order: 2 },
-              { name: 'Side', order: 3 },
-            ])
-          }
-          // Set meal options with categoryId
-          if (firstMeal.options) {
-            setMealOptions(firstMeal.options.map((opt: any) => ({
-              menuItemId: opt.menuItemId,
-              categoryId: opt.categoryId || opt.category?.id, // Support both old and new structure
-              additionalPrice: opt.additionalPrice || 0,
-            })))
-          }
-          // Set linked menu items
-          if (firstMeal.menuItems && Array.isArray(firstMeal.menuItems)) {
-            setLinkedMenuItems(firstMeal.menuItems.map((link: any) => link.menuItem?.id || link.menuItemId).filter(Boolean))
-          }
-        } else {
-          // No meals exist, reset to defaults
-          setMeal(null)
-          setMealForm({
-            name: 'Meal Deal',
-            description: '',
-            basePrice: '',
-            image: '',
-            available: true,
-          })
-          setMealCategories([
-            { name: 'Fries', order: 1 },
-            { name: 'Drink', order: 2 },
-            { name: 'Side', order: 3 },
-          ])
-          setMealOptions([])
-          setLinkedMenuItems([])
-        }
+        // API returns an array of meals
+        const mealsList = Array.isArray(data) ? data : [data].filter(Boolean)
+        setMeals(mealsList)
       }
     } catch (error) {
-      console.error('Error fetching meal:', error)
-      toast.error('Failed to fetch meal')
+      console.error('Error fetching meals:', error)
+      toast.error('Failed to fetch meals')
+    }
+  }
+
+  const handleEditMeal = (mealToEdit: any) => {
+    setMeal(mealToEdit)
+    setShowMealEditor(true)
+    setMealForm({
+      name: mealToEdit.name || 'Meal Deal',
+      description: mealToEdit.description || '',
+      basePrice: mealToEdit.basePrice?.toString() || '',
+      image: mealToEdit.image || '',
+      available: mealToEdit.available !== undefined ? mealToEdit.available : true,
+      categoryFilter: mealToEdit.categoryFilter || '',
+    })
+    // Set categories from the meal
+    if (mealToEdit.categories && Array.isArray(mealToEdit.categories)) {
+      setMealCategories(mealToEdit.categories.map((cat: any) => ({
+        id: cat.id,
+        name: cat.name,
+        order: cat.order,
+      })).sort((a: any, b: any) => a.order - b.order))
+    } else {
+      // Default categories if none exist
+      setMealCategories([
+        { name: 'Fries', order: 1 },
+        { name: 'Drink', order: 2 },
+        { name: 'Side', order: 3 },
+      ])
+    }
+    // Set meal options with categoryId
+    if (mealToEdit.options) {
+      setMealOptions(mealToEdit.options.map((opt: any) => ({
+        menuItemId: opt.menuItemId,
+        categoryId: opt.categoryId || opt.category?.id, // Support both old and new structure
+        additionalPrice: opt.additionalPrice || 0,
+      })))
+    }
+    // Set linked menu items
+    if (mealToEdit.menuItems && Array.isArray(mealToEdit.menuItems)) {
+      setLinkedMenuItems(mealToEdit.menuItems.map((link: any) => link.menuItem?.id || link.menuItemId).filter(Boolean))
+    } else {
+      setLinkedMenuItems([])
     }
   }
 
@@ -694,6 +684,7 @@ export default function AdminPage() {
         basePrice: mealForm.basePrice,
         image: mealForm.image,
         available: mealForm.available,
+        categoryFilter: mealForm.categoryFilter || null,
         categories: categoriesToSend,
         options: optionsToSend || [],
         menuItemIds: linkedMenuItems || [],
@@ -710,7 +701,23 @@ export default function AdminPage() {
       if (response.ok) {
         toast.success('Meal saved successfully')
         setShowMealEditor(false)
-        fetchMeal()
+        setMeal(null)
+        setMealForm({
+          name: 'Meal Deal',
+          description: '',
+          basePrice: '',
+          image: '',
+          available: true,
+          categoryFilter: '',
+        })
+        setMealCategories([
+          { name: 'Fries', order: 1 },
+          { name: 'Drink', order: 2 },
+          { name: 'Side', order: 3 },
+        ])
+        setMealOptions([])
+        setLinkedMenuItems([])
+        fetchMeals()
       } else {
         const error = await response.json()
         toast.error(error.error || 'Failed to save meal')
@@ -1775,6 +1782,26 @@ export default function AdminPage() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                         placeholder="0.00"
                       />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Category Filter *
+                      </label>
+                      <select
+                        value={mealForm.categoryFilter}
+                        onChange={(e) => setMealForm({ ...mealForm, categoryFilter: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                      >
+                        <option value="">Select Category</option>
+                        <option value="burger">Burger</option>
+                        <option value="wrap">Wrap</option>
+                        <option value="fries">Fries</option>
+                        <option value="drink">Drink</option>
+                        <option value="side">Side</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        This meal will automatically apply to all menu items in this category
+                      </p>
                     </div>
                     {/* Dynamic Categories */}
                     <div className="md:col-span-2">

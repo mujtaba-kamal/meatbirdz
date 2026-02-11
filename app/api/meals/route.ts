@@ -12,7 +12,15 @@ export async function GET(request: NextRequest) {
     const menuItemId = searchParams.get('menuItemId') // Optional: filter meals linked to a menu item
 
     if (menuItemId) {
-      // Fetch meals linked to a specific menu item
+      // Fetch the menu item to get its category
+      const menuItem = await prisma.menuItem.findUnique({
+        where: { id: menuItemId },
+        select: { category: true },
+      })
+
+      // Fetch meals that match:
+      // 1. Meals directly linked to this menu item via MenuItemMeal
+      // 2. Meals with categoryFilter matching the menu item's category
       const menuItemMeals = await prisma.menuItemMeal.findMany({
         where: { menuItemId },
         include: {
@@ -36,7 +44,38 @@ export async function GET(request: NextRequest) {
         },
       })
 
-      return NextResponse.json(menuItemMeals.map((mim) => mim.meal))
+      // Also fetch meals by categoryFilter if menu item exists
+      let categoryMeals: any[] = []
+      if (menuItem) {
+        const mealsByCategory = await prisma.meal.findMany({
+          where: {
+            categoryFilter: menuItem.category,
+            available: true,
+          },
+          include: {
+            categories: {
+              orderBy: { order: 'asc' },
+            },
+            options: {
+              include: {
+                menuItem: true,
+                category: true,
+              },
+              orderBy: [
+                { category: { order: 'asc' } },
+                { additionalPrice: 'asc' },
+              ],
+            },
+          },
+        })
+        categoryMeals = mealsByCategory
+      }
+
+      // Combine and deduplicate (prefer directly linked meals)
+      const linkedMealIds = new Set(menuItemMeals.map(mim => mim.meal.id))
+      const additionalMeals = categoryMeals.filter(meal => !linkedMealIds.has(meal.id))
+      
+      return NextResponse.json([...menuItemMeals.map((mim) => mim.meal), ...additionalMeals])
     }
 
     // Fetch all meals
@@ -100,6 +139,7 @@ export async function POST(request: NextRequest) {
       basePrice, 
       image, 
       available,
+      categoryFilter, // Category this meal applies to (e.g., "burger", "wrap", "fries")
       categories, // Array of { name, order }
       options, // Array of { menuItemId, categoryId, additionalPrice }
       menuItemIds, // Array of menu item IDs to link this meal to
@@ -130,6 +170,7 @@ export async function POST(request: NextRequest) {
         basePrice: parseFloat(basePrice),
         image: image || null,
         available: available !== undefined ? available : true,
+        categoryFilter: categoryFilter || null,
         categories: {
           create: categories.map((cat: { name: string; order: number }) => ({
             name: cat.name,

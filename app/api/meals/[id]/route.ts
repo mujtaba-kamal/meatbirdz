@@ -27,6 +27,7 @@ export async function PUT(
       basePrice, 
       image, 
       available,
+      categoryFilter, // Category this meal applies to
       categories, // Array of { id?, name, order } - if id exists, update; if not, create
       options, // Array of { menuItemId, categoryId, additionalPrice }
       menuItemIds, // Array of menu item IDs to link this meal to

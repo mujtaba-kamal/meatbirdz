@@ -75,18 +75,19 @@ model OrderItem {
 }
 
 model Meal {
-  id          String   @id @default(cuid())
-  name        String   @default("Meal Deal")
-  description String?
-  basePrice   Float    // Base price of the meal
-  image       String?
-  available   Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  categories  MealCategory[] // Dynamic categories for this meal
-  options     MealOption[]
-  orderItems  OrderItem[]
-  menuItems   MenuItemMeal[] // Menu items linked to this meal
+  id            String   @id @default(cuid())
+  name          String   @default("Meal Deal")
+  description   String?
+  basePrice     Float    // Base price of the meal
+  image         String?
+  available     Boolean  @default(true)
+  categoryFilter String? // Category this meal applies to (e.g., "burger", "wrap", "fries")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  categories    MealCategory[] // Dynamic categories for this meal
+  options       MealOption[]
+  orderItems    OrderItem[]
+  menuItems     MenuItemMeal[] // Menu items linked to this meal
 }
 
 model MealCategory {
