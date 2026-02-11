@@ -20,6 +20,7 @@ model MenuItem {
   category    String   // "burger", "wrap", "fries", "drink"
   image       String?
   available   Boolean  @default(true)
+  order       Int      @default(0) // Display order within category
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   orderItems  OrderItem[]

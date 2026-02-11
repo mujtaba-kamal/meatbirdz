@@ -3,8 +3,25 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle, XCircle, Clock, Package, Bell, BellRing, X, Banknote, CreditCard, DollarSign, Calendar, Filter, ChevronDown, Mail, Phone, MapPin, Utensils, Plus, Trash2, Edit, Save, X as XIcon } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Package, Bell, BellRing, X, Banknote, CreditCard, DollarSign, Calendar, Filter, ChevronDown, Mail, Phone, MapPin, Utensils, Plus, Trash2, Edit, Save, X as XIcon, GripVertical } from 'lucide-react'
 import toast from 'react-hot-toast'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface OrderItem {
   id: string
@@ -1245,10 +1262,10 @@ export default function AdminPage() {
                 </button>
       </div>
 
-              {/* Add/Edit Menu Item Form */}
-              {(showAddMenuItem || editingMenuItem) && (
+              {/* Add Menu Item Form */}
+              {showAddMenuItem && !editingMenuItem && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-300">
-                  <h3 className="font-semibold mb-4">{editingMenuItem ? 'Edit' : 'Add'} Menu Item</h3>
+                  <h3 className="font-semibold mb-4">Add Menu Item</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">

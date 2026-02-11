@@ -11,6 +11,7 @@ export async function GET() {
     const menuItems = await prisma.menuItem.findMany({
       orderBy: [
         { category: 'asc' },
+        { order: 'asc' },
         { name: 'asc' },
       ],
     })
