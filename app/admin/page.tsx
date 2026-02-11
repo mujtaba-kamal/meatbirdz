@@ -482,7 +482,12 @@ export default function AdminPage() {
         const data = await response.json()
         // API returns an array of meals
         const mealsList = Array.isArray(data) ? data : [data].filter(Boolean)
+        console.log('Fetched meals:', mealsList.length, mealsList)
         setMeals(mealsList)
+      } else {
+        console.error('Failed to fetch meals:', response.status, response.statusText)
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Error data:', errorData)
       }
     } catch (error) {
       console.error('Error fetching meals:', error)
@@ -1740,18 +1745,107 @@ export default function AdminPage() {
               </DndContext>
             </div>
 
-            {/* Meal Section - Single Meal Editor */}
+            {/* Meal Section - Multiple Meals */}
             <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Meal Deal</h2>
+                <h2 className="text-xl font-semibold">Meal Management</h2>
                 <button
-                  onClick={() => setShowMealEditor(!showMealEditor)}
+                  onClick={() => {
+                    setShowMealEditor(true)
+                    setMeal(null) // Start fresh for new meal
+                    setMealForm({
+                      name: 'Meal Deal',
+                      description: '',
+                      basePrice: '',
+                      image: '',
+                      available: true,
+                      categoryFilter: '',
+                    })
+                    setMealCategories([
+                      { name: 'Fries', order: 1 },
+                      { name: 'Drink', order: 2 },
+                      { name: 'Side', order: 3 },
+                    ])
+                    setMealOptions([])
+                    setLinkedMenuItems([])
+                  }}
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
-                  {showMealEditor ? <XIcon className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
-                  {showMealEditor ? 'Close Editor' : meal ? 'Edit Meal' : 'Create Meal'}
+                  <Plus className="w-4 h-4" />
+                  Add Meal
                 </button>
               </div>
+
+              {/* List of Existing Meals */}
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">
+                  Existing Meals {meals.length > 0 && `(${meals.length})`}
+                </h3>
+                {meals.length > 0 ? (
+                  <div className="space-y-2">
+                    {meals.map((m) => (
+                      <div
+                        key={m.id}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                      >
+                        <div>
+                          <span className="font-semibold">{m.name}</span>
+                          {m.categoryFilter && (
+                            <span className="ml-2 text-xs text-gray-600">
+                              (Category: {m.categoryFilter})
+                            </span>
+                          )}
+                          <span className="ml-2 text-sm text-gray-600">${m.basePrice?.toFixed(2)}</span>
+                          {!m.available && (
+                            <span className="ml-2 text-xs text-red-600 font-medium">(Unavailable)</span>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditMeal(m)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit meal"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (confirm(`Delete meal "${m.name}"?`)) {
+                                try {
+                                  const response = await fetch(`/api/meals/${m.id}`, {
+                                    method: 'DELETE',
+                                  })
+                                  if (response.ok) {
+                                    toast.success('Meal deleted')
+                                    fetchMeals()
+                                  } else {
+                                    const error = await response.json()
+                                    toast.error(error.error || 'Failed to delete meal')
+                                  }
+                                } catch (error) {
+                                  toast.error('Failed to delete meal')
+                                }
+                              }
+                            }}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete meal"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-gray-500 py-4 text-sm">
+                    {showMealEditor ? 'Fill in the form below to create a meal' : 'No meals yet. Click "Add Meal" to create one.'}
+                  </p>
+                )}
+              </div>
+
+              {meals.length === 0 && !showMealEditor && (
+                <p className="text-center text-gray-500 py-4">No meals yet. Click "Add Meal" to create one.</p>
+              )}
 
               {/* Meal Editor Form */}
               {showMealEditor && (
