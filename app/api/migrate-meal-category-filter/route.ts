@@ -78,25 +78,31 @@ export async function POST(request: NextRequest) {
         WHERE table_schema = 'public' 
         AND table_name = 'Meal' 
         AND column_name = 'categoryFilter'
-      );
+      ) as exists;
     `)
     const categoryFilterColumnExists = (checkCategoryFilterColumn as any[])[0]?.exists || false
 
-    if (categoryFilterColumnExists) {
-      console.log('Meal "categoryFilter" column already exists. Skipping migration.')
-      return NextResponse.json({
-        success: true,
-        message: 'Meal categoryFilter column migration completed successfully',
-        alreadyMigrated: true,
-      })
-    }
+    console.log('Category filter column exists check:', categoryFilterColumnExists)
 
-    // Add 'categoryFilter' column to Meal table
-    await prisma.$executeRawUnsafe(`
-      ALTER TABLE "Meal" 
-      ADD COLUMN "categoryFilter" TEXT;
-    `)
-    console.log('✅ Added "categoryFilter" column to Meal table.')
+    if (!categoryFilterColumnExists) {
+      // Add 'categoryFilter' column to Meal table
+      try {
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "Meal" 
+          ADD COLUMN IF NOT EXISTS "categoryFilter" TEXT;
+        `)
+        console.log('✅ Added "categoryFilter" column to Meal table.')
+      } catch (error: any) {
+        // If column already exists (race condition), that's fine
+        if (error.message?.includes('already exists') || error.message?.includes('duplicate')) {
+          console.log('Column already exists (race condition), continuing...')
+        } else {
+          throw error
+        }
+      }
+    } else {
+      console.log('Meal "categoryFilter" column already exists. Skipping migration.')
+    }
 
     console.log('Meal categoryFilter column migration completed successfully!')
     
