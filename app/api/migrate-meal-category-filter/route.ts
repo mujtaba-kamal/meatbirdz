@@ -71,38 +71,38 @@ export async function POST(request: NextRequest) {
       console.log('✅ Created "Meal" table.')
     }
 
-    // Check if 'categoryFilter' column already exists
-    const checkCategoryFilterColumn = await prisma.$queryRawUnsafe(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-        AND table_name = 'Meal' 
-        AND column_name = 'categoryFilter'
-      ) as exists;
-    `)
-    const categoryFilterColumnExists = (checkCategoryFilterColumn as any[])[0]?.exists || false
-
-    console.log('Category filter column exists check:', categoryFilterColumnExists)
-
-    if (!categoryFilterColumnExists) {
-      // Add 'categoryFilter' column to Meal table
-      try {
-        await prisma.$executeRawUnsafe(`
-          ALTER TABLE "Meal" 
-          ADD COLUMN IF NOT EXISTS "categoryFilter" TEXT;
-        `)
-        console.log('✅ Added "categoryFilter" column to Meal table.')
-      } catch (error: any) {
-        // If column already exists (race condition), that's fine
-        if (error.message?.includes('already exists') || error.message?.includes('duplicate')) {
-          console.log('Column already exists (race condition), continuing...')
-        } else {
-          throw error
-        }
+    // Always try to add the column (using IF NOT EXISTS to avoid errors if it already exists)
+    try {
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE "Meal" 
+        ADD COLUMN IF NOT EXISTS "categoryFilter" TEXT;
+      `)
+      console.log('✅ Added "categoryFilter" column to Meal table (or it already existed).')
+    } catch (error: any) {
+      // If column already exists, that's fine - continue
+      if (error.message?.includes('already exists') || error.message?.includes('duplicate') || error.message?.includes('column') && error.message?.includes('already')) {
+        console.log('Column already exists, continuing...')
+      } else {
+        console.error('Error adding column:', error.message)
+        throw error
       }
-    } else {
-      console.log('Meal "categoryFilter" column already exists. Skipping migration.')
     }
+
+    // Verify the column exists
+    const verifyColumn = await prisma.$queryRawUnsafe(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = 'public' 
+      AND table_name = 'Meal' 
+      AND column_name = 'categoryFilter';
+    `)
+    const columnExists = Array.isArray(verifyColumn) && verifyColumn.length > 0
+    
+    if (!columnExists) {
+      throw new Error('Failed to verify categoryFilter column was added. Please check database connection.')
+    }
+    
+    console.log('✅ Verified "categoryFilter" column exists in Meal table.')
 
     console.log('Meal categoryFilter column migration completed successfully!')
     

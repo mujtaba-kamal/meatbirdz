@@ -155,36 +155,81 @@ export async function PUT(
     if (basePrice !== undefined) updateData.basePrice = parseFloat(basePrice)
     if (image !== undefined) updateData.image = image || null
     if (available !== undefined) updateData.available = available
+    if (categoryFilter !== undefined) updateData.categoryFilter = categoryFilter || null
 
-    const meal = await prisma.meal.update({
-      where: { id: mealId },
-      data: updateData,
-      include: {
-        categories: {
-          orderBy: { order: 'asc' },
-        },
-        options: {
-          include: {
-            menuItem: true,
-            category: true,
+    let meal
+    try {
+      meal = await prisma.meal.update({
+        where: { id: mealId },
+        data: updateData,
+        include: {
+          categories: {
+            orderBy: { order: 'asc' },
           },
-          orderBy: [
-            { category: { order: 'asc' } },
-            { additionalPrice: 'asc' },
-          ],
-        },
-        menuItems: {
-          include: {
-            menuItem: {
-              select: {
-                id: true,
-                name: true,
+          options: {
+            include: {
+              menuItem: true,
+              category: true,
+            },
+            orderBy: [
+              { category: { order: 'asc' } },
+              { additionalPrice: 'asc' },
+            ],
+          },
+          menuItems: {
+            include: {
+              menuItem: {
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
             },
           },
         },
-      },
-    })
+      })
+    } catch (error: any) {
+      // If categoryFilter column doesn't exist, add it and retry
+      if (error.message?.includes('categoryFilter') && error.message?.includes('does not exist')) {
+        console.log('categoryFilter column missing, attempting to add it...')
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "Meal" 
+          ADD COLUMN IF NOT EXISTS "categoryFilter" TEXT;
+        `)
+        console.log('✅ Added categoryFilter column, retrying meal update...')
+        meal = await prisma.meal.update({
+          where: { id: mealId },
+          data: updateData,
+          include: {
+            categories: {
+              orderBy: { order: 'asc' },
+            },
+            options: {
+              include: {
+                menuItem: true,
+                category: true,
+              },
+              orderBy: [
+                { category: { order: 'asc' } },
+                { additionalPrice: 'asc' },
+              ],
+            },
+            menuItems: {
+              include: {
+                menuItem: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        })
+      } else {
+        throw error
+      }
+    }
 
     return NextResponse.json(meal)
   } catch (error: any) {

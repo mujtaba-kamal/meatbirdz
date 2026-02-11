@@ -162,31 +162,77 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create meal with categories first, then options (since options need category IDs)
-    const meal = await prisma.meal.create({
-      data: {
-        name,
-        description: description || null,
-        basePrice: parseFloat(basePrice),
-        image: image || null,
-        available: available !== undefined ? available : true,
-        categoryFilter: categoryFilter || null,
-        categories: {
-          create: categories.map((cat: { name: string; order: number }) => ({
-            name: cat.name,
-            order: cat.order,
-          })),
-        },
-        menuItems: menuItemIds && menuItemIds.length > 0 ? {
-          create: menuItemIds.map((menuItemId: string) => ({
-            menuItemId,
-          })),
-        } : undefined,
-      },
-      include: {
-        categories: true,
-      },
-    })
+        // Try to create meal - if categoryFilter column doesn't exist, add it first
+        let meal
+        try {
+          meal = await prisma.meal.create({
+            data: {
+              name,
+              description: description || null,
+              basePrice: parseFloat(basePrice),
+              image: image || null,
+              available: available !== undefined ? available : true,
+              categoryFilter: categoryFilter || null,
+              categories: {
+                create: categories.map((cat: { name: string; order: number }) => ({
+                  name: cat.name,
+                  order: cat.order,
+                })),
+              },
+              menuItems: menuItemIds && menuItemIds.length > 0 ? {
+                create: menuItemIds.map((menuItemId: string) => ({
+                  menuItemId,
+                })),
+              } : undefined,
+            },
+            include: {
+              categories: true,
+            },
+          })
+        } catch (error: any) {
+          // If categoryFilter column doesn't exist, try to add it and retry
+          if (error.message?.includes('categoryFilter') && error.message?.includes('does not exist')) {
+            console.log('categoryFilter column missing, attempting to add it...')
+            try {
+              await prisma.$executeRawUnsafe(`
+                ALTER TABLE "Meal" 
+                ADD COLUMN IF NOT EXISTS "categoryFilter" TEXT;
+              `)
+              console.log('✅ Added categoryFilter column, retrying meal creation...')
+              
+              // Retry meal creation
+              meal = await prisma.meal.create({
+                data: {
+                  name,
+                  description: description || null,
+                  basePrice: parseFloat(basePrice),
+                  image: image || null,
+                  available: available !== undefined ? available : true,
+                  categoryFilter: categoryFilter || null,
+                  categories: {
+                    create: categories.map((cat: { name: string; order: number }) => ({
+                      name: cat.name,
+                      order: cat.order,
+                    })),
+                  },
+                  menuItems: menuItemIds && menuItemIds.length > 0 ? {
+                    create: menuItemIds.map((menuItemId: string) => ({
+                      menuItemId,
+                    })),
+                  } : undefined,
+                },
+                include: {
+                  categories: true,
+                },
+              })
+            } catch (retryError: any) {
+              console.error('Failed to add column or retry:', retryError)
+              throw new Error(`Failed to create meal. Please run migration: ${retryError.message}`)
+            }
+          } else {
+            throw error
+          }
+        }
 
     // Now create options with the actual category IDs
     // Match options to categories by order if categoryId is not provided
