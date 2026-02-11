@@ -1014,7 +1014,7 @@ export default function AdminPage() {
   const orderCountsByStatus = orderStatuses.reduce((acc, status) => {
     acc[status] = orders.filter((order) => order.status === status).length
     return acc
-  }, {} as Record<string, number>)
+  }, {} as Record<string, number>))
 
   if (status === 'loading' || loading) {
     return (
@@ -1059,7 +1059,7 @@ export default function AdminPage() {
                 </span>
               </div>
             )}
-          </div>
+        </div>
           
           {/* Tabs */}
           <div className="flex gap-2 mt-4 border-b border-gray-200">
