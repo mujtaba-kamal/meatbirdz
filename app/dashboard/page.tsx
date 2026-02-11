@@ -83,8 +83,8 @@ export default function DashboardPage() {
       
       if (session?.user?.id) {
         // Fetch orders for logged-in user
-        const response = await fetch('/api/orders/user')
-        const data = await response.json()
+      const response = await fetch('/api/orders/user')
+      const data = await response.json()
         setOrders(Array.isArray(data) ? data : [])
       } else {
         // Fetch guest orders from localStorage
@@ -162,9 +162,9 @@ export default function DashboardPage() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">My Dashboard</h1>
           {session ? (
-            <p className="text-gray-600">
-              Welcome back, {session.user?.name || session.user?.email}!
-            </p>
+          <p className="text-gray-600">
+            Welcome back, {session.user?.name || session.user?.email}!
+          </p>
           ) : (
             <div className="flex items-center gap-4">
               <p className="text-gray-600">View your orders</p>

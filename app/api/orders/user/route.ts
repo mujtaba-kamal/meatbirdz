@@ -14,13 +14,13 @@ export async function GET(request: NextRequest) {
 
     // If user is logged in, fetch their orders
     if (session?.user?.id) {
-      const orders = await prisma.order.findMany({
-        where: {
-          userId: session.user.id,
-        },
-        include: {
-          items: {
-            include: {
+    const orders = await prisma.order.findMany({
+      where: {
+        userId: session.user.id,
+      },
+      include: {
+        items: {
+          include: {
               menuItem: {
                 select: {
                   name: true,
@@ -78,15 +78,15 @@ export async function GET(request: NextRequest) {
                   name: true,
                 },
               },
-            },
           },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      })
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
 
-      return NextResponse.json(orders)
+    return NextResponse.json(orders)
     }
 
     // No session and no parameters, return empty array

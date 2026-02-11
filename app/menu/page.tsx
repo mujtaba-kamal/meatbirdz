@@ -215,15 +215,15 @@ export default function MenuPage() {
         })
       } else {
         // Add as regular menu item
-        addItem({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          image: item.image || undefined,
-          instructions: instructions || undefined,
+      addItem({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        image: item.image || undefined,
+        instructions: instructions || undefined,
           type: 'menuItem',
           menuItemId: item.id,
-        })
+      })
       }
     }
     

@@ -1,3 +1,4 @@
+'use client'
 
 'use client'
 
@@ -8,29 +9,29 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Menu, ShoppingCart, Clock, MapPin, ChefHat, Star, Shield, Zap } from 'lucide-react'
 
-// Hero carousel images
-const heroImages = [
-  {
-    url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1920&h=1080&fit=crop&q=80',
-    alt: 'Delicious burgers',
-  },
-  {
-    url: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=1920&h=1080&fit=crop&q=80',
-    alt: 'Fresh wraps',
-  },
-  {
-    url: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=1920&h=1080&fit=crop&q=80',
-    alt: 'Crispy fries',
-  },
-]
-
 export default function Home() {
   const { data: session } = useSession()
   const router = useRouter()
   const [logoError, setLogoError] = useState(true) // Start with true to show fallback
   const [logoLoaded, setLogoLoaded] = useState(false)
   const [logoSrc, setLogoSrc] = useState('/logo.png')
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [currentSlide, setCurrentSlide] = useState(0)
+
+  // Hero carousel images - burger, wraps, fries
+  const heroImages = [
+    {
+      url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1920&h=1080&fit=crop&q=80',
+      alt: 'Delicious burgers',
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=1920&h=1080&fit=crop&q=80',
+      alt: 'Fresh wraps',
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=1920&h=1080&fit=crop&q=80',
+      alt: 'Crispy fries',
+    },
+  ]
 
   useEffect(() => {
     // Check if logo exists by trying to load it (try PNG first, then SVG)
@@ -79,11 +80,11 @@ export default function Home() {
   // Auto-swipe carousel
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % heroImages.length)
-    }, 5000) // Change image every 5 seconds
+      setCurrentSlide((prev) => (prev + 1) % heroImages.length)
+    }, 5000) // Change slide every 5 seconds
 
     return () => clearInterval(interval)
-  }, [])
+  }, [heroImages.length])
 
   return (
     <div className="min-h-screen">
@@ -95,7 +96,7 @@ export default function Home() {
             <div
               key={index}
               className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+                index === currentSlide ? 'opacity-100' : 'opacity-0'
               }`}
             >
               <Image
@@ -105,14 +106,13 @@ export default function Home() {
                 className="object-cover"
                 priority={index === 0}
                 quality={90}
-                sizes="100vw"
               />
             </div>
           ))}
         </div>
         
         {/* Dark overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/60"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/50 to-black/60"></div>
         
         {/* Content */}
         <div className="relative max-w-6xl mx-auto text-center h-full flex flex-col justify-center">

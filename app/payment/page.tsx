@@ -163,16 +163,16 @@ function CheckoutForm({ paymentIntentId, orderType }: { paymentIntentId: string 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <h3 className="text-lg font-bold text-gray-900 mb-4">Pay Online</h3>
-          <PaymentElement />
+      <PaymentElement />
         </div>
-        <button
-          type="submit"
-          disabled={!stripe || loading}
+      <button
+        type="submit"
+        disabled={!stripe || loading}
           className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-        >
-          {loading ? 'Processing...' : 'Pay Now'}
-        </button>
-      </form>
+      >
+        {loading ? 'Processing...' : 'Pay Now'}
+      </button>
+    </form>
     </div>
   )
 }
@@ -260,9 +260,9 @@ function PaymentPageContent() {
         <h1 className="text-3xl font-bold mb-8">Complete Your Payment</h1>
         <div className="bg-white rounded-lg shadow-md p-6">
           {clientSecret && stripePromise ? (
-            <Elements stripe={stripePromise} options={options}>
+          <Elements stripe={stripePromise} options={options}>
               <CheckoutForm paymentIntentId={paymentIntentId} orderType={finalOrderType} />
-            </Elements>
+          </Elements>
           ) : (
             <CheckoutForm paymentIntentId={paymentIntentId} orderType={finalOrderType} />
           )}

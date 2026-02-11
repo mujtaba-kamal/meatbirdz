@@ -88,8 +88,7 @@ export default function AdminPage() {
   
   // Menu management state
   const [menuItems, setMenuItems] = useState<any[]>([])
-  const [meals, setMeals] = useState<any[]>([]) // All meals
-  const [selectedMeal, setSelectedMeal] = useState<any>(null) // Currently selected meal for editing
+  const [meal, setMeal] = useState<any>(null)
   const [showAddMenuItem, setShowAddMenuItem] = useState(false)
   const [showMealEditor, setShowMealEditor] = useState(false)
   const [editingMenuItem, setEditingMenuItem] = useState<any>(null)
@@ -171,7 +170,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (session?.user?.role === 'ADMIN' && activeTab === 'menu') {
       fetchMenuItems()
-      fetchMeals()
+      fetchMeal()
     }
   }, [session, activeTab])
 
@@ -474,109 +473,72 @@ export default function AdminPage() {
     )
   }
 
-  const fetchMeals = async () => {
+  const fetchMeal = async () => {
     try {
       const response = await fetch('/api/meals')
       if (response.ok) {
         const data = await response.json()
-        const mealsArray = Array.isArray(data) ? data : [data].filter(Boolean)
-        setMeals(mealsArray)
-        
-        // If a meal is selected, refresh its data
-        if (selectedMeal) {
-          const refreshedMeal = mealsArray.find((m: any) => m.id === selectedMeal.id)
-          if (refreshedMeal) {
-            loadMealIntoEditor(refreshedMeal)
+        // API now returns an array, get the first meal or allow selecting
+        const meals = Array.isArray(data) ? data : [data].filter(Boolean)
+        if (meals.length > 0) {
+          const firstMeal = meals[0] // For now, use first meal. Later we can add meal selection
+          setMeal(firstMeal)
+          setMealForm({
+            name: firstMeal.name || 'Meal Deal',
+            description: firstMeal.description || '',
+            basePrice: firstMeal.basePrice?.toString() || '',
+            image: firstMeal.image || '',
+            available: firstMeal.available !== undefined ? firstMeal.available : true,
+          })
+          // Set categories from the meal
+          if (firstMeal.categories && Array.isArray(firstMeal.categories)) {
+            setMealCategories(firstMeal.categories.map((cat: any) => ({
+              id: cat.id,
+              name: cat.name,
+              order: cat.order,
+            })).sort((a: any, b: any) => a.order - b.order))
+          } else {
+            // Default categories if none exist
+            setMealCategories([
+              { name: 'Fries', order: 1 },
+              { name: 'Drink', order: 2 },
+              { name: 'Side', order: 3 },
+            ])
           }
+          // Set meal options with categoryId
+          if (firstMeal.options) {
+            setMealOptions(firstMeal.options.map((opt: any) => ({
+              menuItemId: opt.menuItemId,
+              categoryId: opt.categoryId || opt.category?.id, // Support both old and new structure
+              additionalPrice: opt.additionalPrice || 0,
+            })))
+          }
+          // Set linked menu items
+          if (firstMeal.menuItems && Array.isArray(firstMeal.menuItems)) {
+            setLinkedMenuItems(firstMeal.menuItems.map((link: any) => link.menuItem?.id || link.menuItemId).filter(Boolean))
+          }
+        } else {
+          // No meals exist, reset to defaults
+          setMeal(null)
+          setMealForm({
+            name: 'Meal Deal',
+            description: '',
+            basePrice: '',
+            image: '',
+            available: true,
+          })
+          setMealCategories([
+            { name: 'Fries', order: 1 },
+            { name: 'Drink', order: 2 },
+            { name: 'Side', order: 3 },
+          ])
+          setMealOptions([])
+          setLinkedMenuItems([])
         }
       }
     } catch (error) {
-      console.error('Error fetching meals:', error)
-      toast.error('Failed to fetch meals')
-    }
-  }
-
-  const loadMealIntoEditor = (mealToLoad: any) => {
-    setSelectedMeal(mealToLoad)
-    setMealForm({
-      name: mealToLoad.name || 'Meal Deal',
-      description: mealToLoad.description || '',
-      basePrice: mealToLoad.basePrice?.toString() || '',
-      image: mealToLoad.image || '',
-      available: mealToLoad.available !== undefined ? mealToLoad.available : true,
-    })
-    // Set categories from the meal
-    if (mealToLoad.categories && Array.isArray(mealToLoad.categories)) {
-      setMealCategories(mealToLoad.categories.map((cat: any) => ({
-        id: cat.id,
-        name: cat.name,
-        order: cat.order,
-      })).sort((a: any, b: any) => a.order - b.order))
-    } else {
-      // Default categories if none exist
-      setMealCategories([
-        { name: 'Fries', order: 1 },
-        { name: 'Drink', order: 2 },
-        { name: 'Side', order: 3 },
-      ])
-    }
-    // Set meal options with categoryId
-    if (mealToLoad.options) {
-      setMealOptions(mealToLoad.options.map((opt: any) => ({
-        menuItemId: opt.menuItemId,
-        categoryId: opt.categoryId || opt.category?.id,
-        additionalPrice: opt.additionalPrice || 0,
-      })))
-    } else {
-      setMealOptions([])
-    }
-    // Set linked menu items
-    if (mealToLoad.menuItems && Array.isArray(mealToLoad.menuItems)) {
-      setLinkedMenuItems(mealToLoad.menuItems.map((link: any) => link.menuItem?.id || link.menuItemId).filter(Boolean))
-    } else {
-      setLinkedMenuItems([])
-    }
-  }
-
-  const resetMealEditor = () => {
-    setSelectedMeal(null)
-    setMealForm({
-      name: 'Meal Deal',
-      description: '',
-      basePrice: '',
-      image: '',
-      available: true,
-    })
-    setMealCategories([
-      { name: 'Fries', order: 1 },
-      { name: 'Drink', order: 2 },
-      { name: 'Side', order: 3 },
-    ])
-    setMealOptions([])
-    setLinkedMenuItems([])
-  }
-
-  const handleDeleteMeal = async (mealId: string) => {
-    if (!confirm('Are you sure you want to delete this meal?')) return
-
-    try {
-      const response = await fetch(`/api/meals/${mealId}`, {
-        method: 'DELETE',
-      })
-
-      if (response.ok) {
-        toast.success('Meal deleted successfully')
-        if (selectedMeal?.id === mealId) {
-          resetMealEditor()
-          setShowMealEditor(false)
-        }
-        fetchMeals()
-      } else {
-        const error = await response.json()
-        toast.error(error.error || 'Failed to delete meal')
-      }
-    } catch (error) {
-      toast.error('Failed to delete meal')
+      console.error('Error fetching meal:', error)
+      toast.error('Failed to fetch meal')
     }
   }
 
@@ -676,7 +638,7 @@ export default function AdminPage() {
       // For existing meals, we can use the actual category IDs
       let optionsToSend
       
-      if (selectedMeal && selectedMeal.id) {
+      if (meal && meal.id) {
         // Existing meal: resolve categoryId from categoryOrder since categories may have been recreated
         // Match each option to its category by finding the category with matching ID or by order
         optionsToSend = mealOptions.map(opt => {
@@ -723,8 +685,8 @@ export default function AdminPage() {
       }
 
       // Use PUT endpoint if meal exists, POST if new
-      const url = selectedMeal ? `/api/meals/${selectedMeal.id}` : '/api/meals'
-      const method = selectedMeal ? 'PUT' : 'POST'
+      const url = meal ? `/api/meals/${meal.id}` : '/api/meals'
+      const method = meal ? 'PUT' : 'POST'
       
       const requestBody = {
         name: mealForm.name,
@@ -747,12 +709,8 @@ export default function AdminPage() {
 
       if (response.ok) {
         toast.success('Meal saved successfully')
-        const savedMeal = await response.json()
-        fetchMeals()
-        // Load the saved meal into editor if it was a new meal
-        if (!selectedMeal) {
-          loadMealIntoEditor(savedMeal)
-        }
+        setShowMealEditor(false)
+        fetchMeal()
       } else {
         const error = await response.json()
         toast.error(error.error || 'Failed to save meal')
@@ -813,8 +771,6 @@ export default function AdminPage() {
     updated[index] = { ...updated[index], name }
     setMealCategories(updated)
   }
-
-  const removeMealOption = (index: number) => {
 
   const removeMealOption = (index: number) => {
     setMealOptions(mealOptions.filter((_, i) => i !== index))
@@ -970,7 +926,7 @@ export default function AdminPage() {
         fetchOrders()
         // Update selected order if it's the one being marked as paid
         if (selectedOrder?.id === orderId) {
-          const updatedOrder = orders.find((o) => o.id === orderId)
+          const updatedOrder = orders.find(o => o.id === orderId)
           if (updatedOrder) {
             setSelectedOrder({ ...updatedOrder, paymentStatus: 'PAID' })
           }
@@ -994,7 +950,7 @@ export default function AdminPage() {
         toast.success('Arrival acknowledged')
         fetchOrders()
         if (selectedOrder?.id === orderId) {
-          const updatedOrder = orders.find((o) => o.id === orderId)
+          const updatedOrder = orders.find(o => o.id === orderId)
           if (updatedOrder) {
             setSelectedOrder({ ...updatedOrder, arrivalAcknowledged: true })
           }
@@ -1009,12 +965,12 @@ export default function AdminPage() {
 
   // Get orders with unacknowledged arrivals
   const arrivalNotifications = orders.filter(
-    (order) => order.arrivalNotification && !order.arrivalAcknowledged
+    order => order.arrivalNotification && !order.arrivalAcknowledged
   )
 
   // Calculate order counts by status
   const orderCountsByStatus = orderStatuses.reduce((acc, status) => {
-    acc[status] = orders.filter((order) => order.status === status).length
+    acc[status] = orders.filter(order => order.status === status).length
     return acc
   }, {} as Record<string, number>)
 
@@ -1321,7 +1277,7 @@ export default function AdminPage() {
                             statusColors[order.status] || statusColors.PENDING
                           }`}
                             onClick={(e) => e.stopPropagation()}
-                          >
+                        >
                             {orderStatuses.map((status) => (
                               <option key={status} value={status}>
                                 {status}
@@ -1777,92 +1733,18 @@ export default function AdminPage() {
               </DndContext>
             </div>
 
-            {/* Meals Section - Multiple Meals Management */}
+            {/* Meal Section - Single Meal Editor */}
             <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Meals</h2>
+                <h2 className="text-xl font-semibold">Meal Deal</h2>
                 <button
-                  onClick={() => {
-                    resetMealEditor()
-                    setShowMealEditor(true)
-                  }}
+                  onClick={() => setShowMealEditor(!showMealEditor)}
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
-                  <Plus className="w-4 h-4" />
-                  Create New Meal
+                  {showMealEditor ? <XIcon className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
+                  {showMealEditor ? 'Close Editor' : meal ? 'Edit Meal' : 'Create Meal'}
                 </button>
               </div>
-
-              {/* Meals List */}
-              {meals.length > 0 && (
-                <div className="mb-6 space-y-2">
-                  {meals.map((mealItem) => (
-                    <div
-                      key={mealItem.id}
-                      className={`p-4 border rounded-lg flex items-center justify-between ${
-                        selectedMeal?.id === mealItem.id ? 'border-green-500 bg-green-50' : 'bg-white'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 flex-1">
-                        {mealItem.image && (
-                          <img src={mealItem.image} alt={mealItem.name} className="w-16 h-16 object-cover rounded" />
-                        )}
-                        <div>
-                          <h4 className="font-semibold">{mealItem.name}</h4>
-                          <p className="text-sm text-gray-600">{mealItem.description}</p>
-                          <div className="flex items-center gap-4 mt-1">
-                            <span className="text-sm font-medium text-green-600">Base: ${mealItem.basePrice?.toFixed(2) || '0.00'}</span>
-                            <span className="text-xs text-gray-500">
-                              {mealItem.categories?.length || 0} categories, {mealItem.options?.length || 0} options
-                            </span>
-                            {mealItem.menuItems && mealItem.menuItems.length > 0 && (
-                              <span className="text-xs text-blue-600">
-                                Linked to {mealItem.menuItems.length} menu item{mealItem.menuItems.length !== 1 ? 's' : ''}
-                              </span>
-                            )}
-                            {!mealItem.available && (
-                              <span className="text-xs text-red-600 font-medium">Unavailable</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            loadMealIntoEditor(mealItem)
-                            setShowMealEditor(true)
-                          }}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteMeal(mealItem.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Meal Editor Form */}
-              {showMealEditor && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-300">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold">{selectedMeal ? 'Edit Meal' : 'Create New Meal'}</h3>
-                    <button
-                      onClick={() => {
-                        setShowMealEditor(false)
-                        resetMealEditor()
-                      }}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      <XIcon className="w-5 h-5" />
-                    </button>
-                  </div>
 
               {/* Meal Editor Form */}
               {showMealEditor && (
@@ -2139,13 +2021,41 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {!showMealEditor && meals.length === 0 && (
-                <p className="text-center text-gray-500 py-8">No meals created yet. Click "Create New Meal" to get started.</p>
+              {/* Meal Display */}
+              {!showMealEditor && meal && (
+                <div className="p-4 border rounded-lg bg-white">
+                  <div className="flex items-center gap-3 mb-2">
+                    {meal.image && (
+                      <img src={meal.image} alt={meal.name} className="w-16 h-16 object-cover rounded" />
+                    )}
+                    <div>
+                      <h4 className="font-semibold">{meal.name}</h4>
+                      <p className="text-sm text-gray-600">{meal.description}</p>
+                      <div className="flex items-center gap-4 mt-1">
+                        <span className="text-sm font-medium text-green-600">Base: ${meal.basePrice?.toFixed(2) || '0.00'}</span>
+                        {!meal.available && (
+                          <span className="text-xs text-red-600 font-medium">Unavailable</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-sm text-gray-600">
+                    <p>Options: {meal.options?.length || 0} items across 3 categories</p>
+                    <div className="mt-2 text-xs">
+                      <p>{meal.category1Name}: {meal.options?.filter((opt: any) => opt.category === 1).length || 0} options</p>
+                      <p>{meal.category2Name}: {meal.options?.filter((opt: any) => opt.category === 2).length || 0} options</p>
+                      <p>{meal.category3Name}: {meal.options?.filter((opt: any) => opt.category === 3).length || 0} options</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!showMealEditor && !meal && (
+                <p className="text-center text-gray-500 py-8">No meal configured yet. Click "Create Meal" to get started.</p>
               )}
             </div>
           </div>
         )}
-      </div>
       </div>
     </div>
   )
