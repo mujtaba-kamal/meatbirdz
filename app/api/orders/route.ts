@@ -43,6 +43,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    console.log('📋 Fetching orders with filter:', whereClause)
+    
     const orders = await prisma.order.findMany({
       where: whereClause,
       include: {
@@ -64,13 +66,23 @@ export async function GET(request: NextRequest) {
         createdAt: 'desc',
       },
     })
+    
+    console.log(`✅ Found ${orders.length} orders`)
     return NextResponse.json(orders)
   } catch (error: any) {
-    console.error('Error fetching orders:', error)
+    console.error('❌ Error fetching orders:', error)
     const errorMessage = error.message || error.toString() || ''
     
-    // Log the error but don't return empty array - let the error propagate
-    // so frontend can handle it properly
+    // Try to return empty array if it's a schema/relation error, otherwise return error
+    if (
+      errorMessage.includes('meal') ||
+      errorMessage.includes('relation') ||
+      errorMessage.includes('does not exist')
+    ) {
+      console.warn('⚠️ Schema error detected, returning empty array')
+      return NextResponse.json([])
+    }
+    
     return NextResponse.json(
       { error: 'Failed to fetch orders', details: errorMessage },
       { status: 500 }

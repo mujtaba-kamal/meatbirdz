@@ -14,8 +14,26 @@ export async function POST(request: NextRequest) {
     items = requestData.items || []
     const { customerInfo, total, paymentIntentId, orderType } = requestData
     
+    // Validate required fields
+    if (!items || items.length === 0) {
+      console.error('❌ No items provided in request')
+      return NextResponse.json(
+        { error: 'No items provided', details: 'Items array is empty' },
+        { status: 400 }
+      )
+    }
+    
+    if (!customerInfo || !customerInfo.customerName || !customerInfo.customerEmail) {
+      console.error('❌ Missing customer info')
+      return NextResponse.json(
+        { error: 'Missing customer information', details: 'customerName and customerEmail are required' },
+        { status: 400 }
+      )
+    }
+    
     // CRITICAL: Log what we're receiving BEFORE any validation
     console.log('\n🔴 ===== RAW ITEMS RECEIVED =====')
+    console.log(`Items count: ${items.length}`)
     console.log(JSON.stringify(items, null, 2))
     console.log('================================\n')
     const session = await getServerSession(authOptions)
@@ -51,25 +69,48 @@ export async function POST(request: NextRequest) {
 
     // Validate menu item IDs exist in database
     const allMenuItemIds = items
-      .map((item: any) => item.menuItemId || item.id)
+      .map((item: any) => {
+        const id = item.menuItemId || item.id
+        console.log(`   Item: id=${item.id}, menuItemId=${item.menuItemId}, using=${id}`)
+        return id
+      })
       .filter(Boolean) as string[]
     
+    if (allMenuItemIds.length === 0) {
+      console.error('❌ No valid menu item IDs found in items')
+      return NextResponse.json(
+        { error: 'Invalid items', details: 'No valid menu item IDs found' },
+        { status: 400 }
+      )
+    }
+    
     // Check which IDs exist in database
-    const existingMenuItems = allMenuItemIds.length > 0 ? await prisma.menuItem.findMany({
+    const existingMenuItems = await prisma.menuItem.findMany({
       where: { id: { in: allMenuItemIds } },
       select: { id: true },
-    }) : []
+    })
     
     const validMenuItemIds = new Set(existingMenuItems.map((m: any) => m.id))
     
     console.log(`\n📋 Validation Results:`)
-    console.log(`   Menu Items: ${validMenuItemIds.size}/${allMenuItemIds.length} valid`)
+    console.log(`   Total items: ${items.length}`)
+    console.log(`   Unique menu item IDs: ${allMenuItemIds.length}`)
+    console.log(`   Valid menu items found: ${validMenuItemIds.size}/${allMenuItemIds.length}`)
     
     // Log invalid IDs
     const invalidMenuItemIds = allMenuItemIds.filter(id => !validMenuItemIds.has(id))
     
     if (invalidMenuItemIds.length > 0) {
       console.error(`❌ Invalid menuItemIds:`, invalidMenuItemIds)
+      // Don't fail completely - just log and continue with null menuItemId
+    }
+    
+    if (validMenuItemIds.size === 0) {
+      console.error('❌ No valid menu items found in database')
+      return NextResponse.json(
+        { error: 'Invalid items', details: 'None of the provided menu item IDs exist in the database' },
+        { status: 400 }
+      )
     }
 
     // Create order in database
@@ -134,20 +175,31 @@ export async function POST(request: NextRequest) {
       order: order,
     })
   } catch (error: any) {
-    console.error('Error creating order from confirmation:', error)
+    console.error('❌ Error creating order from confirmation:', error)
     console.error('Error details:', {
       message: error.message,
       code: error.code,
       meta: error.meta,
-      items: items?.map((item: any) => ({
+      stack: error.stack,
+      itemsCount: items?.length || 0,
+      items: items?.slice(0, 3).map((item: any) => ({
         id: item.id,
+        name: item.name,
         type: item.type,
         menuItemId: item.menuItemId,
         quantity: item.quantity,
+        price: item.price,
       })),
     })
+    
+    // Return more detailed error for debugging
     return NextResponse.json(
-      { error: 'Failed to create order', details: error.message },
+      { 
+        error: 'Failed to create order', 
+        details: error.message,
+        code: error.code,
+        meta: error.meta,
+      },
       { status: 500 }
     )
   }

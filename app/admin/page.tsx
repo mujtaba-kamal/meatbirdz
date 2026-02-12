@@ -577,26 +577,31 @@ export default function AdminPage() {
       })
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
+        throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`)
       }
       
       const data = await response.json()
       // Ensure data is always an array
       if (Array.isArray(data)) {
+        console.log(`✅ Loaded ${data.length} orders`)
       setOrders(data)
       } else {
-        console.error('Expected array but got:', data)
+        console.error('❌ Expected array but got:', data)
         setOrders([])
         if (data.error) {
-          toast.error(data.error)
+          toast.error(`Failed to load orders: ${data.error}`)
         }
       }
       setLastUpdateTime(new Date())
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error fetching orders:', error)
       // Don't show error toast on every failed request (too noisy)
       if (orders.length === 0) {
-      toast.error('Failed to load orders')
+        toast.error(`Failed to load orders: ${error.message || 'Unknown error'}`)
       }
+      // Set empty array on error to prevent UI issues
+      setOrders([])
     } finally {
       setLoading(false)
     }

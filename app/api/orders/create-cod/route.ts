@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
         paymentStatus: 'PENDING', // Will be marked as PAID when payment is received
         items: {
           create: items.map((item: any) => ({
-            menuItemId: item.id,
+            menuItemId: item.menuItemId || item.id,
             quantity: item.quantity,
             price: item.price,
           })),
