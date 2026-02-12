@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCartStore } from '@/store/cartStore'
-import { Plus, Minus, MapPin, Store, Truck, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Minus, MapPin, Store, Truck, X, Menu as MenuIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export const dynamic = 'force-dynamic'
@@ -35,19 +35,19 @@ export default function MenuPage() {
   const [loading, setLoading] = useState(true)
   const [orderType, setOrderType] = useState<string | null>(null)
   const [selectedLocation, setSelectedLocation] = useState<any>(null)
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({})
   const [itemInstructions, setItemInstructions] = useState<Record<string, string>>({})
-  const [meals, setMeals] = useState<Record<string, any>>({}) // meals linked to each menu item: { menuItemId: meal }
-  const [mealChoices, setMealChoices] = useState<Record<string, Record<string, any>>>({}) // { menuItemId: { mealId: { categoryId: choice } } }
-  const [showMealOption, setShowMealOption] = useState<Record<string, string | null>>({}) // { menuItemId: mealId | null }
+  const [meals, setMeals] = useState<Record<string, any>>({})
+  const [mealChoices, setMealChoices] = useState<Record<string, Record<string, any>>>({})
+  const [showMealOption, setShowMealOption] = useState<Record<string, string | null>>({})
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const addItem = useCartStore((state) => state.addItem)
 
   useEffect(() => {
-    // Only run on client side
     if (typeof window === 'undefined') return
     
-    // Check if location is selected
     const storedOrderType = localStorage.getItem('orderType')
     const storedLocation = localStorage.getItem('selectedLocation')
     
@@ -55,27 +55,28 @@ export default function MenuPage() {
       setOrderType(storedOrderType)
       setSelectedLocation(JSON.parse(storedLocation))
     } else {
-      // Redirect to order online page if no location selected
       router.push('/order-online')
     }
     
     fetchMenuItems()
-    fetchMeals()
   }, [router])
+
+  // Fetch meals when menu items are loaded
+  useEffect(() => {
+    if (menuItems.length > 0) {
+      fetchMeals()
+    }
+  }, [menuItems])
 
   const fetchMeals = async () => {
     try {
-      // Fetch all meals - we'll filter by menu item when displaying
       const response = await fetch('/api/meals')
-      if (!response.ok) {
-        console.error('Failed to fetch meals:', response.status, response.statusText)
-        return
-      }
+      if (!response.ok) return
       const allMeals = await response.json()
       if (Array.isArray(allMeals)) {
-        // Create a map of meals by menu item ID
         const mealsByMenuItem: Record<string, any[]> = {}
         
+        // First, add meals directly linked to menu items
         allMeals.forEach((meal: any) => {
           if (meal.available && meal.menuItems && Array.isArray(meal.menuItems)) {
             meal.menuItems.forEach((link: any) => {
@@ -90,34 +91,44 @@ export default function MenuPage() {
           }
         })
         
+        // Then, add meals by categoryFilter (after menuItems are loaded)
+        if (menuItems.length > 0) {
+          allMeals.forEach((meal: any) => {
+            if (meal.available && meal.categoryFilter) {
+              menuItems.forEach((item: MenuItem) => {
+                if (item.category === meal.categoryFilter) {
+                  if (!mealsByMenuItem[item.id]) {
+                    mealsByMenuItem[item.id] = []
+                  }
+                  if (!mealsByMenuItem[item.id].find((m: any) => m.id === meal.id)) {
+                    mealsByMenuItem[item.id].push(meal)
+                  }
+                }
+              })
+            }
+          })
+        }
+        
         setMeals(mealsByMenuItem)
-      } else {
-        console.error('Meals API returned non-array data:', allMeals)
       }
     } catch (error) {
       console.error('Error fetching meals:', error)
     }
   }
 
-
   const fetchMenuItems = async () => {
     try {
       const response = await fetch('/api/menu')
-      if (!response.ok) {
-        throw new Error('Failed to fetch menu')
-      }
+      if (!response.ok) throw new Error('Failed to fetch menu')
       const data = await response.json()
-      // Ensure data is an array
       if (Array.isArray(data)) {
         setMenuItems(data)
-        // Initialize quantities to 1 for all items
         const initialQuantities: Record<string, number> = {}
         data.forEach((item: MenuItem) => {
           initialQuantities[item.id] = 1
         })
         setItemQuantities(initialQuantities)
       } else {
-        console.error('Menu API returned non-array data:', data)
         toast.error('Failed to load menu: Invalid data format')
         setMenuItems([])
       }
@@ -135,22 +146,48 @@ export default function MenuPage() {
       ? menuItems
       : menuItems.filter((item) => item.category === selectedCategory)
 
-  const toggleExpand = (itemId: string) => {
-    const newExpanded = new Set(expandedItems)
-    if (newExpanded.has(itemId)) {
-      newExpanded.delete(itemId)
-    } else {
-      newExpanded.add(itemId)
-    }
-    setExpandedItems(newExpanded)
-  }
-
   const updateQuantity = (itemId: string, change: number) => {
     setItemQuantities((prev) => {
       const current = prev[itemId] || 1
       const newQuantity = Math.max(1, current + change)
       return { ...prev, [itemId]: newQuantity }
     })
+  }
+
+  const openDrawer = async (item: MenuItem) => {
+    if (!item.available) {
+      toast.error('This item is currently unavailable')
+      return
+    }
+    setSelectedItem(item)
+    setDrawerOpen(true)
+    // Initialize quantity if not set
+    if (!itemQuantities[item.id]) {
+      setItemQuantities((prev) => ({ ...prev, [item.id]: 1 }))
+    }
+    
+    // Fetch meals for this specific menu item if not already loaded
+    if (!meals[item.id] || meals[item.id].length === 0) {
+      try {
+        const response = await fetch(`/api/meals?menuItemId=${item.id}`)
+        if (response.ok) {
+          const itemMeals = await response.json()
+          if (Array.isArray(itemMeals) && itemMeals.length > 0) {
+            setMeals((prev) => ({
+              ...prev,
+              [item.id]: itemMeals,
+            }))
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching meals for item:', error)
+      }
+    }
+  }
+
+  const closeDrawer = () => {
+    setDrawerOpen(false)
+    setSelectedItem(null)
   }
 
   const handleAddToCart = (item: MenuItem) => {
@@ -170,7 +207,6 @@ export default function MenuPage() {
     const selectedMeal = selectedMealId && meals[item.id]?.find((m: any) => m.id === selectedMealId)
     const mealChoicesForItem = mealChoices[item.id]?.[selectedMealId || '']
     
-    // If meal is selected, check if all categories are selected
     if (selectedMealId && selectedMeal) {
       const allCategoriesSelected = selectedMeal.categories?.every((cat: any) => 
         mealChoicesForItem?.[cat.id]
@@ -181,10 +217,8 @@ export default function MenuPage() {
       }
     }
     
-    // Add item with quantity
     for (let i = 0; i < quantity; i++) {
       if (selectedMealId && selectedMeal && mealChoicesForItem) {
-        // Add as meal
         const totalPrice =
           item.price +
           (selectedMeal.basePrice || 0) +
@@ -193,7 +227,6 @@ export default function MenuPage() {
             return sum + (choice?.price || 0)
           }, 0)
 
-        // Build meal choices object
         const mealChoicesObj: Record<string, any> = {}
         selectedMeal.categories?.forEach((cat: any) => {
           const choice = mealChoicesForItem[cat.id]
@@ -203,7 +236,7 @@ export default function MenuPage() {
         })
 
         addItem({
-          id: `${item.id}-meal-${selectedMealId}-${Date.now()}-${i}`, // Unique ID for meal with this item
+          id: `${item.id}-meal-${selectedMealId}-${Date.now()}-${i}`,
           name: `${item.name} - ${selectedMeal.name}`,
           price: totalPrice,
           quantity: 1,
@@ -214,7 +247,6 @@ export default function MenuPage() {
           mealChoices: mealChoicesObj,
         })
       } else {
-        // Add as regular menu item
       addItem({
         id: item.id,
         name: item.name,
@@ -230,7 +262,7 @@ export default function MenuPage() {
     const itemName = selectedMealId && selectedMeal ? `${item.name} with ${selectedMeal.name}` : item.name
     toast.success(`${quantity}x ${itemName} added to cart`)
     
-    // Reset quantity, instructions, meal option, and meal choices for this item
+    // Reset and close drawer
     setItemQuantities((prev) => ({ ...prev, [item.id]: 1 }))
     setItemInstructions((prev) => {
       const newInstructions = { ...prev }
@@ -247,11 +279,7 @@ export default function MenuPage() {
       delete newChoices[item.id]
       return newChoices
     })
-    setExpandedItems((prev) => {
-      const newSet = new Set(prev)
-      newSet.delete(item.id)
-      return newSet
-    })
+    closeDrawer()
   }
 
   if (loading) {
@@ -263,56 +291,70 @@ export default function MenuPage() {
   }
 
   return (
-    <div className="min-h-screen py-8 sm:py-12 px-4 pt-20 sm:pt-24">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
         {/* Location Banner */}
         {orderType && selectedLocation && (
-          <div className="mb-6 sm:mb-8 bg-white rounded-2xl shadow-lg p-4 sm:p-6 border-2 border-primary-200">
-            <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-30">
+          <div className="max-w-7xl mx-auto px-4 py-3">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center">
                 {orderType === 'collection' ? (
-                  <Store className="w-5 h-5 sm:w-6 sm:h-6 text-primary-600 mr-3" />
+                  <Store className="w-5 h-5 text-primary-600 mr-2" />
                 ) : (
-                  <Truck className="w-5 h-5 sm:w-6 sm:h-6 text-primary-600 mr-3" />
+                  <Truck className="w-5 h-5 text-primary-600 mr-2" />
                 )}
                 <div>
-                  <p className="text-xs sm:text-sm text-gray-600 mb-1">
+                  <p className="text-xs text-gray-600">
                     {orderType === 'collection' ? 'Collection from' : 'Delivery to'}
                   </p>
-                  <p className="font-bold text-base sm:text-lg text-gray-900">
+                  <p className="font-bold text-sm text-gray-900">
                     {orderType === 'collection'
                       ? selectedLocation.name
                       : `${selectedLocation.area} (${selectedLocation.postalCode})`}
                   </p>
-                  {orderType === 'collection' && (
-                    <p className="text-xs sm:text-sm text-gray-600 mt-1">{selectedLocation.address}</p>
-                  )}
                 </div>
               </div>
               <button
                 onClick={() => router.push('/order-online')}
-                className="text-primary-600 hover:text-primary-700 font-medium text-xs sm:text-sm"
+                className="text-primary-600 hover:text-primary-700 font-medium text-xs"
               >
-                Change Location
+                Change
               </button>
+            </div>
             </div>
           </div>
         )}
 
-        <div className="text-center mb-6 sm:mb-12">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 mb-2 sm:mb-4">Our Menu</h1>
-          <p className="text-base sm:text-lg md:text-xl text-gray-600">Delicious food made fresh for you</p>
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900">Our Menu</h1>
+              <p className="text-gray-600 mt-1">Delicious food made fresh for you</p>
+            </div>
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="lg:hidden p-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50"
+            >
+              <MenuIcon className="w-6 h-6 text-gray-700" />
+            </button>
+          </div>
         </div>
 
-        {/* Category Filter - Sticky and Scrollable on Mobile */}
-        <div className="sticky top-16 sm:top-20 z-40 bg-gradient-to-br from-gray-50 via-white to-primary-50 pb-4 sm:pb-0 -mx-4 sm:mx-0 px-4 sm:px-0 mb-6 sm:mb-12">
-          <div className="flex overflow-x-auto gap-2 sm:gap-3 pb-2 sm:pb-0 sm:flex-wrap sm:justify-center scrollbar-hide">
+        <div className="flex gap-6">
+          {/* Sidebar - Desktop */}
+          <aside className="hidden lg:block w-64 flex-shrink-0">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sticky top-24">
+              <h2 className="font-bold text-lg mb-4 text-gray-900">Categories</h2>
+              <nav className="space-y-2">
             <button
               onClick={() => setSelectedCategory('all')}
-              className={`flex-shrink-0 px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all transform hover:scale-105 whitespace-nowrap ${
+                  className={`w-full text-left px-4 py-3 rounded-lg font-semibold transition-all ${
                 selectedCategory === 'all'
-                  ? 'bg-primary-600 text-white shadow-lg'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 shadow-md'
+                      ? 'bg-primary-600 text-white shadow-md'
+                      : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
             >
               All Items
@@ -321,178 +363,283 @@ export default function MenuPage() {
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
-                className={`flex-shrink-0 px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all transform hover:scale-105 whitespace-nowrap ${
+                    className={`w-full text-left px-4 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                      selectedCategory === category.id
+                        ? 'bg-primary-600 text-white shadow-md'
+                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className="text-xl">{category.emoji}</span>
+                    {category.name}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </aside>
+
+          {/* Mobile Sidebar Overlay */}
+          {sidebarOpen && (
+            <>
+              <div
+                className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+                onClick={() => setSidebarOpen(false)}
+              />
+              <aside className="fixed left-0 top-0 h-full w-64 bg-white shadow-xl z-50 lg:hidden overflow-y-auto">
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-bold text-lg text-gray-900">Categories</h2>
+                    <button
+                      onClick={() => setSidebarOpen(false)}
+                      className="p-2 hover:bg-gray-100 rounded-lg"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <nav className="space-y-2">
+                    <button
+                      onClick={() => {
+                        setSelectedCategory('all')
+                        setSidebarOpen(false)
+                      }}
+                      className={`w-full text-left px-4 py-3 rounded-lg font-semibold transition-all ${
+                        selectedCategory === 'all'
+                          ? 'bg-primary-600 text-white shadow-md'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      All Items
+                    </button>
+                    {categories.map((category) => (
+                      <button
+                        key={category.id}
+                        onClick={() => {
+                          setSelectedCategory(category.id)
+                          setSidebarOpen(false)
+                        }}
+                        className={`w-full text-left px-4 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                          selectedCategory === category.id
+                            ? 'bg-primary-600 text-white shadow-md'
+                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <span className="text-xl">{category.emoji}</span>
+                        {category.name}
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+              </aside>
+            </>
+          )}
+
+          {/* Main Content - Card Grid */}
+          <main className="flex-1 min-w-0">
+            {/* Mobile Category Filter */}
+            <div className="lg:hidden mb-6">
+              <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide">
+                <button
+                  onClick={() => setSelectedCategory('all')}
+                  className={`flex-shrink-0 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                    selectedCategory === 'all'
+                      ? 'bg-primary-600 text-white shadow-md'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 shadow-sm'
+                  }`}
+                >
+                  All
+                </button>
+                {categories.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={`flex-shrink-0 px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 ${
                   selectedCategory === category.id
-                    ? 'bg-primary-600 text-white shadow-lg'
-                    : 'bg-white text-gray-700 hover:bg-gray-50 shadow-md'
+                        ? 'bg-primary-600 text-white shadow-md'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 shadow-sm'
                 }`}
               >
-                <span className="text-lg sm:text-xl mr-2">{category.emoji}</span>
+                    <span>{category.emoji}</span>
                 {category.name}
               </button>
             ))}
           </div>
         </div>
 
-
-        {/* Menu Items List */}
-        <div className="space-y-3 sm:space-y-4">
-          {filteredItems.map((item) => {
-            const isExpanded = expandedItems.has(item.id)
-            const quantity = itemQuantities[item.id] || 1
-            const instructions = itemInstructions[item.id] || ''
-
-            return (
+            {/* Menu Items Grid */}
+            {filteredItems.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {filteredItems.map((item) => (
               <div
                 key={item.id}
-                className={`bg-white rounded-xl sm:rounded-2xl shadow-md border border-gray-200 transition-all ${
-                  !item.available ? 'opacity-60' : 'hover:shadow-lg'
-                } ${isExpanded ? 'border-primary-300 shadow-lg' : ''}`}
-              >
-                {/* Item Header - Always Visible */}
-                <button
-                  onClick={() => toggleExpand(item.id)}
-                  disabled={!item.available}
-                  className="w-full p-4 sm:p-6 flex items-start gap-4 text-left hover:bg-gray-50 transition-colors disabled:cursor-not-allowed"
-                >
-                  {/* Item Image */}
-                  {item.image && (
-                    <div className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-100">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // Fallback to placeholder if image fails to load
-                          e.currentTarget.src = `https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&h=200&fit=crop&crop=center`
-                        }}
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="flex-1 min-w-0 flex flex-col">
-                    <div className="flex items-start justify-between gap-4 mb-2">
-                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 flex-1">{item.name}</h3>
-                      <span className="text-lg sm:text-xl font-extrabold text-primary-600 whitespace-nowrap">
+                    onClick={() => openDrawer(item)}
+                    className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] ${
+                      !item.available ? 'opacity-60 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {item.image && (
+                      <div className="aspect-square w-full overflow-hidden bg-gray-100">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = `https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop`
+                          }}
+                        />
+                      </div>
+                    )}
+                    <div className="p-4">
+                      <h3 className="font-bold text-lg text-gray-900 mb-1">{item.name}</h3>
+                      {item.description && (
+                        <p className="text-sm text-gray-600 line-clamp-2 mb-2">{item.description}</p>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <span className="text-xl font-extrabold text-primary-600">
                         £{item.price.toFixed(2)}
                       </span>
+                        {!item.available && (
+                          <span className="text-xs text-red-600 font-semibold">Unavailable</span>
+                        )}
+                      </div>
                     </div>
-                    {item.description && (
-                      <p className="text-sm sm:text-base text-gray-600 line-clamp-2">
-                        {item.description}
-                      </p>
-                    )}
-                    {!item.available && (
-                      <p className="text-red-600 text-sm font-semibold mt-2">Currently Unavailable</p>
-                    )}
                   </div>
-                  <div className="ml-2 flex-shrink-0">
-                    {isExpanded ? (
-                      <ChevronUp className="w-5 h-5 sm:w-6 sm:h-6 text-primary-600" />
+                ))}
+              </div>
                     ) : (
-                      <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
+              <div className="text-center py-12">
+                <p className="text-gray-600 text-lg">No items found in this category</p>
+              </div>
                     )}
+          </main>
+        </div>
                   </div>
-                </button>
 
-                {/* Expanded Content */}
-                {isExpanded && item.available && (
-                  <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-200 pt-4 sm:pt-6 space-y-4">
+      {/* Side Drawer */}
+      {drawerOpen && selectedItem && (
+        <>
+          {/* Overlay */}
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-50 transition-opacity"
+            onClick={closeDrawer}
+          />
+          
+          {/* Drawer */}
+          <div className="fixed right-0 top-0 h-full w-full sm:w-96 bg-white shadow-2xl z-50 overflow-y-auto transform transition-transform">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10">
+              <h2 className="text-xl font-bold text-gray-900">{selectedItem.name}</h2>
+              <button
+                onClick={closeDrawer}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+                </button>
+            </div>
+
+            <div className="p-4 space-y-6">
+              {/* Item Image */}
+              {selectedItem.image && (
+                <div className="aspect-square w-full rounded-lg overflow-hidden bg-gray-100">
+                  <img
+                    src={selectedItem.image}
+                    alt={selectedItem.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+
+              {/* Description */}
+              {selectedItem.description && (
+                <p className="text-gray-600">{selectedItem.description}</p>
+              )}
+
+              {/* Price */}
+              <div className="text-2xl font-extrabold text-primary-600">
+                £{selectedItem.price.toFixed(2)}
+              </div>
+
                     {/* Quantity Controls */}
                     <div className="flex items-center justify-between">
-                      <label className="text-sm sm:text-base font-semibold text-gray-700">Quantity:</label>
+                <label className="text-base font-semibold text-gray-700">Quantity:</label>
                       <div className="flex items-center gap-3">
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            updateQuantity(item.id, -1)
-                          }}
-                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary-100 hover:bg-primary-200 text-primary-600 flex items-center justify-center transition-colors"
-                        >
-                          <Minus className="w-4 h-4 sm:w-5 sm:h-5" />
+                    onClick={() => updateQuantity(selectedItem.id, -1)}
+                    className="w-10 h-10 rounded-full bg-primary-100 hover:bg-primary-200 text-primary-600 flex items-center justify-center transition-colors"
+                  >
+                    <Minus className="w-5 h-5" />
                         </button>
-                        <span className="text-lg sm:text-xl font-bold text-gray-900 w-8 text-center">
-                          {quantity}
+                  <span className="text-xl font-bold text-gray-900 w-8 text-center">
+                    {itemQuantities[selectedItem.id] || 1}
                         </span>
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            updateQuantity(item.id, 1)
-                          }}
-                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary-100 hover:bg-primary-200 text-primary-600 flex items-center justify-center transition-colors"
-                        >
-                          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                    onClick={() => updateQuantity(selectedItem.id, 1)}
+                    className="w-10 h-10 rounded-full bg-primary-100 hover:bg-primary-200 text-primary-600 flex items-center justify-center transition-colors"
+                  >
+                    <Plus className="w-5 h-5" />
                         </button>
                       </div>
                     </div>
 
-                    {/* Instructions/Notes */}
+              {/* Instructions */}
                     <div>
-                      <label htmlFor={`instructions-${item.id}`} className="block text-sm sm:text-base font-semibold text-gray-700 mb-2">
+                <label className="block text-base font-semibold text-gray-700 mb-2">
                         Special Instructions (Optional):
                       </label>
                       <textarea
-                        id={`instructions-${item.id}`}
-                        value={instructions}
+                  value={itemInstructions[selectedItem.id] || ''}
                         onChange={(e) => {
                           setItemInstructions((prev) => ({
                             ...prev,
-                            [item.id]: e.target.value,
+                      [selectedItem.id]: e.target.value,
                           }))
                         }}
-                        onClick={(e) => e.stopPropagation()}
-                        placeholder="E.g., No onions, extra sauce, well done..."
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none text-sm sm:text-base"
+                  placeholder="E.g., No onions, extra sauce..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
                         rows={3}
                       />
                     </div>
 
-                    {/* Meal Deal Option */}
-                    {meals[item.id] && meals[item.id].length > 0 && meals[item.id].map((meal: any) => (
-                      meal.available && (
-                      <div className="border-t border-gray-200 pt-4">
-                        <label className="flex items-center gap-3 p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors cursor-pointer">
+              {/* Meal Options */}
+              {meals[selectedItem.id] && meals[selectedItem.id].length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-gray-900">Meal Options</h3>
+                  {meals[selectedItem.id].map((meal: any) => (
+                    meal.available && (
+                      <div key={meal.id} className="border border-gray-200 rounded-lg p-4">
+                        <label className="flex items-center gap-3 cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={showMealOption[item.id] === meal.id}
+                            checked={showMealOption[selectedItem.id] === meal.id}
                             onChange={(e) => {
-                              e.stopPropagation()
                               setShowMealOption((prev) => ({
                                 ...prev,
-                                [item.id]: prev[item.id] === meal.id ? null : meal.id,
+                                [selectedItem.id]: prev[selectedItem.id] === meal.id ? null : meal.id,
                               }))
-                              if (showMealOption[item.id] === meal.id) {
+                              if (showMealOption[selectedItem.id] === meal.id) {
                                 setMealChoices((prev) => {
                                   const newChoices = { ...prev }
-                                  if (newChoices[item.id]) {
-                                    delete newChoices[item.id][meal.id]
-                                    if (Object.keys(newChoices[item.id]).length === 0) {
-                                      delete newChoices[item.id]
+                                  if (newChoices[selectedItem.id]) {
+                                    delete newChoices[selectedItem.id][meal.id]
+                                    if (Object.keys(newChoices[selectedItem.id]).length === 0) {
+                                      delete newChoices[selectedItem.id]
                                     }
                                   }
                                   return newChoices
                                 })
                               }
                             }}
-                            onClick={(e) => e.stopPropagation()}
                             className="w-5 h-5 text-primary-600 focus:ring-primary-500 rounded"
                           />
-                          <div className="flex items-center gap-2 flex-1">
-                            <span className="text-lg">🍔</span>
-                            <span className="font-semibold text-gray-900">
-                              Make it a {meal.name}
-                            </span>
-                            <span className="text-sm text-gray-600">
-                              (+£{meal.basePrice?.toFixed(2) || '0.00'})
-                            </span>
+                          <div className="flex-1">
+                            <div className="font-semibold text-gray-900">{meal.name}</div>
+                            <div className="text-sm text-gray-600">
+                              +£{meal.basePrice?.toFixed(2) || '0.00'}
+                            </div>
                           </div>
                         </label>
 
-                        {/* Meal Options */}
-                        {showMealOption[item.id] === meal.id && (
-                          <div className="space-y-4 mb-4 p-4 bg-gray-50 rounded-lg">
-                            {/* Dynamic Categories */}
-                            {meal.categories && meal.categories.map((category: any) => (
+                        {/* Meal Category Options */}
+                        {showMealOption[selectedItem.id] === meal.id && meal.categories && (
+                          <div className="mt-4 space-y-4 pl-8">
+                            {meal.categories.map((category: any) => (
                               <div key={category.id}>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                                   {category.name}:
@@ -503,20 +650,19 @@ export default function MenuPage() {
                                     .map((option: any) => (
                                       <label
                                         key={option.id}
-                                        className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-white transition-colors bg-white"
+                                        className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50"
                                       >
                                         <input
                                           type="radio"
-                                          name={`meal-${meal.id}-category-${category.id}-${item.id}`}
-                                          value={option.menuItemId}
-                                          checked={mealChoices[item.id]?.[meal.id]?.[category.id]?.id === option.menuItemId}
+                                          name={`meal-${meal.id}-category-${category.id}-${selectedItem.id}`}
+                                          checked={mealChoices[selectedItem.id]?.[meal.id]?.[category.id]?.id === option.menuItemId}
                                           onChange={() => {
                                             setMealChoices((prev) => ({
                                               ...prev,
-                                              [item.id]: {
-                                                ...prev[item.id],
+                                              [selectedItem.id]: {
+                                                ...prev[selectedItem.id],
                                                 [meal.id]: {
-                                                  ...prev[item.id]?.[meal.id],
+                                                  ...prev[selectedItem.id]?.[meal.id],
                                                   [category.id]: {
                                                     id: option.menuItemId,
                                                     name: option.menuItem.name,
@@ -545,8 +691,8 @@ export default function MenuPage() {
                               </div>
                             ))}
 
-                            {/* Meal Total Price Display */}
-                            {meal.categories && meal.categories.every((cat: any) => mealChoices[item.id]?.[meal.id]?.[cat.id]) && (
+                            {/* Meal Total */}
+                            {meal.categories && meal.categories.every((cat: any) => mealChoices[selectedItem.id]?.[meal.id]?.[cat.id]) && (
                               <div className="pt-3 border-t border-gray-200">
                                 <div className="flex items-center justify-between">
                                   <span className="text-sm font-semibold text-gray-900">Meal Total:</span>
@@ -554,7 +700,7 @@ export default function MenuPage() {
                                     £{(
                                       (meal.basePrice || 0) +
                                       (meal.categories || []).reduce((sum: number, cat: any) => {
-                                        const choice = mealChoices[item.id]?.[meal.id]?.[cat.id]
+                                        const choice = mealChoices[selectedItem.id]?.[meal.id]?.[cat.id]
                                         return sum + (choice?.price || 0)
                                       }, 0)
                                     ).toFixed(2)}
@@ -562,59 +708,53 @@ export default function MenuPage() {
                                 </div>
                               </div>
                             )}
-                          </div>
-                        )}
-                      </div>
-                    ))).filter(Boolean)}
-
-                    {/* Add to Cart Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleAddToCart(item)
-                      }}
-                      disabled={
-                        (() => {
-                          const selectedMealId = showMealOption[item.id]
-                          if (!selectedMealId) return false
-                          const selectedMeal = meals[item.id]?.find((m: any) => m.id === selectedMealId)
-                          if (!selectedMeal) return false
-                          const mealChoicesForItem = mealChoices[item.id]?.[selectedMealId]
-                          return !selectedMeal.categories?.every((cat: any) => mealChoicesForItem?.[cat.id])
-                        })()
-                      }
-                      className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3 sm:py-4 rounded-xl font-semibold hover:from-primary-700 hover:to-primary-800 transition-all transform hover:scale-[1.02] shadow-md text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                    >
-                      {(() => {
-                        const selectedMealId = showMealOption[item.id]
-                        const selectedMeal = selectedMealId && meals[item.id]?.find((m: any) => m.id === selectedMealId)
-                        const mealChoicesForItem = selectedMealId && mealChoices[item.id]?.[selectedMealId]
-                        const allSelected = selectedMeal?.categories?.every((cat: any) => mealChoicesForItem?.[cat.id])
-                        
-                        if (selectedMeal && allSelected) {
-                          const totalPrice = item.price + (selectedMeal.basePrice || 0) + 
-                            (selectedMeal.categories || []).reduce((sum: number, cat: any) => {
-                              const choice = mealChoicesForItem?.[cat.id]
-                              return sum + (choice?.price || 0)
-                            }, 0)
-                          return `Add ${quantity > 1 ? `${quantity}x ` : ''}to Cart - £${(totalPrice * quantity).toFixed(2)}`
-                        }
-                        return `Add ${quantity > 1 ? `${quantity}x ` : ''}to Cart - £${(item.price * quantity).toFixed(2)}`
-                      })()}
-                    </button>
                   </div>
                 )}
               </div>
             )
-          })}
+                  ))}
         </div>
+              )}
 
-        {filteredItems.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-600 text-lg">No items found in this category</p>
+              {/* Add to Cart Button */}
+              <div className="sticky bottom-0 bg-white pt-4 border-t border-gray-200 -mx-4 px-4 pb-4">
+                <button
+                  onClick={() => handleAddToCart(selectedItem)}
+                  disabled={
+                    (() => {
+                      const selectedMealId = showMealOption[selectedItem.id]
+                      if (!selectedMealId) return false
+                      const selectedMeal = meals[selectedItem.id]?.find((m: any) => m.id === selectedMealId)
+                      if (!selectedMeal) return false
+                      const mealChoicesForItem = mealChoices[selectedItem.id]?.[selectedMealId]
+                      return !selectedMeal.categories?.every((cat: any) => mealChoicesForItem?.[cat.id])
+                    })()
+                  }
+                  className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-4 rounded-xl font-semibold hover:from-primary-700 hover:to-primary-800 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {(() => {
+                    const selectedMealId = showMealOption[selectedItem.id]
+                    const selectedMeal = selectedMealId && meals[selectedItem.id]?.find((m: any) => m.id === selectedMealId)
+                    const mealChoicesForItem = selectedMealId && mealChoices[selectedItem.id]?.[selectedMealId]
+                    const allSelected = selectedMeal?.categories?.every((cat: any) => mealChoicesForItem?.[cat.id])
+                    const quantity = itemQuantities[selectedItem.id] || 1
+                    
+                    if (selectedMeal && allSelected) {
+                      const totalPrice = selectedItem.price + (selectedMeal.basePrice || 0) + 
+                        (selectedMeal.categories || []).reduce((sum: number, cat: any) => {
+                          const choice = mealChoicesForItem?.[cat.id]
+                          return sum + (choice?.price || 0)
+                        }, 0)
+                      return `Add ${quantity > 1 ? `${quantity}x ` : ''}to Cart - £${(totalPrice * quantity).toFixed(2)}`
+                    }
+                    return `Add ${quantity > 1 ? `${quantity}x ` : ''}to Cart - £${(selectedItem.price * quantity).toFixed(2)}`
+                  })()}
+                </button>
+              </div>
+            </div>
           </div>
+        </>
         )}
-      </div>
     </div>
   )
 }
