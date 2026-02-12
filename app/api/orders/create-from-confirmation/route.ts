@@ -98,36 +98,46 @@ export async function POST(request: NextRequest) {
     let validMenuItemIds = new Set<string>()
     if (menuItemIds.length > 0) {
       try {
+        console.log(`Querying database for ${menuItemIds.length} menu item IDs:`, menuItemIds)
         const existingMenuItems = await prisma.menuItem.findMany({
           where: { id: { in: menuItemIds } },
-          select: { id: true },
+          select: { id: true, name: true },
         })
         const existingMenuItemIds = new Set(existingMenuItems.map((m: any) => m.id))
         validMenuItemIds = existingMenuItemIds
+        
+        console.log(`Found ${existingMenuItems.length} menu items in database:`)
+        existingMenuItems.forEach((m: any) => {
+          console.log(`  - ${m.id}: ${m.name}`)
+        })
+        
         const invalidMenuItemIds = menuItemIds.filter((id: string) => !existingMenuItemIds.has(id))
         
         if (invalidMenuItemIds.length > 0) {
-          console.error('Invalid menu item IDs:', invalidMenuItemIds)
+          console.error('❌ Invalid menu item IDs (not found in database):', invalidMenuItemIds)
           console.error('Items being processed:', items.map((item: any) => ({
             id: item.id,
             type: item.type,
             menuItemId: item.menuItemId,
             mealId: item.mealId,
+            name: item.name,
           })))
-          console.error('Existing menu item IDs:', Array.from(existingMenuItemIds))
+          console.error('Valid menu item IDs found:', Array.from(existingMenuItemIds))
           console.error('Total menu items queried:', existingMenuItems.length)
           // Instead of failing, log warning and continue - menuItemId is optional for meals
           // We'll set menuItemId to null for invalid IDs during order creation
-          console.warn('Some menu item IDs not found, but continuing as menuItemId is optional for meal items')
+          console.warn('⚠️ Some menu item IDs not found, but continuing as menuItemId is optional for meal items')
           // Don't return error - continue with order creation, menuItemId will be set to null
         } else {
-          console.log(`All ${menuItemIds.length} menu item IDs are valid`)
+          console.log(`✅ All ${menuItemIds.length} menu item IDs are valid`)
         }
       } catch (error: any) {
-        console.error('Error validating menu item IDs:', error)
+        console.error('❌ Error validating menu item IDs:', error)
         // If validation fails, set validMenuItemIds to empty set - all menuItemIds will be set to null
         validMenuItemIds = new Set<string>()
       }
+    } else {
+      console.log('⚠️ No menu item IDs to validate')
     }
 
     // Create order in database
@@ -161,8 +171,15 @@ export async function POST(request: NextRequest) {
               const finalMenuItemId = menuItemId && validMenuItemIds.has(menuItemId) ? menuItemId : null
               
               if (menuItemId && !validMenuItemIds.has(menuItemId)) {
-                console.warn(`Meal item has invalid menuItemId: ${menuItemId}, setting to null`)
+                console.error(`❌ Meal item has invalid menuItemId: ${menuItemId}`)
+                console.error(`   Item details:`, { id: item.id, name: item.name, menuItemId: item.menuItemId })
+                console.error(`   Valid menuItemIds:`, Array.from(validMenuItemIds).slice(0, 5))
+                console.error(`   Setting menuItemId to null to avoid foreign key constraint`)
+              } else if (menuItemId && validMenuItemIds.has(menuItemId)) {
+                console.log(`✅ Meal item has valid menuItemId: ${menuItemId}`)
               }
+              
+              console.log(`Creating order item: menuItemId=${finalMenuItemId}, mealId=${item.mealId || null}`)
               
               return {
                 menuItemId: finalMenuItemId, // The base menu item (burger/wrap) - optional, null if invalid
