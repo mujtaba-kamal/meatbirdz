@@ -14,7 +14,11 @@ interface OrderItem {
     id: string
     name: string
     price: number
-  }
+  } | null
+  meal?: {
+    id: string
+    name: string
+  } | null
 }
 
 interface Order {
@@ -243,17 +247,21 @@ function OrderConfirmationContent() {
           <div className="border-t pt-4 mb-6">
             <h3 className="font-semibold mb-3">Items Ordered</h3>
             <div className="space-y-2">
-              {order.items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex justify-between items-center"
-                >
-                  <span>
-                    {item.menuItem.name} x {item.quantity}
-                  </span>
-                  <span>${(item.price * item.quantity).toFixed(2)}</span>
-                </div>
-              ))}
+              {order.items.map((item) => {
+                // Handle null menuItem (for meal items or invalid menuItemIds)
+                const itemName = item.menuItem?.name || item.meal?.name || 'Unknown Item'
+                return (
+                  <div
+                    key={item.id}
+                    className="flex justify-between items-center"
+                  >
+                    <span>
+                      {itemName} x {item.quantity}
+                    </span>
+                    <span>${(item.price * item.quantity).toFixed(2)}</span>
+                  </div>
+                )
+              })}
             </div>
             <div className="border-t mt-4 pt-4 flex justify-between items-center">
               <span className="text-lg font-semibold">Total</span>

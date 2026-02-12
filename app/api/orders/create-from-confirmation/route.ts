@@ -208,7 +208,22 @@ export async function POST(request: NextRequest) {
       include: {
         items: {
           include: {
-            menuItem: true,
+            menuItem: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+              },
+            },
+            // Include meal relation if it exists
+            ...(typeof (prisma as any).orderItem.fields?.meal !== 'undefined' && {
+              meal: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            }),
           },
         },
       },
