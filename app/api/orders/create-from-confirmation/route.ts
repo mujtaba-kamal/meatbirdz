@@ -8,8 +8,11 @@ import { PaymentStatus } from '@prisma/client'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+  let items: any[] = []
   try {
-    const { items, customerInfo, total, paymentIntentId, orderType } = await request.json()
+    const requestData = await request.json()
+    items = requestData.items || []
+    const { customerInfo, total, paymentIntentId, orderType } = requestData
     const session = await getServerSession(authOptions)
 
     // Validate userId exists if provided
@@ -41,6 +44,55 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Validate meal IDs exist before creating order (if meal model exists)
+    const mealIds = items
+      .filter((item: any) => item.type === 'meal' && item.mealId)
+      .map((item: any) => item.mealId)
+    
+    if (mealIds.length > 0) {
+      try {
+        const existingMeals = await (prisma as any).meal.findMany({
+          where: { id: { in: mealIds } },
+          select: { id: true },
+        })
+        const existingMealIds = new Set(existingMeals.map((m: any) => m.id))
+        const invalidMealIds = mealIds.filter((id: string) => !existingMealIds.has(id))
+        
+        if (invalidMealIds.length > 0) {
+          console.error('Invalid meal IDs:', invalidMealIds)
+          return NextResponse.json(
+            { error: 'Invalid meal IDs provided', details: `Meal IDs not found: ${invalidMealIds.join(', ')}` },
+            { status: 400 }
+          )
+        }
+      } catch (error: any) {
+        // If meal model doesn't exist, log warning but continue
+        console.warn('Meal validation skipped (meal model may not exist):', error.message)
+      }
+    }
+
+    // Validate menu item IDs exist before creating order
+    const menuItemIds = items
+      .map((item: any) => item.menuItemId || (item.type !== 'meal' ? item.id : null))
+      .filter(Boolean) as string[]
+    
+    if (menuItemIds.length > 0) {
+      const existingMenuItems = await prisma.menuItem.findMany({
+        where: { id: { in: menuItemIds } },
+        select: { id: true },
+      })
+      const existingMenuItemIds = new Set(existingMenuItems.map((m: any) => m.id))
+      const invalidMenuItemIds = menuItemIds.filter((id: string) => !existingMenuItemIds.has(id))
+      
+      if (invalidMenuItemIds.length > 0) {
+        console.error('Invalid menu item IDs:', invalidMenuItemIds)
+        return NextResponse.json(
+          { error: 'Invalid menu item IDs provided', details: `Menu item IDs not found: ${invalidMenuItemIds.join(', ')}` },
+          { status: 400 }
+        )
+      }
+    }
+
     // Create order in database
     const order = await prisma.order.create({
       data: {
@@ -56,12 +108,25 @@ export async function POST(request: NextRequest) {
         paymentStatus: paymentStatus,
         stripePaymentId: stripePaymentId,
         items: {
-          create: items.map((item: any) => ({
-            menuItemId: item.type === 'meal' ? null : (item.menuItemId || item.id),
-            mealId: item.type === 'meal' ? (item.mealId || item.id) : null,
-            quantity: item.quantity,
-            price: item.price,
-          })),
+          create: items.map((item: any) => {
+            // For meal items, we need both menuItemId (the burger/wrap) and mealId (the meal deal)
+            if (item.type === 'meal') {
+              return {
+                menuItemId: item.menuItemId || null, // The base menu item (burger/wrap)
+                mealId: item.mealId || null, // The meal deal
+                quantity: item.quantity,
+                price: item.price,
+              }
+            } else {
+              // For regular menu items
+              return {
+                menuItemId: item.menuItemId || item.id,
+                mealId: null,
+                quantity: item.quantity,
+                price: item.price,
+              }
+            }
+          }),
         },
       },
       include: {
@@ -80,6 +145,18 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Error creating order from confirmation:', error)
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+      items: items?.map((item: any) => ({
+        id: item.id,
+        type: item.type,
+        menuItemId: item.menuItemId,
+        mealId: item.mealId,
+        quantity: item.quantity,
+      })),
+    })
     return NextResponse.json(
       { error: 'Failed to create order', details: error.message },
       { status: 500 }

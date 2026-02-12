@@ -243,7 +243,8 @@ export default function MenuPage() {
           image: item.image || selectedMeal.image || undefined,
           instructions: instructions || undefined,
           type: 'meal',
-          mealId: selectedMeal.id,
+          menuItemId: item.id, // Store the base menu item ID
+          mealId: selectedMeal.id, // Store the meal deal ID
           mealChoices: mealChoicesObj,
         })
       } else {
