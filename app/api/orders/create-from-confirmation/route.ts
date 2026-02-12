@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/lib/auth'
 import { stripe } from '@/lib/stripe'
-import { PaymentStatus } from '@prisma/client'
+import { PaymentStatus, Prisma } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 
@@ -142,9 +142,11 @@ export async function POST(request: NextRequest) {
               }
               
               // Store selected meal options as JSON
-              const selectedMealOptionsJson = item.selectedMealOptions && Array.isArray(item.selectedMealOptions) && item.selectedMealOptions.length > 0
-                ? JSON.stringify(item.selectedMealOptions)
-                : null
+              // Prisma JSON fields need Prisma.JsonNull for null, or the actual JSON value
+              let selectedMealOptionsJson: Prisma.InputJsonValue | undefined = undefined
+              if (item.selectedMealOptions && Array.isArray(item.selectedMealOptions) && item.selectedMealOptions.length > 0) {
+                selectedMealOptionsJson = item.selectedMealOptions as Prisma.InputJsonValue
+              }
               
               console.log(`📦 Creating meal order item:`)
               console.log(`   menuItemId: ${finalMenuItemId}`)
@@ -154,7 +156,7 @@ export async function POST(request: NextRequest) {
               return {
                 menuItemId: finalMenuItemId, // Only set if valid
                 mealId: finalMealId, // Only set if valid
-                selectedMealOptions: selectedMealOptionsJson,
+                ...(selectedMealOptionsJson !== undefined && { selectedMealOptions: selectedMealOptionsJson }),
                 quantity: item.quantity,
                 price: item.price,
               }
