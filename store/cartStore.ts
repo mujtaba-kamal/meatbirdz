@@ -8,16 +8,8 @@ export interface CartItem {
   quantity: number
   image?: string
   instructions?: string
-  type?: 'menuItem' | 'meal'
-  menuItemId?: string // The base menu item (burger/wrap)
-  mealId?: string // The meal deal ID
-  selectedMealOptions?: Array<{ // Selected meal options
-    categoryId: string
-    categoryName: string
-    menuItemId: string
-    menuItemName: string
-    additionalPrice: number
-  }>
+  type?: 'menuItem'
+  menuItemId?: string
 }
 
 interface CartStore {
@@ -35,19 +27,11 @@ export const useCartStore = create<CartStore>()(
     (set, get) => ({
       items: [],
       addItem: (item) => {
-        // For meals, always add as a new item to allow different combinations
-        if (item.type === 'meal') {
-          set({
-            items: [...get().items, { ...item, quantity: item.quantity || 1 }],
-          })
-          return
-        }
-
-        const existingItem = get().items.find((i) => i.id === item.id && i.type !== 'meal')
+        const existingItem = get().items.find((i) => i.id === item.id)
         if (existingItem) {
           set({
             items: get().items.map((i) =>
-              i.id === item.id && i.type !== 'meal'
+              i.id === item.id
                 ? { ...i, quantity: i.quantity + (item.quantity || 1) }
                 : i
             ),

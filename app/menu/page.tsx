@@ -37,9 +37,6 @@ export default function MenuPage() {
   const [selectedLocation, setSelectedLocation] = useState<any>(null)
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({})
   const [itemInstructions, setItemInstructions] = useState<Record<string, string>>({})
-  const [meals, setMeals] = useState<Record<string, any>>({})
-  const [mealChoices, setMealChoices] = useState<Record<string, Record<string, any>>>({})
-  const [showMealOption, setShowMealOption] = useState<Record<string, string | null>>({})
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -60,61 +57,6 @@ export default function MenuPage() {
     
     fetchMenuItems()
   }, [router])
-
-  // Fetch meals when menu items are loaded
-  useEffect(() => {
-    if (menuItems.length > 0) {
-      fetchMeals()
-    }
-  }, [menuItems])
-
-  const fetchMeals = async () => {
-    try {
-      const response = await fetch('/api/meals')
-      if (!response.ok) return
-      const allMeals = await response.json()
-      if (Array.isArray(allMeals)) {
-        const mealsByMenuItem: Record<string, any[]> = {}
-        
-        // First, add meals directly linked to menu items
-        allMeals.forEach((meal: any) => {
-          if (meal.available && meal.menuItems && Array.isArray(meal.menuItems)) {
-            meal.menuItems.forEach((link: any) => {
-              const menuItemId = link.menuItem?.id
-              if (menuItemId) {
-                if (!mealsByMenuItem[menuItemId]) {
-                  mealsByMenuItem[menuItemId] = []
-                }
-                mealsByMenuItem[menuItemId].push(meal)
-              }
-            })
-          }
-        })
-        
-        // Then, add meals by categoryFilter (after menuItems are loaded)
-        if (menuItems.length > 0) {
-          allMeals.forEach((meal: any) => {
-            if (meal.available && meal.categoryFilter) {
-              menuItems.forEach((item: MenuItem) => {
-                if (item.category === meal.categoryFilter) {
-                  if (!mealsByMenuItem[item.id]) {
-                    mealsByMenuItem[item.id] = []
-                  }
-                  if (!mealsByMenuItem[item.id].find((m: any) => m.id === meal.id)) {
-                    mealsByMenuItem[item.id].push(meal)
-                  }
-                }
-              })
-            }
-          })
-        }
-        
-        setMeals(mealsByMenuItem)
-      }
-    } catch (error) {
-      console.error('Error fetching meals:', error)
-    }
-  }
 
   const fetchMenuItems = async () => {
     try {
@@ -166,23 +108,6 @@ export default function MenuPage() {
       setItemQuantities((prev) => ({ ...prev, [item.id]: 1 }))
     }
     
-    // Fetch meals for this specific menu item if not already loaded
-    if (!meals[item.id] || meals[item.id].length === 0) {
-      try {
-        const response = await fetch(`/api/meals?menuItemId=${item.id}`)
-        if (response.ok) {
-          const itemMeals = await response.json()
-          if (Array.isArray(itemMeals) && itemMeals.length > 0) {
-            setMeals((prev) => ({
-              ...prev,
-              [item.id]: itemMeals,
-            }))
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching meals for item:', error)
-      }
-    }
   }
 
   const closeDrawer = () => {
@@ -203,79 +128,20 @@ export default function MenuPage() {
     
     const quantity = itemQuantities[item.id] || 1
     const instructions = itemInstructions[item.id] || ''
-    const selectedMealId = showMealOption[item.id]
-    const selectedMeal = selectedMealId && meals[item.id]?.find((m: any) => m.id === selectedMealId)
-    const mealChoicesForItem = mealChoices[item.id]?.[selectedMealId || '']
-    
-    if (selectedMealId && selectedMeal) {
-      const allCategoriesSelected = selectedMeal.categories?.every((cat: any) => 
-        mealChoicesForItem?.[cat.id]
-      )
-      if (!allCategoriesSelected) {
-        toast.error(`Please select one option from each category for ${selectedMeal.name}`)
-        return
-      }
-    }
     
     for (let i = 0; i < quantity; i++) {
-      if (selectedMealId && selectedMeal && mealChoicesForItem) {
-        const totalPrice =
-          item.price +
-          (selectedMeal.basePrice || 0) +
-          (selectedMeal.categories || []).reduce((sum: number, cat: any) => {
-            const choice = mealChoicesForItem[cat.id]
-            return sum + (choice?.additionalPrice || 0)
-          }, 0)
-
-        // Build selected meal options array with proper structure
-        const selectedMealOptions: Array<{
-          categoryId: string
-          categoryName: string
-          menuItemId: string
-          menuItemName: string
-          additionalPrice: number
-        }> = []
-        
-        selectedMeal.categories?.forEach((cat: any) => {
-          const choice = mealChoicesForItem[cat.id]
-          if (choice) {
-            selectedMealOptions.push({
-              categoryId: cat.id,
-              categoryName: cat.name,
-              menuItemId: choice.menuItemId || choice.id,
-              menuItemName: choice.name,
-              additionalPrice: choice.price || 0,
-            })
-          }
-        })
-
-        addItem({
-          id: `${item.id}-meal-${selectedMealId}-${Date.now()}-${i}`,
-          name: `${item.name} + ${selectedMeal.name}`,
-          price: totalPrice,
-          quantity: 1,
-          image: item.image || selectedMeal.image || undefined,
-          instructions: instructions || undefined,
-          type: 'meal',
-          menuItemId: item.id, // The base menu item (burger/wrap)
-          mealId: selectedMeal.id, // The meal deal
-          selectedMealOptions: selectedMealOptions, // Selected meal options
-        })
-      } else {
       addItem({
         id: item.id,
         name: item.name,
         price: item.price,
         image: item.image || undefined,
         instructions: instructions || undefined,
-          type: 'menuItem',
-          menuItemId: item.id,
+        type: 'menuItem',
+        menuItemId: item.id,
       })
-      }
     }
     
-    const itemName = selectedMealId && selectedMeal ? `${item.name} with ${selectedMeal.name}` : item.name
-    toast.success(`${quantity}x ${itemName} added to cart`)
+    toast.success(`${quantity}x ${item.name} added to cart`)
     
     // Reset and close drawer
     setItemQuantities((prev) => ({ ...prev, [item.id]: 1 }))
@@ -283,16 +149,6 @@ export default function MenuPage() {
       const newInstructions = { ...prev }
       delete newInstructions[item.id]
       return newInstructions
-    })
-    setShowMealOption((prev) => {
-      const newOptions = { ...prev }
-      delete newOptions[item.id]
-      return newOptions
-    })
-    setMealChoices((prev) => {
-      const newChoices = { ...prev }
-      delete newChoices[item.id]
-      return newChoices
     })
     closeDrawer()
   }
@@ -612,158 +468,15 @@ export default function MenuPage() {
                       />
                     </div>
 
-              {/* Meal Options */}
-              {meals[selectedItem.id] && meals[selectedItem.id].length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-gray-900">Meal Options</h3>
-                  {meals[selectedItem.id].map((meal: any) => (
-                    meal.available && (
-                      <div key={meal.id} className="border border-gray-200 rounded-lg p-4">
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={showMealOption[selectedItem.id] === meal.id}
-                            onChange={(e) => {
-                              setShowMealOption((prev) => ({
-                                ...prev,
-                                [selectedItem.id]: prev[selectedItem.id] === meal.id ? null : meal.id,
-                              }))
-                              if (showMealOption[selectedItem.id] === meal.id) {
-                                setMealChoices((prev) => {
-                                  const newChoices = { ...prev }
-                                  if (newChoices[selectedItem.id]) {
-                                    delete newChoices[selectedItem.id][meal.id]
-                                    if (Object.keys(newChoices[selectedItem.id]).length === 0) {
-                                      delete newChoices[selectedItem.id]
-                                    }
-                                  }
-                                  return newChoices
-                                })
-                              }
-                            }}
-                            className="w-5 h-5 text-primary-600 focus:ring-primary-500 rounded"
-                          />
-                          <div className="flex-1">
-                            <div className="font-semibold text-gray-900">{meal.name}</div>
-                            <div className="text-sm text-gray-600">
-                              +£{meal.basePrice?.toFixed(2) || '0.00'}
-                            </div>
-                          </div>
-                        </label>
-
-                        {/* Meal Category Options */}
-                        {showMealOption[selectedItem.id] === meal.id && meal.categories && (
-                          <div className="mt-4 space-y-4 pl-8">
-                            {meal.categories.map((category: any) => (
-                              <div key={category.id}>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                  {category.name}:
-                                </label>
-                                <div className="space-y-2">
-                                  {meal.options
-                                    .filter((opt: any) => opt.categoryId === category.id)
-                                    .map((option: any) => (
-                                      <label
-                                        key={option.id}
-                                        className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50"
-                                      >
-                                        <input
-                                          type="radio"
-                                          name={`meal-${meal.id}-category-${category.id}-${selectedItem.id}`}
-                                          checked={mealChoices[selectedItem.id]?.[meal.id]?.[category.id]?.menuItemId === option.menuItemId}
-                                          onChange={() => {
-                                            setMealChoices((prev) => ({
-                                              ...prev,
-                                              [selectedItem.id]: {
-                                                ...prev[selectedItem.id],
-                                                [meal.id]: {
-                                                  ...prev[selectedItem.id]?.[meal.id],
-                                                  [category.id]: {
-                                                    categoryId: category.id,
-                                                    categoryName: category.name,
-                                                    menuItemId: option.menuItemId,
-                                                    menuItemName: option.menuItem.name,
-                                                    additionalPrice: option.additionalPrice || 0,
-                                                  },
-                                                },
-                                              },
-                                            }))
-                                          }}
-                                          className="w-4 h-4 text-primary-600 focus:ring-primary-500"
-                                        />
-                                        <div className="flex-1">
-                                          <span className="text-sm font-medium text-gray-900">{option.menuItem.name}</span>
-                                          {option.additionalPrice > 0 && (
-                                            <span className="text-xs text-gray-600 ml-2">
-                                              (+£{option.additionalPrice.toFixed(2)})
-                                            </span>
-                                          )}
-                                          {option.additionalPrice === 0 && (
-                                            <span className="text-xs text-green-600 ml-2">(Included)</span>
-                                          )}
-                                        </div>
-                                      </label>
-                                    ))}
-                                </div>
-                              </div>
-                            ))}
-
-                            {/* Meal Total */}
-                            {meal.categories && meal.categories.every((cat: any) => mealChoices[selectedItem.id]?.[meal.id]?.[cat.id]) && (
-                              <div className="pt-3 border-t border-gray-200">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm font-semibold text-gray-900">Meal Total:</span>
-                                  <span className="text-lg font-bold text-primary-600">
-                                    £{(
-                                      (meal.basePrice || 0) +
-                                      (meal.categories || []).reduce((sum: number, cat: any) => {
-                                        const choice = mealChoices[selectedItem.id]?.[meal.id]?.[cat.id]
-                                        return sum + (choice?.additionalPrice || 0)
-                                      }, 0)
-                                    ).toFixed(2)}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                  </div>
-                )}
-              </div>
-            )
-                  ))}
-        </div>
-              )}
 
               {/* Add to Cart Button */}
               <div className="sticky bottom-0 bg-white pt-4 border-t border-gray-200 -mx-4 px-4 pb-4">
                 <button
                   onClick={() => handleAddToCart(selectedItem)}
-                  disabled={
-                    (() => {
-                      const selectedMealId = showMealOption[selectedItem.id]
-                      if (!selectedMealId) return false
-                      const selectedMeal = meals[selectedItem.id]?.find((m: any) => m.id === selectedMealId)
-                      if (!selectedMeal) return false
-                      const mealChoicesForItem = mealChoices[selectedItem.id]?.[selectedMealId]
-                      return !selectedMeal.categories?.every((cat: any) => mealChoicesForItem?.[cat.id])
-                    })()
-                  }
-                  className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-4 rounded-xl font-semibold hover:from-primary-700 hover:to-primary-800 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-4 rounded-xl font-semibold hover:from-primary-700 hover:to-primary-800 transition-all shadow-lg"
                 >
                   {(() => {
-                    const selectedMealId = showMealOption[selectedItem.id]
-                    const selectedMeal = selectedMealId && meals[selectedItem.id]?.find((m: any) => m.id === selectedMealId)
-                    const mealChoicesForItem = selectedMealId && mealChoices[selectedItem.id]?.[selectedMealId]
-                    const allSelected = selectedMeal?.categories?.every((cat: any) => mealChoicesForItem?.[cat.id])
                     const quantity = itemQuantities[selectedItem.id] || 1
-                    
-                    if (selectedMeal && allSelected) {
-                      const totalPrice = selectedItem.price + (selectedMeal.basePrice || 0) + 
-                        (selectedMeal.categories || []).reduce((sum: number, cat: any) => {
-                          const choice = mealChoicesForItem?.[cat.id]
-                          return sum + (choice?.price || 0)
-                        }, 0)
-                      return `Add ${quantity > 1 ? `${quantity}x ` : ''}to Cart - £${(totalPrice * quantity).toFixed(2)}`
-                    }
                     return `Add ${quantity > 1 ? `${quantity}x ` : ''}to Cart - £${(selectedItem.price * quantity).toFixed(2)}`
                   })()}
                 </button>
