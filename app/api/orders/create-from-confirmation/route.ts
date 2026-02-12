@@ -185,8 +185,8 @@ export async function POST(request: NextRequest) {
 
     // Prepare order items with validation
     const orderItems = items.map((item: any) => {
-      // For menu items, use menuItemId or id
-      const menuItemId = item.menuItemId || item.id
+      // For menu items, use menuItemId (required). Do NOT fall back to item.id as that's the unique cart item ID
+      const menuItemId = item.menuItemId
       
       // Validate required fields
       const quantity = parseInt(item.quantity) || 1
@@ -205,10 +205,16 @@ export async function POST(request: NextRequest) {
       // Get selected add-ons if present
       const selectedAddOns = item.selectedAddOns || null
       
-      // Validate menuItemId exists
+      // Validate menuItemId exists and is provided
+      if (!menuItemId) {
+        console.error(`❌ Missing menuItemId for item:`, { id: item.id, name: item.name, menuItemId: item.menuItemId })
+        throw new Error(`Missing menuItemId for item ${item.name || item.id}. This is a required field.`)
+      }
+      
       if (!validMenuItemIds.has(menuItemId)) {
-        console.error(`❌ Invalid menuItemId: ${menuItemId}`)
+        console.error(`❌ Invalid menuItemId: ${menuItemId} (not found in database)`)
         console.error(`   Item:`, { id: item.id, name: item.name, menuItemId: item.menuItemId })
+        console.error(`   Available menu item IDs:`, Array.from(validMenuItemIds).slice(0, 5))
         // Set to null to avoid foreign key error - but log the issue
         return {
           menuItemId: null,

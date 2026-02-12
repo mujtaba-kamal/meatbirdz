@@ -73,8 +73,11 @@ function CheckoutForm({ paymentIntentId, orderType }: { paymentIntentId: string 
       const codOrderData = {
         items: items.map(item => ({
           id: item.id,
+          name: item.name,
+          menuItemId: item.menuItemId,
           quantity: item.quantity,
           price: item.price,
+          selectedAddOns: item.selectedAddOns || null,
         })),
         total: getTotal(),
         orderType: orderType,
