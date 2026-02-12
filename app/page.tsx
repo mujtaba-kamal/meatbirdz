@@ -17,19 +17,19 @@ export default function Home() {
   const [logoSrc, setLogoSrc] = useState('/logo.png')
   const [currentSlide, setCurrentSlide] = useState(0)
 
-  // Hero carousel images - burger, wraps, fries
+  // Hero carousel images - Cloudinary images
   const heroImages = [
     {
-      url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1920&h=1080&fit=crop&q=80',
-      alt: 'Delicious burgers',
+      url: 'https://res.cloudinary.com/dzuo7rbfa/image/upload/v1770882589/crispy_bird_2_o3hjtb.jpg',
+      alt: 'Crispy Bird Delicious Food',
     },
     {
-      url: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=1920&h=1080&fit=crop&q=80',
-      alt: 'Fresh wraps',
+      url: 'https://res.cloudinary.com/dzuo7rbfa/image/upload/v1770882589/crispy_bird_imzsgf.jpg',
+      alt: 'Crispy Bird Menu',
     },
     {
-      url: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=1920&h=1080&fit=crop&q=80',
-      alt: 'Crispy fries',
+      url: 'https://res.cloudinary.com/dzuo7rbfa/image/upload/v1770817252/cld-sample-4.jpg',
+      alt: 'Fresh Food Selection',
     },
   ]
 
