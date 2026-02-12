@@ -146,7 +146,9 @@ export async function POST(request: Request) {
         CREATE TABLE IF NOT EXISTS "OrderItem" (
           "id" TEXT NOT NULL,
           "orderId" TEXT NOT NULL,
-          "menuItemId" TEXT NOT NULL,
+          "menuItemId" TEXT,
+          "mealId" TEXT,
+          "selectedMealOptions" JSONB,
           "quantity" INTEGER NOT NULL,
           "price" DOUBLE PRECISION NOT NULL,
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -157,6 +159,66 @@ export async function POST(request: Request) {
     } catch (error: any) {
       console.error('❌ Error creating OrderItem table:', error.message)
       throw error
+    }
+    
+    // Add selectedMealOptions column if it doesn't exist (for existing tables)
+    try {
+      await prisma.$executeRawUnsafe(`
+        DO $$ 
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'OrderItem' AND column_name = 'selectedMealOptions'
+          ) THEN
+            ALTER TABLE "OrderItem" ADD COLUMN "selectedMealOptions" JSONB;
+            RAISE NOTICE 'Added selectedMealOptions column';
+          ELSE
+            RAISE NOTICE 'selectedMealOptions column already exists';
+          END IF;
+        END $$;
+      `)
+      console.log('✅ Ensured selectedMealOptions column exists')
+    } catch (error: any) {
+      console.log('⚠️ selectedMealOptions column check:', error.message)
+    }
+    
+    // Add mealId column if it doesn't exist (for existing tables)
+    try {
+      await prisma.$executeRawUnsafe(`
+        DO $$ 
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'OrderItem' AND column_name = 'mealId'
+          ) THEN
+            ALTER TABLE "OrderItem" ADD COLUMN "mealId" TEXT;
+            RAISE NOTICE 'Added mealId column';
+          ELSE
+            RAISE NOTICE 'mealId column already exists';
+          END IF;
+        END $$;
+      `)
+      console.log('✅ Ensured mealId column exists')
+    } catch (error: any) {
+      console.log('⚠️ mealId column check:', error.message)
+    }
+    
+    // Make menuItemId nullable if it's not already (for existing tables)
+    try {
+      await prisma.$executeRawUnsafe(`
+        DO $$ 
+        BEGIN
+          ALTER TABLE "OrderItem" 
+          ALTER COLUMN "menuItemId" DROP NOT NULL;
+        EXCEPTION
+          WHEN OTHERS THEN
+            -- Column might already be nullable, ignore error
+            NULL;
+        END $$;
+      `)
+      console.log('✅ Ensured menuItemId is nullable')
+    } catch (error: any) {
+      console.log('⚠️ menuItemId nullable check:', error.message)
     }
 
     // Add foreign keys (ignore if they exist)
