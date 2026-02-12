@@ -91,6 +91,8 @@ export default function AdminPage() {
   const [showAddMenuItem, setShowAddMenuItem] = useState(false)
   const [editingMenuItem, setEditingMenuItem] = useState<any>(null)
   const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const [addOns, setAddOns] = useState<any[]>([]) // Add-ons for the currently editing menu item
+  const [newAddOn, setNewAddOn] = useState({ name: '', price: '', available: true })
   
   // Form states
   const [menuItemForm, setMenuItemForm] = useState({
@@ -160,6 +162,87 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Error fetching menu items:', error)
       toast.error('Failed to fetch menu items')
+    }
+  }
+
+  const fetchAddOns = async (menuItemId: string) => {
+    try {
+      const response = await fetch(`/api/add-ons?menuItemId=${menuItemId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setAddOns(data)
+      }
+    } catch (error) {
+      console.error('Error fetching add-ons:', error)
+    }
+  }
+
+  const handleAddAddOn = async () => {
+    if (!editingMenuItem || !newAddOn.name || !newAddOn.price) {
+      toast.error('Please fill in add-on name and price')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/add-ons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          menuItemId: editingMenuItem.id,
+          name: newAddOn.name,
+          price: parseFloat(newAddOn.price),
+          available: newAddOn.available,
+        }),
+      })
+
+      if (response.ok) {
+        toast.success('Add-on added successfully')
+        setNewAddOn({ name: '', price: '', available: true })
+        await fetchAddOns(editingMenuItem.id)
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to add add-on')
+      }
+    } catch (error) {
+      toast.error('Failed to add add-on')
+    }
+  }
+
+  const handleToggleAddOn = async (addOnId: string, available: boolean) => {
+    try {
+      const response = await fetch(`/api/add-ons/${addOnId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ available }),
+      })
+
+      if (response.ok && editingMenuItem) {
+        toast.success('Add-on updated')
+        await fetchAddOns(editingMenuItem.id)
+      } else {
+        toast.error('Failed to update add-on')
+      }
+    } catch (error) {
+      toast.error('Failed to update add-on')
+    }
+  }
+
+  const handleDeleteAddOn = async (addOnId: string) => {
+    if (!confirm('Are you sure you want to delete this add-on?')) return
+
+    try {
+      const response = await fetch(`/api/add-ons/${addOnId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok && editingMenuItem) {
+        toast.success('Add-on deleted')
+        await fetchAddOns(editingMenuItem.id)
+      } else {
+        toast.error('Failed to delete add-on')
+      }
+    } catch (error) {
+      toast.error('Failed to delete add-on')
     }
   }
 
@@ -361,6 +444,79 @@ export default function AdminPage() {
                 </label>
               </div>
             </div>
+            
+            {/* Add-Ons Section */}
+            <div className="mt-6 pt-6 border-t border-blue-200">
+              <h4 className="font-semibold text-blue-900 mb-4">Add-Ons</h4>
+              <div className="space-y-3">
+                {addOns.map((addOn) => (
+                  <div key={addOn.id} className="flex items-center gap-2 p-2 bg-white rounded border">
+                    <div className="flex-1">
+                      <div className="font-medium">{addOn.name}</div>
+                      <div className="text-sm text-gray-600">+£{addOn.price.toFixed(2)}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-1 rounded ${addOn.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {addOn.available ? 'Available' : 'Unavailable'}
+                      </span>
+                      <button
+                        onClick={() => handleToggleAddOn(addOn.id, !addOn.available)}
+                        className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                        title={addOn.available ? 'Mark unavailable' : 'Mark available'}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAddOn(addOn.id)}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Add New Add-On Form */}
+                <div className="p-3 bg-gray-50 rounded border-2 border-dashed border-gray-300">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <input
+                      type="text"
+                      value={newAddOn.name}
+                      onChange={(e) => setNewAddOn({ ...newAddOn, name: e.target.value })}
+                      placeholder="Add-on name (e.g., Fries, Drink)"
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={newAddOn.price}
+                      onChange={(e) => setNewAddOn({ ...newAddOn, price: e.target.value })}
+                      placeholder="Price"
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleAddAddOn}
+                        className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center justify-center gap-1"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add
+                      </button>
+                      <label className="flex items-center gap-1 px-3 py-2 border border-gray-300 rounded-lg text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={newAddOn.available}
+                          onChange={(e) => setNewAddOn({ ...newAddOn, available: e.target.checked })}
+                          className="w-4 h-4"
+                        />
+                        <span>Available</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
             <div className="flex gap-2 mt-4">
               <button
                 onClick={handleUpdateMenuItem}
@@ -374,6 +530,8 @@ export default function AdminPage() {
                   setEditingMenuItem(null)
                   setMenuItemForm({ name: '', description: '', price: '', category: '', image: '', available: true })
                   setSelectedCategory('')
+                  setAddOns([])
+                  setNewAddOn({ name: '', price: '', available: true })
                 }}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
               >
@@ -426,6 +584,8 @@ export default function AdminPage() {
                     available: item.available,
                   })
                   setSelectedCategory(item.category)
+                  // Fetch add-ons for this menu item
+                  fetchAddOns(item.id)
                 }}
                 className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
               >

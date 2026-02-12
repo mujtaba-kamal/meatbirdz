@@ -26,6 +26,7 @@ model MenuItem {
   orderItems  OrderItem[]
   mealOptions MealOption[]
   meals       MenuItemMeal[] // Meals linked to this menu item
+  addOns      AddOn[]        // Add-ons available for this menu item
 }
 
 model User {
@@ -67,6 +68,7 @@ model OrderItem {
   menuItemId          String?
   mealId              String?
   selectedMealOptions Json? // Store selected meal options: [{ categoryId, menuItemId, additionalPrice }]
+  selectedAddOns      Json? // Store selected add-ons: [{ addOnId, name, price }]
   quantity            Int
   price               Float
   order               Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -130,6 +132,20 @@ model MenuItemMeal {
   @@unique([menuItemId, mealId])
   @@index([menuItemId])
   @@index([mealId])
+}
+
+model AddOn {
+  id          String    @id @default(cuid())
+  menuItemId  String    // The menu item this add-on belongs to
+  name        String    // Name of the add-on (e.g., "Fries", "Drink", "Fries + Drink")
+  price       Float     // Additional price for this add-on
+  available   Boolean   @default(true)
+  order       Int       @default(0) // Display order
+  menuItem    MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([menuItemId])
 }
 
 enum OrderStatus {

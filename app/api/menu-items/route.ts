@@ -9,9 +9,14 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   try {
     const menuItems = await prisma.menuItem.findMany({
+      include: {
+        addOns: {
+          orderBy: { order: 'asc' },
+        },
+      } as any,
       orderBy: [
         { category: 'asc' },
-        { order: 'asc' },
+        { order: 'asc' } as any,
         { name: 'asc' },
       ],
     })

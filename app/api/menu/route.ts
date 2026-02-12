@@ -12,6 +12,12 @@ export async function GET() {
     }
 
     const menuItems = await prisma.menuItem.findMany({
+      include: {
+        addOns: {
+          where: { available: true },
+          orderBy: { order: 'asc' },
+        },
+      } as any,
       orderBy: [
         { category: 'asc' },
         { name: 'asc' },
