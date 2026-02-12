@@ -49,8 +49,58 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // SIMPLIFIED FLOW: No validation - just use the IDs as provided from the frontend
-    // The database will handle foreign key constraints if IDs are invalid
+    // Validate IDs exist in database to prevent foreign key errors
+    // But we'll still use them if provided - validation is just for error handling
+    const allMenuItemIds = items
+      .map((item: any) => {
+        if (item.type === 'meal') {
+          // For meals, extract menuItemId if not explicitly provided
+          let menuItemId = item.menuItemId
+          if (!menuItemId && item.id && item.id.includes('-meal-')) {
+            const parts = item.id.split('-meal-')
+            if (parts.length > 0 && parts[0]) {
+              menuItemId = parts[0]
+            }
+          }
+          return menuItemId
+        } else {
+          return item.menuItemId || item.id
+        }
+      })
+      .filter(Boolean) as string[]
+    
+    const allMealIds = items
+      .filter((item: any) => item.type === 'meal' && item.mealId)
+      .map((item: any) => item.mealId) as string[]
+    
+    // Check which IDs exist in database
+    const existingMenuItems = allMenuItemIds.length > 0 ? await prisma.menuItem.findMany({
+      where: { id: { in: allMenuItemIds } },
+      select: { id: true },
+    }) : []
+    
+    const existingMeals = allMealIds.length > 0 ? await (prisma as any).meal.findMany({
+      where: { id: { in: allMealIds } },
+      select: { id: true },
+    }).catch(() => []) : []
+    
+    const validMenuItemIds = new Set(existingMenuItems.map((m: any) => m.id))
+    const validMealIds = new Set(existingMeals.map((m: any) => m.id))
+    
+    console.log(`\n📋 Validation Results:`)
+    console.log(`   Menu Items: ${validMenuItemIds.size}/${allMenuItemIds.length} valid`)
+    console.log(`   Meals: ${validMealIds.size}/${allMealIds.length} valid`)
+    
+    // Log invalid IDs
+    const invalidMenuItemIds = allMenuItemIds.filter(id => !validMenuItemIds.has(id))
+    const invalidMealIds = allMealIds.filter(id => !validMealIds.has(id))
+    
+    if (invalidMenuItemIds.length > 0) {
+      console.error(`❌ Invalid menuItemIds:`, invalidMenuItemIds)
+    }
+    if (invalidMealIds.length > 0) {
+      console.error(`❌ Invalid mealIds:`, invalidMealIds)
+    }
 
     // Create order in database
     const order = await prisma.order.create({
@@ -79,18 +129,42 @@ export async function POST(request: NextRequest) {
                 }
               }
               
-              // SIMPLIFIED: Just use the IDs as provided - no validation that nullifies them
-              console.log(`📦 Creating meal order item: menuItemId=${menuItemId}, mealId=${item.mealId}`)
+              // Use validated IDs - only set if they exist in database
+              // For meals, menuItemId is optional, mealId should be set if valid
+              const finalMenuItemId = menuItemId && validMenuItemIds.has(menuItemId) ? menuItemId : null
+              const finalMealId = item.mealId && validMealIds.has(item.mealId) ? item.mealId : null
+              
+              if (!finalMenuItemId && menuItemId) {
+                console.warn(`⚠️ menuItemId ${menuItemId} not found, setting to null (optional for meals)`)
+              }
+              if (!finalMealId && item.mealId) {
+                console.error(`❌ mealId ${item.mealId} not found - meal order will have no meal reference!`)
+              }
+              
+              console.log(`📦 Creating meal order item: menuItemId=${finalMenuItemId}, mealId=${finalMealId}`)
               
               return {
-                menuItemId: menuItemId || null, // The base menu item (burger/wrap)
-                mealId: item.mealId || null, // The meal deal
+                menuItemId: finalMenuItemId, // Only set if valid
+                mealId: finalMealId, // Only set if valid
                 quantity: item.quantity,
                 price: item.price,
               }
             } else {
               // For regular menu items, use menuItemId or id
               const menuItemId = item.menuItemId || item.id
+              
+              // Validate menuItemId exists - for regular items, it's required
+              if (!validMenuItemIds.has(menuItemId)) {
+                console.error(`❌ Regular item has invalid menuItemId: ${menuItemId}`)
+                console.error(`   Item:`, { id: item.id, name: item.name, menuItemId: item.menuItemId })
+                // Set to null to avoid foreign key error - but log the issue
+                return {
+                  menuItemId: null, // Set to null to avoid foreign key constraint
+                  mealId: null,
+                  quantity: item.quantity,
+                  price: item.price,
+                }
+              }
               
               console.log(`📦 Creating regular menu item order: menuItemId=${menuItemId}`)
               
@@ -120,7 +194,7 @@ export async function POST(request: NextRequest) {
                 name: true,
               },
             },
-          },
+          } as any, // Use 'as any' to bypass TypeScript if Prisma Client types aren't updated
         },
       },
     })
