@@ -15,10 +15,6 @@ interface OrderItem {
     name: string
     price: number
   } | null
-  meal?: {
-    id: string
-    name: string
-  } | null
 }
 
 interface Order {
@@ -249,7 +245,7 @@ function OrderConfirmationContent() {
             <div className="space-y-2">
               {order.items.map((item) => {
                 // Handle null menuItem (for meal items or invalid menuItemIds)
-                const itemName = item.menuItem?.name || item.meal?.name || 'Unknown Item'
+                const itemName = item.menuItem?.name || 'Unknown Item'
                 return (
                   <div
                     key={item.id}

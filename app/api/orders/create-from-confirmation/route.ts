@@ -98,7 +98,6 @@ export async function POST(request: NextRequest) {
               // Set to null to avoid foreign key error - but log the issue
               return {
                 menuItemId: null,
-                mealId: null,
                 quantity: item.quantity,
                 price: item.price,
               }
@@ -108,7 +107,6 @@ export async function POST(request: NextRequest) {
             
             return {
               menuItemId: menuItemId,
-              mealId: null,
               quantity: item.quantity,
               price: item.price,
             }
@@ -125,13 +123,7 @@ export async function POST(request: NextRequest) {
                 price: true,
               },
             },
-            meal: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          } as any, // Use 'as any' to bypass TypeScript if Prisma Client types aren't updated
+          },
         },
       },
     })
@@ -151,7 +143,6 @@ export async function POST(request: NextRequest) {
         id: item.id,
         type: item.type,
         menuItemId: item.menuItemId,
-        mealId: item.mealId,
         quantity: item.quantity,
       })),
     })
