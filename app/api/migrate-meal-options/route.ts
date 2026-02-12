@@ -35,11 +35,21 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Add the column
-    await prisma.$executeRawUnsafe(`
-      ALTER TABLE "OrderItem" 
-      ADD COLUMN IF NOT EXISTS "selectedMealOptions" JSONB
-    `)
+    // Add the column (using JSONB for PostgreSQL)
+    try {
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE "OrderItem" 
+        ADD COLUMN IF NOT EXISTS "selectedMealOptions" JSONB
+      `)
+      console.log('Successfully added selectedMealOptions column')
+    } catch (error: any) {
+      // If column already exists, that's fine
+      if (error.message?.includes('already exists') || error.message?.includes('duplicate')) {
+        console.log('Column selectedMealOptions already exists (this is OK)')
+      } else {
+        throw error
+      }
+    }
 
     console.log('Successfully added selectedMealOptions column')
 
