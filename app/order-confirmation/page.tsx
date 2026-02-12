@@ -92,6 +92,23 @@ function OrderConfirmationContent() {
         throw new Error('No order data available')
       }
 
+      // Log what we're sending
+      console.log('📤 Sending order data:', {
+        itemsCount: orderData.items?.length || 0,
+        items: orderData.items?.slice(0, 2).map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          menuItemId: item.menuItemId,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        customerInfo: {
+          name: orderData.customerInfo?.customerName,
+          email: orderData.customerInfo?.customerEmail,
+        },
+        total: orderData.total,
+      })
+
       // Create order
       const response = await fetch('/api/orders/create-from-confirmation', {
         method: 'POST',
@@ -102,7 +119,15 @@ function OrderConfirmationContent() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create order')
+        console.error('❌ Order creation failed:', {
+          status: response.status,
+          error: data.error,
+          details: data.details,
+          code: data.code,
+          meta: data.meta,
+        })
+        const errorMessage = data.details || data.error || 'Failed to create order'
+        throw new Error(errorMessage)
       }
 
       // Clear sessionStorage
@@ -123,9 +148,13 @@ function OrderConfirmationContent() {
 
       setOrder(data.order)
     } catch (error: any) {
-      console.error('Error creating order:', error)
-      toast.error(error.message || 'Failed to create order')
-    } finally {
+      console.error('❌ Error creating order:', error)
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+      })
+      const errorMessage = error.message || 'Failed to create order. Please try again or contact support.'
+      toast.error(errorMessage)
       setLoading(false)
     }
   }

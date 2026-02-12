@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     const allMenuItemIds = items
       .map((item: any) => {
         const id = item.menuItemId || item.id
-        console.log(`   Item: id=${item.id}, menuItemId=${item.menuItemId}, using=${id}`)
+        console.log(`   Item: id=${item.id}, name=${item.name}, menuItemId=${item.menuItemId}, using=${id}`)
         return id
       })
       .filter(Boolean) as string[]
@@ -79,36 +79,58 @@ export async function POST(request: NextRequest) {
     if (allMenuItemIds.length === 0) {
       console.error('❌ No valid menu item IDs found in items')
       return NextResponse.json(
-        { error: 'Invalid items', details: 'No valid menu item IDs found' },
+        { error: 'Invalid items', details: 'No valid menu item IDs found in cart items' },
         { status: 400 }
       )
     }
     
+    // Check total menu items in database (for debugging)
+    const totalMenuItemsInDb = await prisma.menuItem.count()
+    console.log(`📊 Total menu items in database: ${totalMenuItemsInDb}`)
+    
     // Check which IDs exist in database
-    const existingMenuItems = await prisma.menuItem.findMany({
-      where: { id: { in: allMenuItemIds } },
-      select: { id: true },
-    })
+    let existingMenuItems
+    try {
+      existingMenuItems = await prisma.menuItem.findMany({
+        where: { id: { in: allMenuItemIds } },
+        select: { id: true, name: true },
+      })
+    } catch (dbError: any) {
+      console.error('❌ Database error fetching menu items:', dbError)
+      return NextResponse.json(
+        { 
+          error: 'Database error', 
+          details: `Failed to validate menu items: ${dbError.message}`,
+          code: dbError.code,
+        },
+        { status: 500 }
+      )
+    }
     
     const validMenuItemIds = new Set(existingMenuItems.map((m: any) => m.id))
     
     console.log(`\n📋 Validation Results:`)
-    console.log(`   Total items: ${items.length}`)
-    console.log(`   Unique menu item IDs: ${allMenuItemIds.length}`)
+    console.log(`   Total items in cart: ${items.length}`)
+    console.log(`   Unique menu item IDs requested: ${allMenuItemIds.length}`)
     console.log(`   Valid menu items found: ${validMenuItemIds.size}/${allMenuItemIds.length}`)
+    console.log(`   Valid IDs:`, Array.from(validMenuItemIds))
     
     // Log invalid IDs
     const invalidMenuItemIds = allMenuItemIds.filter(id => !validMenuItemIds.has(id))
     
     if (invalidMenuItemIds.length > 0) {
-      console.error(`❌ Invalid menuItemIds:`, invalidMenuItemIds)
+      console.error(`❌ Invalid menuItemIds (not found in database):`, invalidMenuItemIds)
+      console.error(`   These IDs were requested but don't exist in the MenuItem table`)
       // Don't fail completely - just log and continue with null menuItemId
     }
     
     if (validMenuItemIds.size === 0) {
       console.error('❌ No valid menu items found in database')
       return NextResponse.json(
-        { error: 'Invalid items', details: 'None of the provided menu item IDs exist in the database' },
+        { 
+          error: 'Invalid items', 
+          details: `None of the provided menu item IDs exist in the database. Requested IDs: ${invalidMenuItemIds.join(', ')}. Total menu items in database: ${totalMenuItemsInDb}`,
+        },
         { status: 400 }
       )
     }
@@ -243,15 +265,17 @@ export async function POST(request: NextRequest) {
     })
     
     // Return more detailed error for debugging
-    return NextResponse.json(
-      { 
-        error: 'Failed to create order', 
-        details: error.message,
-        code: error.code,
-        meta: error.meta,
-      },
-      { status: 500 }
-    )
+    const errorResponse = {
+      error: 'Failed to create order',
+      details: error.message || 'Unknown error occurred',
+      code: error.code,
+      meta: error.meta,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    }
+    
+    console.error('❌ Returning error response:', errorResponse)
+    
+    return NextResponse.json(errorResponse, { status: 500 })
   }
 }
 
