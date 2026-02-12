@@ -151,6 +151,8 @@ function OrderConfirmationContent() {
       sessionStorage.removeItem('pendingCODOrder')
 
       setOrder(data.order)
+      setLoading(false) // IMPORTANT: Set loading to false after successful order creation
+      setLoading(false) // IMPORTANT: Set loading to false after successful order creation
     } catch (error: any) {
       console.error('❌ Error creating order:', error)
       console.error('Error details:', {
@@ -166,17 +168,22 @@ function OrderConfirmationContent() {
   const fetchOrder = async (id: string) => {
     try {
       setLoading(true)
+      console.log(`📋 Fetching order with ID: ${id}`)
+      
       const response = await fetch(`/api/orders/${id}`)
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
-        throw new Error(errorData.error || `Failed to fetch order: ${response.status}`)
+        console.error(`❌ Failed to fetch order: ${response.status}`, errorData)
+        throw new Error(errorData.error || errorData.details || `Failed to fetch order: ${response.status}`)
       }
       
       const data = await response.json()
+      console.log(`✅ Order fetched successfully:`, { id: data.id, itemsCount: data.items?.length })
       
       if (!data || !data.id) {
-        throw new Error('Order not found')
+        console.error('❌ Invalid order data received:', data)
+        throw new Error('Order not found or invalid data')
       }
       
       setOrder(data)
@@ -196,6 +203,7 @@ function OrderConfirmationContent() {
     } catch (error: any) {
       console.error('❌ Error fetching order:', error)
       toast.error(error.message || 'Failed to load order details')
+      setOrder(null) // Clear order on error
     } finally {
       setLoading(false)
     }
