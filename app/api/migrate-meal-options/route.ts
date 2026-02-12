@@ -1,18 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
+
+// GET endpoint to check if column exists
+export async function GET(request: NextRequest) {
+  try {
+    const checkColumn = await prisma.$queryRawUnsafe(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'OrderItem' 
+      AND column_name = 'selectedMealOptions'
+    `)
+
+    const exists = (checkColumn as any[]).length > 0
+
+    return NextResponse.json({
+      exists,
+      message: exists 
+        ? 'Column selectedMealOptions exists' 
+        : 'Column selectedMealOptions does not exist',
+    })
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: 'Failed to check column', details: error.message },
+      { status: 500 }
+    )
+  }
+}
 
 // POST endpoint to add selectedMealOptions column to OrderItem table
 export async function POST(request: NextRequest) {
   try {
+    // Check for admin session OR setup token
+    const session = await getServerSession(authOptions)
     const { searchParams } = new URL(request.url)
     const token = searchParams.get('token')
 
-    // Simple token check
-    if (token !== process.env.SETUP_TOKEN) {
+    const isAdmin = session?.user?.role === 'ADMIN'
+    const hasValidToken = token === process.env.SETUP_TOKEN
+
+    if (!isAdmin && !hasValidToken) {
       return NextResponse.json(
-        { error: 'Unauthorized. Setup token required.' },
+        { error: 'Unauthorized. Admin access or setup token required.' },
         { status: 401 }
       )
     }

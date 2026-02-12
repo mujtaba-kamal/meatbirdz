@@ -236,6 +236,24 @@ export async function POST(request: Request) {
       console.log('⚠️ arrivalAcknowledged column:', error.message)
     }
 
+    // Add selectedMealOptions column to OrderItem table
+    try {
+      await prisma.$executeRawUnsafe(`
+        DO $$ 
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'OrderItem' AND column_name = 'selectedMealOptions'
+          ) THEN
+            ALTER TABLE "OrderItem" ADD COLUMN "selectedMealOptions" JSONB;
+          END IF;
+        END $$;
+      `)
+      console.log('✅ Added selectedMealOptions column to OrderItem')
+    } catch (error: any) {
+      console.log('⚠️ selectedMealOptions column:', error.message)
+    }
+
     // Clear existing data
     await prisma.orderItem.deleteMany().catch(() => {})
     await prisma.order.deleteMany().catch(() => {})
