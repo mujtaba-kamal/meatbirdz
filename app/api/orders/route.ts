@@ -48,9 +48,12 @@ export async function GET(request: NextRequest) {
       include: {
         items: {
           include: {
-            menuItem: true,
-            // Note: meal relation will be available after database migration
-            // For now, we only include menuItem to avoid errors
+            menuItem: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },

@@ -30,7 +30,11 @@ interface OrderItem {
   menuItem: {
     id: string
     name: string
-  }
+  } | null
+  meal?: {
+    id: string
+    name: string
+  } | null
 }
 
 interface Order {
@@ -1331,7 +1335,11 @@ export default function AdminPage() {
                           <p className="text-xs text-gray-500">Items</p>
                           <p className="text-gray-900">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>
                           <p className="text-gray-600 text-xs">
-                            {order.items.slice(0, 2).map(item => item.menuItem.name).join(', ')}
+                            {order.items.slice(0, 2).map(item => {
+                              if (item.menuItem?.name) return item.menuItem.name
+                              if (item.meal?.name) return item.meal.name
+                              return 'Unknown Item'
+                            }).filter(Boolean).join(', ')}
                             {order.items.length > 2 && ` +${order.items.length - 2} more`}
                           </p>
                         </div>
@@ -1461,7 +1469,7 @@ export default function AdminPage() {
                           className="flex justify-between text-sm"
                         >
                           <span>
-                            {item.menuItem.name} x {item.quantity}
+                            {item.menuItem?.name || item.meal?.name || 'Unknown Item'} x {item.quantity}
                           </span>
                           <span>${(item.price * item.quantity).toFixed(2)}</span>
                         </div>
