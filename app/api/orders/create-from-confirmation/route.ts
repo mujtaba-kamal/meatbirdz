@@ -34,6 +34,30 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // Auto-migrate: Ensure selectedAddOns column exists
+    try {
+      const columnCheck = await prisma.$queryRawUnsafe(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'OrderItem' 
+        AND column_name = 'selectedAddOns'
+      `)
+      
+      if ((columnCheck as any[]).length === 0) {
+        console.log('🔧 Auto-migrating: Adding selectedAddOns column...')
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "OrderItem" 
+          ADD COLUMN IF NOT EXISTS "selectedAddOns" JSONB
+        `)
+        console.log('✅ Successfully added selectedAddOns column')
+      }
+    } catch (migrationError: any) {
+      // If column already exists or migration fails, log but continue
+      if (!migrationError.message?.includes('already exists')) {
+        console.warn('⚠️ Migration check failed (non-critical):', migrationError.message)
+      }
+    }
+    
     const requestData = await request.json()
     items = requestData.items || []
     const { customerInfo, total, paymentIntentId, orderType } = requestData

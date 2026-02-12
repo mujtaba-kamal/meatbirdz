@@ -30,7 +30,7 @@ export async function PUT(
     if (available !== undefined) updateData.available = available
     if (order !== undefined) updateData.order = parseInt(order)
 
-    const addOn = await prisma.addOn.update({
+    const addOn = await (prisma as any).addOn.update({
       where: { id: addOnId },
       data: updateData,
     })
@@ -62,7 +62,7 @@ export async function DELETE(
 
     const addOnId = params.id
 
-    await prisma.addOn.delete({
+    await (prisma as any).addOn.delete({
       where: { id: addOnId },
     })
 
