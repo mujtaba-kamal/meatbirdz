@@ -1,6 +1,12 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+export interface SelectedAddOn {
+  addOnId: string
+  name: string
+  price: number
+}
+
 export interface CartItem {
   id: string
   name: string
@@ -10,6 +16,7 @@ export interface CartItem {
   instructions?: string
   type?: 'menuItem'
   menuItemId?: string
+  selectedAddOns?: SelectedAddOn[]
 }
 
 interface CartStore {

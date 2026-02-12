@@ -202,6 +202,9 @@ export async function POST(request: NextRequest) {
         throw new Error(`Invalid price for item ${item.name || item.id}`)
       }
       
+      // Get selected add-ons if present
+      const selectedAddOns = item.selectedAddOns || null
+      
       // Validate menuItemId exists
       if (!validMenuItemIds.has(menuItemId)) {
         console.error(`❌ Invalid menuItemId: ${menuItemId}`)
@@ -211,15 +214,17 @@ export async function POST(request: NextRequest) {
           menuItemId: null,
           quantity: quantity,
           price: price,
+          selectedAddOns: selectedAddOns,
         }
       }
       
-      console.log(`📦 Creating menu item order: menuItemId=${menuItemId}, quantity=${quantity}, price=${price}`)
+      console.log(`📦 Creating menu item order: menuItemId=${menuItemId}, quantity=${quantity}, price=${price}, addOns=${selectedAddOns ? selectedAddOns.length : 0}`)
       
       return {
         menuItemId: menuItemId,
         quantity: quantity,
         price: price,
+        selectedAddOns: selectedAddOns,
       }
     })
     

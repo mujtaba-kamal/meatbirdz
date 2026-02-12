@@ -31,6 +31,11 @@ interface OrderItem {
     id: string
     name: string
   } | null
+  selectedAddOns?: Array<{
+    addOnId: string
+    name: string
+    price: number
+  }> | null
 }
 
 interface Order {
@@ -1380,9 +1385,9 @@ export default function AdminPage() {
                       {selectedOrder.items.map((item) => (
                         <div
                           key={item.id}
-                          className="flex justify-between text-sm"
+                          className="flex justify-between text-sm mb-2"
                         >
-                          <div>
+                          <div className="flex-1">
                             <div>
                               {item.menuItem?.name ? (
                                 <span className="font-semibold">{item.menuItem.name}</span>
@@ -1390,8 +1395,17 @@ export default function AdminPage() {
                                 <span className="font-semibold">Unknown Item</span>
                               )} x {item.quantity}
                             </div>
+                            {item.selectedAddOns && item.selectedAddOns.length > 0 && (
+                              <div className="ml-4 mt-1 text-xs text-gray-600">
+                                {item.selectedAddOns.map((addOn, idx) => (
+                                  <div key={idx}>
+                                    + {addOn.name} (+£{addOn.price.toFixed(2)})
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                          <span>${(item.price * item.quantity).toFixed(2)}</span>
+                          <span>£{(item.price * item.quantity).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>

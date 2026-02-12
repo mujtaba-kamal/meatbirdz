@@ -8,6 +8,13 @@ import toast from 'react-hot-toast'
 
 export const dynamic = 'force-dynamic'
 
+interface AddOn {
+  id: string
+  name: string
+  price: number
+  available: boolean
+}
+
 interface MenuItem {
   id: string
   name: string
@@ -16,6 +23,7 @@ interface MenuItem {
   category: string
   image: string | null
   available: boolean
+  addOns?: AddOn[]
 }
 
 const categories = [
@@ -37,6 +45,7 @@ export default function MenuPage() {
   const [selectedLocation, setSelectedLocation] = useState<any>(null)
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({})
   const [itemInstructions, setItemInstructions] = useState<Record<string, string>>({})
+  const [selectedAddOns, setSelectedAddOns] = useState<Record<string, string[]>>({}) // menuItemId -> array of addOnIds
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -132,12 +141,37 @@ export default function MenuPage() {
     if (!itemQuantities[item.id]) {
       setItemQuantities((prev) => ({ ...prev, [item.id]: 1 }))
     }
-    
+    // Initialize selected add-ons if not set
+    if (!selectedAddOns[item.id]) {
+      setSelectedAddOns((prev) => ({ ...prev, [item.id]: [] }))
+    }
   }
 
   const closeDrawer = () => {
     setDrawerOpen(false)
     setSelectedItem(null)
+  }
+
+  const toggleAddOn = (menuItemId: string, addOnId: string) => {
+    setSelectedAddOns((prev) => {
+      const current = prev[menuItemId] || []
+      if (current.includes(addOnId)) {
+        return { ...prev, [menuItemId]: current.filter((id) => id !== addOnId) }
+      } else {
+        return { ...prev, [menuItemId]: [...current, addOnId] }
+      }
+    })
+  }
+
+  const getItemTotalPrice = (item: MenuItem): number => {
+    const quantity = itemQuantities[item.id] || 1
+    const basePrice = item.price * quantity
+    const selectedAddOnIds = selectedAddOns[item.id] || []
+    const addOnsTotal = selectedAddOnIds.reduce((total, addOnId) => {
+      const addOn = item.addOns?.find((a) => a.id === addOnId)
+      return total + (addOn ? addOn.price * quantity : 0)
+    }, 0)
+    return basePrice + addOnsTotal
   }
 
   const handleAddToCart = (item: MenuItem) => {
@@ -153,20 +187,39 @@ export default function MenuPage() {
     
     const quantity = itemQuantities[item.id] || 1
     const instructions = itemInstructions[item.id] || ''
+    const selectedAddOnIds = selectedAddOns[item.id] || []
+    
+    // Get selected add-ons with their details
+    const selectedAddOnsData = selectedAddOnIds
+      .map((addOnId) => item.addOns?.find((a) => a.id === addOnId))
+      .filter((a): a is AddOn => a !== undefined)
+    
+    // Calculate total price including add-ons
+    const basePrice = item.price
+    const addOnsTotal = selectedAddOnsData.reduce((sum, addOn) => sum + addOn.price, 0)
+    const itemTotalPrice = basePrice + addOnsTotal
     
     for (let i = 0; i < quantity; i++) {
       addItem({
-        id: item.id,
+        id: `${item.id}-${Date.now()}-${i}`, // Unique ID for each item instance
         name: item.name,
-        price: item.price,
+        price: itemTotalPrice, // Price includes add-ons
         image: item.image || undefined,
         instructions: instructions || undefined,
         type: 'menuItem',
         menuItemId: item.id,
+        selectedAddOns: selectedAddOnsData.map((addOn) => ({
+          addOnId: addOn.id,
+          name: addOn.name,
+          price: addOn.price,
+        })),
       })
     }
     
-    toast.success(`${quantity}x ${item.name} added to cart`)
+    const addOnsText = selectedAddOnsData.length > 0 
+      ? ` with ${selectedAddOnsData.map(a => a.name).join(', ')}`
+      : ''
+    toast.success(`${quantity}x ${item.name}${addOnsText} added to cart`)
     
     // Reset and close drawer
     setItemQuantities((prev) => ({ ...prev, [item.id]: 1 }))
@@ -174,6 +227,11 @@ export default function MenuPage() {
       const newInstructions = { ...prev }
       delete newInstructions[item.id]
       return newInstructions
+    })
+    setSelectedAddOns((prev) => {
+      const newAddOns = { ...prev }
+      delete newAddOns[item.id]
+      return newAddOns
     })
     closeDrawer()
   }
@@ -474,6 +532,45 @@ export default function MenuPage() {
                       </div>
                     </div>
 
+              {/* Add-Ons */}
+              {selectedItem.addOns && selectedItem.addOns.length > 0 && (
+                <div>
+                  <label className="block text-base font-semibold text-gray-700 mb-3">
+                    Add-Ons (Optional):
+                  </label>
+                  <div className="space-y-2">
+                    {selectedItem.addOns
+                      .filter((addOn) => addOn.available)
+                      .map((addOn) => {
+                        const isSelected = (selectedAddOns[selectedItem.id] || []).includes(addOn.id)
+                        return (
+                          <label
+                            key={addOn.id}
+                            className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleAddOn(selectedItem.id, addOn.id)}
+                                className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                              />
+                              <span className="font-medium text-gray-900">{addOn.name}</span>
+                            </div>
+                            <span className="text-primary-600 font-semibold">
+                              +£{addOn.price.toFixed(2)}
+                            </span>
+                          </label>
+                        )
+                      })}
+                  </div>
+                </div>
+              )}
+
               {/* Instructions */}
                     <div>
                 <label className="block text-base font-semibold text-gray-700 mb-2">
@@ -502,7 +599,8 @@ export default function MenuPage() {
                 >
                   {(() => {
                     const quantity = itemQuantities[selectedItem.id] || 1
-                    return `Add ${quantity > 1 ? `${quantity}x ` : ''}to Cart - £${(selectedItem.price * quantity).toFixed(2)}`
+                    const totalPrice = getItemTotalPrice(selectedItem)
+                    return `Add ${quantity > 1 ? `${quantity}x ` : ''}to Cart - £${totalPrice.toFixed(2)}`
                   })()}
                 </button>
               </div>

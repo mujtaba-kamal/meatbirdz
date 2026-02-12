@@ -7,22 +7,22 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    // Auto-migrate: Ensure selectedMealOptions column exists
+    // Auto-migrate: Ensure selectedAddOns column exists
     try {
       const columnCheck = await prisma.$queryRawUnsafe(`
         SELECT column_name 
         FROM information_schema.columns 
         WHERE table_name = 'OrderItem' 
-        AND column_name = 'selectedMealOptions'
+        AND column_name = 'selectedAddOns'
       `)
       
       if ((columnCheck as any[]).length === 0) {
-        console.log('🔧 Auto-migrating: Adding selectedMealOptions column...')
+        console.log('🔧 Auto-migrating: Adding selectedAddOns column...')
         await prisma.$executeRawUnsafe(`
           ALTER TABLE "OrderItem" 
-          ADD COLUMN IF NOT EXISTS "selectedMealOptions" JSONB
+          ADD COLUMN IF NOT EXISTS "selectedAddOns" JSONB
         `)
-        console.log('✅ Successfully added selectedMealOptions column')
+        console.log('✅ Successfully added selectedAddOns column')
       }
     } catch (migrationError: any) {
       // If column already exists or migration fails, log but continue
@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
             menuItemId: item.menuItemId || item.id,
             quantity: item.quantity,
             price: item.price,
+            selectedAddOns: item.selectedAddOns || null,
           })),
         },
       },

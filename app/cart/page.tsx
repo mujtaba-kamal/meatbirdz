@@ -44,6 +44,15 @@ export default function CartPage() {
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-base sm:text-lg truncate">{item.name}</h3>
                 <p className="text-gray-600 text-sm">£{item.price.toFixed(2)} each</p>
+                {item.selectedAddOns && item.selectedAddOns.length > 0 && (
+                  <div className="mt-1 text-xs sm:text-sm text-gray-600">
+                    {item.selectedAddOns.map((addOn, idx) => (
+                      <div key={idx}>
+                        + {addOn.name} (+£{addOn.price.toFixed(2)})
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {item.instructions && (
                   <p className="text-xs sm:text-sm text-primary-600 mt-1 italic">
                     Note: {item.instructions}
