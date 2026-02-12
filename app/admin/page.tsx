@@ -149,19 +149,48 @@ export default function AdminPage() {
 
   const fetchMenuItems = async () => {
     try {
+      console.log('📋 Admin: Fetching menu items...')
       const response = await fetch('/api/menu-items')
-      if (response.ok) {
-        const data = await response.json()
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
+        console.error('❌ Menu items API error:', errorData)
+        toast.error(errorData.error || errorData.details || 'Failed to fetch menu items')
+        setMenuItems([])
+        return
+      }
+      
+      const data = await response.json()
+      console.log('📦 Admin: Menu items response:', { 
+        isArray: Array.isArray(data), 
+        length: Array.isArray(data) ? data.length : 0,
+      })
+      
+      if (Array.isArray(data)) {
+        console.log(`✅ Admin: Loaded ${data.length} menu items`)
         // Sort by order, then by name
         const sorted = data.sort((a: any, b: any) => {
           if (a.order !== b.order) return (a.order || 0) - (b.order || 0)
           return a.name.localeCompare(b.name)
         })
         setMenuItems(sorted)
+      } else if (data.items && Array.isArray(data.items)) {
+        // Handle case where API returns { items: [...] }
+        console.log(`✅ Admin: Loaded ${data.items.length} menu items from items array`)
+        const sorted = data.items.sort((a: any, b: any) => {
+          if (a.order !== b.order) return (a.order || 0) - (b.order || 0)
+          return a.name.localeCompare(b.name)
+        })
+        setMenuItems(sorted)
+      } else {
+        console.error('❌ Admin: Invalid data format:', data)
+        toast.error(data.error || 'Failed to fetch menu items: Invalid data format')
+        setMenuItems([])
       }
-    } catch (error) {
-      console.error('Error fetching menu items:', error)
-      toast.error('Failed to fetch menu items')
+    } catch (error: any) {
+      console.error('❌ Admin: Error fetching menu items:', error)
+      toast.error(error.message || 'Failed to fetch menu items')
+      setMenuItems([])
     }
   }
 

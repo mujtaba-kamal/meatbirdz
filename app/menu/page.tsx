@@ -60,23 +60,48 @@ export default function MenuPage() {
 
   const fetchMenuItems = async () => {
     try {
+      setLoading(true)
+      console.log('📋 Fetching menu items...')
       const response = await fetch('/api/menu')
-      if (!response.ok) throw new Error('Failed to fetch menu')
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
+        console.error('❌ Menu API error:', errorData)
+        throw new Error(errorData.error || errorData.details || `Failed to fetch menu: ${response.status}`)
+      }
+      
       const data = await response.json()
+      console.log('📦 Menu API response:', { 
+        isArray: Array.isArray(data), 
+        length: Array.isArray(data) ? data.length : 0,
+        hasError: data.error,
+      })
+      
       if (Array.isArray(data)) {
+        console.log(`✅ Loaded ${data.length} menu items`)
         setMenuItems(data)
         const initialQuantities: Record<string, number> = {}
         data.forEach((item: MenuItem) => {
           initialQuantities[item.id] = 1
         })
         setItemQuantities(initialQuantities)
+      } else if (data.items && Array.isArray(data.items)) {
+        // Handle case where API returns { items: [...] }
+        console.log(`✅ Loaded ${data.items.length} menu items from items array`)
+        setMenuItems(data.items)
+        const initialQuantities: Record<string, number> = {}
+        data.items.forEach((item: MenuItem) => {
+          initialQuantities[item.id] = 1
+        })
+        setItemQuantities(initialQuantities)
       } else {
-        toast.error('Failed to load menu: Invalid data format')
+        console.error('❌ Invalid data format:', data)
+        toast.error(`Failed to load menu: ${data.error || 'Invalid data format'}`)
         setMenuItems([])
       }
-    } catch (error) {
-      console.error('Error fetching menu:', error)
-      toast.error('Failed to load menu')
+    } catch (error: any) {
+      console.error('❌ Error fetching menu:', error)
+      toast.error(error.message || 'Failed to load menu')
       setMenuItems([])
     } finally {
       setLoading(false)

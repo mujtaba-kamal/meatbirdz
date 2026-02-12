@@ -8,6 +8,36 @@ export const dynamic = 'force-dynamic'
 // GET - Fetch all menu items
 export async function GET() {
   try {
+    console.log('📋 Admin: Fetching menu items...')
+    
+    // Check if MenuItem table exists
+    const tableCheck = await prisma.$queryRawUnsafe(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'MenuItem'
+      );
+    `)
+    
+    const tableExists = (tableCheck as any[])[0]?.exists || false
+    
+    if (!tableExists) {
+      console.error('❌ MenuItem table does not exist')
+      return NextResponse.json(
+        { error: 'MenuItem table does not exist. Please run database setup.', items: [] },
+        { status: 500 }
+      )
+    }
+    
+    // Check menu item count
+    const count = await prisma.menuItem.count()
+    console.log(`📊 Found ${count} menu items in database`)
+    
+    if (count === 0) {
+      console.warn('⚠️ No menu items found in database')
+      return NextResponse.json([])
+    }
+    
     let menuItems
     try {
       // Try to include add-ons if the relation exists
@@ -23,9 +53,11 @@ export async function GET() {
           { name: 'asc' },
         ],
       })
+      console.log(`✅ Fetched ${menuItems.length} menu items with add-ons relation`)
     } catch (error: any) {
+      console.log('⚠️ Error with addOns relation:', error.message)
       // If addOns relation doesn't exist, fetch without it
-      if (error.message?.includes('addOns') || error.message?.includes('relation')) {
+      if (error.message?.includes('addOns') || error.message?.includes('relation') || error.message?.includes('Unknown argument')) {
         console.warn('⚠️ AddOns relation not available, fetching menu items without add-ons')
         menuItems = await prisma.menuItem.findMany({
           orderBy: [
@@ -34,6 +66,8 @@ export async function GET() {
             { name: 'asc' },
           ],
         })
+        console.log(`✅ Fetched ${menuItems.length} menu items without add-ons`)
+        
         // Fetch add-ons separately and attach them
         try {
           const addOnsData = await (prisma as any).$queryRawUnsafe(`
@@ -56,24 +90,37 @@ export async function GET() {
             ...item,
             addOns: addOnsByMenuItem[item.id] || [],
           }))
-        } catch (addOnError) {
+          console.log(`✅ Attached add-ons to menu items`)
+        } catch (addOnError: any) {
           // If AddOn table doesn't exist, just return menu items without add-ons
-          console.warn('⚠️ AddOn table not available')
+          console.warn('⚠️ AddOn table not available:', addOnError.message)
           menuItems = menuItems.map((item: any) => ({
             ...item,
             addOns: [],
           }))
         }
       } else {
+        // Re-throw if it's a different error
+        console.error('❌ Unexpected error fetching menu items:', error)
         throw error
       }
     }
 
+    console.log(`✅ Admin: Returning ${menuItems.length} menu items`)
     return NextResponse.json(menuItems)
-  } catch (error) {
-    console.error('Error fetching menu items:', error)
+  } catch (error: any) {
+    console.error('❌ Admin: Error fetching menu items:', error)
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+    })
     return NextResponse.json(
-      { error: 'Failed to fetch menu items' },
+      { 
+        error: 'Failed to fetch menu items',
+        details: error.message,
+        items: []
+      },
       { status: 500 }
     )
   }
