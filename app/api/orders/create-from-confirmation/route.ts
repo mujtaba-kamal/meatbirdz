@@ -13,6 +13,11 @@ export async function POST(request: NextRequest) {
     const requestData = await request.json()
     items = requestData.items || []
     const { customerInfo, total, paymentIntentId, orderType } = requestData
+    
+    // CRITICAL: Log what we're receiving BEFORE any validation
+    console.log('\n🔴 ===== RAW ITEMS RECEIVED =====')
+    console.log(JSON.stringify(items, null, 2))
+    console.log('================================\n')
     const session = await getServerSession(authOptions)
 
     // Validate userId exists if provided
@@ -188,11 +193,12 @@ export async function POST(request: NextRequest) {
                 }
               }
               
-              // Only set menuItemId if it's valid (exists in database), otherwise set to null
-              const finalMenuItemId = menuItemId && validMenuItemIds.has(menuItemId) ? menuItemId : null
+              // USE THE IDs AS PROVIDED - don't validate and set to null
+              // Just use what's passed from the frontend
+              const finalMenuItemId = menuItemId || null
+              const finalMealId = item.mealId || null
               
-              // Validate mealId - only set if it's valid (exists in database)
-              const finalMealId = item.mealId && validMealIds.has(item.mealId) ? item.mealId : null
+              console.log(`📦 Creating order item with IDs: menuItemId=${finalMenuItemId}, mealId=${finalMealId}`)
               
               if (menuItemId && !validMenuItemIds.has(menuItemId)) {
                 console.error(`❌ Meal item has invalid menuItemId: ${menuItemId}`)
@@ -245,17 +251,6 @@ export async function POST(request: NextRequest) {
                 price: item.price,
               }
             }
-          }).filter((orderItem: any) => {
-            // Final safety check: ensure we never insert invalid menuItemIds or mealIds
-            if (orderItem.menuItemId && !validMenuItemIds.has(orderItem.menuItemId)) {
-              console.error(`🔒 FINAL CHECK: Invalid menuItemId detected: ${orderItem.menuItemId}, setting to null`)
-              orderItem.menuItemId = null
-            }
-            if (orderItem.mealId && !validMealIds.has(orderItem.mealId)) {
-              console.error(`🔒 FINAL CHECK: Invalid mealId detected: ${orderItem.mealId}, setting to null`)
-              orderItem.mealId = null
-            }
-            return true
           }),
         },
       },
