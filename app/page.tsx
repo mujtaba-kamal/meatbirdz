@@ -134,11 +134,7 @@ export default function Home() {
                   onError={() => setLogoError(true)}
                 />
               </div>
-            ) : (
-              <div className="bg-white/20 backdrop-blur-sm p-3 sm:p-4 rounded-full">
-                <ChefHat className="w-12 h-12 sm:w-16 sm:h-16 text-white" />
-              </div>
-            )}
+            ) : null}
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-extrabold mb-4 sm:mb-6 drop-shadow-lg px-2">
             Welcome to MeatBirdz

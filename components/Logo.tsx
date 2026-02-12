@@ -18,12 +18,12 @@ export default function Logo({ className = '', showText = false, isAdmin = false
       href={isAdmin ? "/admin" : "/"} 
       className={`flex items-center group ${className}`}
     >
-      <div className="relative h-10 sm:h-12 md:h-14 flex-shrink-0" style={{ width: 'auto' }}>
+      <div className="relative h-12 sm:h-16 md:h-20 flex-shrink-0" style={{ width: 'auto' }}>
         <Image
           src={logoImageUrl}
           alt="MEATBIRDZ Logo"
-          width={140}
-          height={56}
+          width={180}
+          height={80}
           className="object-contain h-full w-auto"
           priority
           unoptimized={false}
