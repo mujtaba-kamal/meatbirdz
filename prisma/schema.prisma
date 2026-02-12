@@ -13,35 +13,35 @@ datasource db {
 }
 
 model MenuItem {
-  id          String   @id @default(cuid())
+  id          String         @id @default(cuid())
   name        String
   description String?
   price       Float
-  category    String   // "burger", "wrap", "fries", "drink"
+  category    String // "burger", "wrap", "fries", "drink"
   image       String?
-  available   Boolean  @default(true)
-  order       Int      @default(0) // Display order within category
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  available   Boolean        @default(true)
+  order       Int            @default(0) // Display order within category
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
   orderItems  OrderItem[]
   mealOptions MealOption[]
   meals       MenuItemMeal[] // Meals linked to this menu item
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  password      String
-  role          UserRole  @default(CUSTOMER)
-  phone         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  orders        Order[]
+  id        String   @id @default(cuid())
+  name      String?
+  email     String   @unique
+  password  String
+  role      UserRole @default(CUSTOMER)
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
 }
 
 model Order {
-  id                  String      @id @default(cuid())
+  id                  String        @id @default(cuid())
   userId              String?
   customerName        String
   customerEmail       String
@@ -50,55 +50,56 @@ model Order {
   city                String
   postalCode          String?
   totalAmount         Float
-  status              OrderStatus @default(PENDING)
+  status              OrderStatus   @default(PENDING)
   paymentStatus       PaymentStatus @default(PENDING)
   stripePaymentId     String?
-  arrivalNotification DateTime?   // When customer marked themselves as arrived
-  arrivalAcknowledged Boolean     @default(false) // Whether admin has acknowledged the arrival
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  arrivalNotification DateTime? // When customer marked themselves as arrived
+  arrivalAcknowledged Boolean       @default(false) // Whether admin has acknowledged the arrival
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
   items               OrderItem[]
-  user                User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user                User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 model OrderItem {
-  id          String   @id @default(cuid())
-  orderId     String
-  menuItemId  String?
-  mealId      String?
-  quantity    Int
-  price       Float
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItem    MenuItem? @relation(fields: [menuItemId], references: [id])
-  meal        Meal?    @relation(fields: [mealId], references: [id])
-  createdAt   DateTime @default(now())
+  id                  String    @id @default(cuid())
+  orderId             String
+  menuItemId          String?
+  mealId              String?
+  selectedMealOptions Json? // Store selected meal options: [{ categoryId, menuItemId, additionalPrice }]
+  quantity            Int
+  price               Float
+  order               Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem            MenuItem? @relation(fields: [menuItemId], references: [id])
+  meal                Meal?     @relation(fields: [mealId], references: [id])
+  createdAt           DateTime  @default(now())
 }
 
 model Meal {
-  id            String   @id @default(cuid())
-  name          String   @default("Meal Deal")
-  description   String?
-  basePrice     Float    // Base price of the meal
-  image         String?
-  available     Boolean  @default(true)
+  id             String         @id @default(cuid())
+  name           String         @default("Meal Deal")
+  description    String?
+  basePrice      Float // Base price of the meal
+  image          String?
+  available      Boolean        @default(true)
   categoryFilter String? // Category this meal applies to (e.g., "burger", "wrap", "fries")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  categories    MealCategory[] // Dynamic categories for this meal
-  options       MealOption[]
-  orderItems    OrderItem[]
-  menuItems     MenuItemMeal[] // Menu items linked to this meal
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  categories     MealCategory[] // Dynamic categories for this meal
+  options        MealOption[]
+  orderItems     OrderItem[]
+  menuItems      MenuItemMeal[] // Menu items linked to this meal
 }
 
 model MealCategory {
-  id          String   @id @default(cuid())
-  mealId      String
-  name        String   // Name of the category (e.g., "Fries", "Drink", "Side")
-  order       Int      // Order of display (1, 2, 3, etc.)
-  meal        Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
-  options     MealOption[]
-  createdAt   DateTime @default(now())
-  
+  id        String       @id @default(cuid())
+  mealId    String
+  name      String // Name of the category (e.g., "Fries", "Drink", "Side")
+  order     Int // Order of display (1, 2, 3, etc.)
+  meal      Meal         @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  options   MealOption[]
+  createdAt DateTime     @default(now())
+
   @@unique([mealId, order])
   @@index([mealId])
 }
@@ -106,26 +107,26 @@ model MealCategory {
 model MealOption {
   id              String       @id @default(cuid())
   mealId          String
-  categoryId      String       // Reference to MealCategory instead of fixed number
+  categoryId      String // Reference to MealCategory instead of fixed number
   menuItemId      String
   additionalPrice Float        @default(0) // Additional price on top of base meal price (can be 0 for included items)
   meal            Meal         @relation(fields: [mealId], references: [id], onDelete: Cascade)
   category        MealCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   menuItem        MenuItem     @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
   createdAt       DateTime     @default(now())
-  
+
   @@unique([mealId, categoryId, menuItemId])
   @@index([mealId, categoryId])
 }
 
 model MenuItemMeal {
-  id        String   @id @default(cuid())
+  id         String   @id @default(cuid())
   menuItemId String
-  mealId    String
-  menuItem  MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  meal      Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  
+  mealId     String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  meal       Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
   @@unique([menuItemId, mealId])
   @@index([menuItemId])
   @@index([mealId])
@@ -151,4 +152,3 @@ enum UserRole {
   CUSTOMER
   ADMIN
 }
-

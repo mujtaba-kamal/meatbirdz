@@ -141,11 +141,20 @@ export async function POST(request: NextRequest) {
                 console.error(`❌ mealId ${item.mealId} not found - meal order will have no meal reference!`)
               }
               
-              console.log(`📦 Creating meal order item: menuItemId=${finalMenuItemId}, mealId=${finalMealId}`)
+              // Store selected meal options as JSON
+              const selectedMealOptionsJson = item.selectedMealOptions && Array.isArray(item.selectedMealOptions) && item.selectedMealOptions.length > 0
+                ? JSON.stringify(item.selectedMealOptions)
+                : null
+              
+              console.log(`📦 Creating meal order item:`)
+              console.log(`   menuItemId: ${finalMenuItemId}`)
+              console.log(`   mealId: ${finalMealId}`)
+              console.log(`   selectedMealOptions: ${selectedMealOptionsJson ? `${item.selectedMealOptions.length} options` : 'none'}`)
               
               return {
                 menuItemId: finalMenuItemId, // Only set if valid
                 mealId: finalMealId, // Only set if valid
+                selectedMealOptions: selectedMealOptionsJson,
                 quantity: item.quantity,
                 price: item.price,
               }

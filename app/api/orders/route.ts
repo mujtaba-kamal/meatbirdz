@@ -47,7 +47,11 @@ export async function GET(request: NextRequest) {
       where: whereClause,
       include: {
         items: {
-          include: {
+          select: {
+            id: true,
+            quantity: true,
+            price: true,
+            selectedMealOptions: true,
             menuItem: {
               select: {
                 id: true,

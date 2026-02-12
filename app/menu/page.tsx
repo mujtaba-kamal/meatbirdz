@@ -224,28 +224,42 @@ export default function MenuPage() {
           (selectedMeal.basePrice || 0) +
           (selectedMeal.categories || []).reduce((sum: number, cat: any) => {
             const choice = mealChoicesForItem[cat.id]
-            return sum + (choice?.price || 0)
+            return sum + (choice?.additionalPrice || 0)
           }, 0)
 
-        const mealChoicesObj: Record<string, any> = {}
+        // Build selected meal options array with proper structure
+        const selectedMealOptions: Array<{
+          categoryId: string
+          categoryName: string
+          menuItemId: string
+          menuItemName: string
+          additionalPrice: number
+        }> = []
+        
         selectedMeal.categories?.forEach((cat: any) => {
           const choice = mealChoicesForItem[cat.id]
           if (choice) {
-            mealChoicesObj[cat.id] = choice
+            selectedMealOptions.push({
+              categoryId: cat.id,
+              categoryName: cat.name,
+              menuItemId: choice.menuItemId || choice.id,
+              menuItemName: choice.name,
+              additionalPrice: choice.price || 0,
+            })
           }
         })
 
         addItem({
           id: `${item.id}-meal-${selectedMealId}-${Date.now()}-${i}`,
-          name: `${item.name} - ${selectedMeal.name}`,
+          name: `${item.name} + ${selectedMeal.name}`,
           price: totalPrice,
           quantity: 1,
           image: item.image || selectedMeal.image || undefined,
           instructions: instructions || undefined,
           type: 'meal',
-          menuItemId: item.id, // Store the base menu item ID
-          mealId: selectedMeal.id, // Store the meal deal ID
-          mealChoices: mealChoicesObj,
+          menuItemId: item.id, // The base menu item (burger/wrap)
+          mealId: selectedMeal.id, // The meal deal
+          selectedMealOptions: selectedMealOptions, // Selected meal options
         })
       } else {
       addItem({
@@ -656,7 +670,7 @@ export default function MenuPage() {
                                         <input
                                           type="radio"
                                           name={`meal-${meal.id}-category-${category.id}-${selectedItem.id}`}
-                                          checked={mealChoices[selectedItem.id]?.[meal.id]?.[category.id]?.id === option.menuItemId}
+                                          checked={mealChoices[selectedItem.id]?.[meal.id]?.[category.id]?.menuItemId === option.menuItemId}
                                           onChange={() => {
                                             setMealChoices((prev) => ({
                                               ...prev,
@@ -665,9 +679,11 @@ export default function MenuPage() {
                                                 [meal.id]: {
                                                   ...prev[selectedItem.id]?.[meal.id],
                                                   [category.id]: {
-                                                    id: option.menuItemId,
-                                                    name: option.menuItem.name,
-                                                    price: option.additionalPrice || 0,
+                                                    categoryId: category.id,
+                                                    categoryName: category.name,
+                                                    menuItemId: option.menuItemId,
+                                                    menuItemName: option.menuItem.name,
+                                                    additionalPrice: option.additionalPrice || 0,
                                                   },
                                                 },
                                               },
@@ -702,7 +718,7 @@ export default function MenuPage() {
                                       (meal.basePrice || 0) +
                                       (meal.categories || []).reduce((sum: number, cat: any) => {
                                         const choice = mealChoices[selectedItem.id]?.[meal.id]?.[cat.id]
-                                        return sum + (choice?.price || 0)
+                                        return sum + (choice?.additionalPrice || 0)
                                       }, 0)
                                     ).toFixed(2)}
                                   </span>

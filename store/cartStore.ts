@@ -8,14 +8,16 @@ export interface CartItem {
   quantity: number
   image?: string
   instructions?: string
-  type?: 'menuItem' | 'meal' // Add type to distinguish between menu items and meals
-  mealId?: string // For meals
-  menuItemId?: string // For menu items
-  mealChoices?: { // For meals: store selected choices
-    main?: { id: string; name: string; price: number }
-    side?: { id: string; name: string; price: number }
-    drink?: { id: string; name: string; price: number }
-  }
+  type?: 'menuItem' | 'meal'
+  menuItemId?: string // The base menu item (burger/wrap)
+  mealId?: string // The meal deal ID
+  selectedMealOptions?: Array<{ // Selected meal options
+    categoryId: string
+    categoryName: string
+    menuItemId: string
+    menuItemName: string
+    additionalPrice: number
+  }>
 }
 
 interface CartStore {

@@ -35,6 +35,7 @@ interface OrderItem {
     id: string
     name: string
   } | null
+  selectedMealOptions?: string | null // JSON string of selected meal options
 }
 
 interface Order {
@@ -1471,19 +1472,40 @@ export default function AdminPage() {
                           key={item.id}
                           className="flex justify-between text-sm"
                         >
-                          <span>
-                            {item.menuItem?.name ? (
-                              item.meal?.name ? (
-                                `${item.menuItem.name} + ${item.meal.name}`
+                          <div>
+                            <div>
+                              {item.menuItem?.name ? (
+                                item.meal?.name ? (
+                                  <span className="font-semibold">{item.menuItem.name} + {item.meal.name}</span>
+                                ) : (
+                                  <span className="font-semibold">{item.menuItem.name}</span>
+                                )
+                              ) : item.meal?.name ? (
+                                <span className="font-semibold">{item.meal.name}</span>
                               ) : (
-                                item.menuItem.name
-                              )
-                            ) : item.meal?.name ? (
-                              item.meal.name
-                            ) : (
-                              'Unknown Item'
-                            )} x {item.quantity}
-                          </span>
+                                <span className="font-semibold">Unknown Item</span>
+                              )} x {item.quantity}
+                            </div>
+                            {item.selectedMealOptions && typeof item.selectedMealOptions === 'string' && (
+                              <div className="text-xs text-gray-600 mt-1 ml-2">
+                                {(() => {
+                                  try {
+                                    const options = JSON.parse(item.selectedMealOptions as string)
+                                    return options.map((opt: any, idx: number) => (
+                                      <div key={idx}>
+                                        • {opt.menuItemName || opt.name}
+                                        {opt.additionalPrice > 0 && (
+                                          <span className="text-primary-600"> (+£{opt.additionalPrice.toFixed(2)})</span>
+                                        )}
+                                      </div>
+                                    ))
+                                  } catch {
+                                    return null
+                                  }
+                                })()}
+                              </div>
+                            )}
+                          </div>
                           <span>${(item.price * item.quantity).toFixed(2)}</span>
                         </div>
                       ))}
