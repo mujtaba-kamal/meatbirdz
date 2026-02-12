@@ -54,6 +54,12 @@ export async function GET(request: NextRequest) {
                 name: true,
               },
             },
+            meal: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },

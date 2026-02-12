@@ -1336,6 +1336,9 @@ export default function AdminPage() {
                           <p className="text-gray-900">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>
                           <p className="text-gray-600 text-xs">
                             {order.items.slice(0, 2).map(item => {
+                              if (item.menuItem?.name && item.meal?.name) {
+                                return `${item.menuItem.name} + ${item.meal.name}`
+                              }
                               if (item.menuItem?.name) return item.menuItem.name
                               if (item.meal?.name) return item.meal.name
                               return 'Unknown Item'
@@ -1469,7 +1472,17 @@ export default function AdminPage() {
                           className="flex justify-between text-sm"
                         >
                           <span>
-                            {item.menuItem?.name || item.meal?.name || 'Unknown Item'} x {item.quantity}
+                            {item.menuItem?.name ? (
+                              item.meal?.name ? (
+                                `${item.menuItem.name} + ${item.meal.name}`
+                              ) : (
+                                item.menuItem.name
+                              )
+                            ) : item.meal?.name ? (
+                              item.meal.name
+                            ) : (
+                              'Unknown Item'
+                            )} x {item.quantity}
                           </span>
                           <span>${(item.price * item.quantity).toFixed(2)}</span>
                         </div>
