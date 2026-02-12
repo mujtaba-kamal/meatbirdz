@@ -106,6 +106,12 @@ export default function Home() {
                 className="object-cover"
                 priority={index === 0}
                 quality={90}
+                unoptimized={false}
+                onError={(e) => {
+                  console.error('Image failed to load:', image.url)
+                  // Fallback to a placeholder if image fails
+                  e.currentTarget.src = 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1920&h=1080&fit=crop&q=80'
+                }}
               />
             </div>
           ))}
