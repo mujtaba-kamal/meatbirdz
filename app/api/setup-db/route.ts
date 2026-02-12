@@ -316,6 +316,69 @@ export async function POST(request: Request) {
       console.log('⚠️ selectedMealOptions column:', error.message)
     }
 
+    // Add selectedAddOns column to OrderItem table
+    try {
+      await prisma.$executeRawUnsafe(`
+        DO $$ 
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'OrderItem' AND column_name = 'selectedAddOns'
+          ) THEN
+            ALTER TABLE "OrderItem" ADD COLUMN "selectedAddOns" JSONB;
+          END IF;
+        END $$;
+      `)
+      console.log('✅ Added selectedAddOns column to OrderItem')
+    } catch (error: any) {
+      console.log('⚠️ selectedAddOns column:', error.message)
+    }
+
+    // Create AddOn table
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "AddOn" (
+          "id" TEXT NOT NULL,
+          "menuItemId" TEXT NOT NULL,
+          "name" TEXT NOT NULL,
+          "price" DOUBLE PRECISION NOT NULL,
+          "available" BOOLEAN NOT NULL DEFAULT true,
+          "order" INTEGER NOT NULL DEFAULT 0,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "AddOn_pkey" PRIMARY KEY ("id")
+        );
+      `)
+      console.log('✅ Created AddOn table')
+    } catch (error: any) {
+      console.error('❌ Error creating AddOn table:', error.message)
+      // Don't throw - table might already exist
+    }
+
+    // Add foreign key for AddOn.menuItemId
+    try {
+      await prisma.$executeRawUnsafe(`
+        DO $$ BEGIN
+          ALTER TABLE "AddOn" ADD CONSTRAINT "AddOn_menuItemId_fkey" FOREIGN KEY ("menuItemId") REFERENCES "MenuItem"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+        EXCEPTION
+          WHEN duplicate_object THEN null;
+        END $$;
+      `)
+      console.log('✅ Added AddOn foreign key')
+    } catch (error: any) {
+      console.log('⚠️ AddOn foreign key:', error.message)
+    }
+
+    // Add index for AddOn.menuItemId
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE INDEX IF NOT EXISTS "AddOn_menuItemId_idx" ON "AddOn"("menuItemId");
+      `)
+      console.log('✅ Added AddOn index')
+    } catch (error: any) {
+      console.log('⚠️ AddOn index:', error.message)
+    }
+
     // Clear existing data
     await prisma.orderItem.deleteMany().catch(() => {})
     await prisma.order.deleteMany().catch(() => {})
