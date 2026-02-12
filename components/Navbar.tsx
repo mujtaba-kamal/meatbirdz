@@ -52,7 +52,7 @@ export default function Navbar() {
     <nav className={`shadow-lg sticky top-0 z-50 border-b relative ${isAdmin ? 'bg-primary-900 border-primary-800' : 'bg-white border-gray-100'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <Logo isAdmin={isAdmin} showText={!isAdmin} />
+          <Logo isAdmin={isAdmin} showText={false} />
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center space-x-4">

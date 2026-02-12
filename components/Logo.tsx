@@ -3,7 +3,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ChefHat } from 'lucide-react'
-import { useState, useEffect } from 'react'
 
 interface LogoProps {
   className?: string
@@ -11,59 +10,27 @@ interface LogoProps {
   isAdmin?: boolean
 }
 
-export default function Logo({ className = '', showText = true, isAdmin = false }: LogoProps) {
-  const [imageError, setImageError] = useState(true) // Start with true to show fallback until image loads
-  const [imageLoaded, setImageLoaded] = useState(false)
-  const [logoSrc, setLogoSrc] = useState('/logo.png')
-
-  useEffect(() => {
-    // Check if logo exists by trying to load it (try PNG first, then SVG)
-    const img = new window.Image()
-    img.onload = () => {
-      setLogoSrc('/logo.png')
-      setImageLoaded(true)
-      setImageError(false)
-    }
-    img.onerror = () => {
-      // Try SVG as fallback
-      const svgImg = new window.Image()
-      svgImg.onload = () => {
-        setLogoSrc('/logo.svg')
-        setImageLoaded(true)
-        setImageError(false)
-      }
-      svgImg.onerror = () => {
-        setImageError(true)
-        setImageLoaded(false)
-      }
-      svgImg.src = '/logo.svg'
-    }
-    img.src = '/logo.png'
-  }, [])
+export default function Logo({ className = '', showText = false, isAdmin = false }: LogoProps) {
+  const logoImageUrl = 'https://res.cloudinary.com/dzuo7rbfa/image/upload/v1770882972/Gemini_Generated_Image_3gu4av3gu4av3gu4_lv8p1v.png'
 
   return (
     <Link 
       href={isAdmin ? "/admin" : "/"} 
-      className={`flex items-center space-x-2 group ${className}`}
+      className={`flex items-center group ${className}`}
     >
-      <div className="relative w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
-        {imageLoaded && !imageError ? (
-          <Image
-            src={logoSrc}
-            alt="MEATBIRDZ Logo"
-            fill
-            className="object-contain"
-            priority
-            onError={() => setImageError(true)}
-          />
-        ) : (
-          <div className={`w-full h-full rounded-lg flex items-center justify-center ${isAdmin ? 'bg-primary-700 group-hover:bg-primary-600' : 'bg-primary-600 group-hover:bg-primary-700'} transition-colors`}>
-            <ChefHat className="w-6 h-6 text-white" />
-          </div>
-        )}
+      <div className="relative h-10 sm:h-12 md:h-14 flex-shrink-0" style={{ width: 'auto' }}>
+        <Image
+          src={logoImageUrl}
+          alt="MEATBIRDZ Logo"
+          width={140}
+          height={56}
+          className="object-contain h-full w-auto"
+          priority
+          unoptimized={false}
+        />
       </div>
       {showText && (
-        <span className={`text-xl sm:text-2xl font-bold ${isAdmin ? 'text-white' : 'bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent'}`}>
+        <span className={`text-xl sm:text-2xl font-bold ml-2 ${isAdmin ? 'text-white' : 'bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent'}`}>
           {isAdmin ? 'Admin Portal' : 'MeatBirdz'}
         </span>
       )}
