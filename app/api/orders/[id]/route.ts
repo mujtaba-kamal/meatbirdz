@@ -6,29 +6,39 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    console.log(`📋 Fetching order: ${params.id}`)
+    
     const order = await prisma.order.findUnique({
       where: { id: params.id },
       include: {
         items: {
           include: {
-            menuItem: true,
+            menuItem: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+              },
+            },
           },
         },
       },
     })
 
     if (!order) {
+      console.log(`❌ Order not found: ${params.id}`)
       return NextResponse.json(
         { error: 'Order not found' },
         { status: 404 }
       )
     }
 
+    console.log(`✅ Order found: ${order.id}, items: ${order.items.length}`)
     return NextResponse.json(order)
-  } catch (error) {
-    console.error('Error fetching order:', error)
+  } catch (error: any) {
+    console.error('❌ Error fetching order:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch order' },
+      { error: 'Failed to fetch order', details: error.message },
       { status: 500 }
     )
   }

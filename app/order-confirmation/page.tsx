@@ -130,12 +130,8 @@ function OrderConfirmationContent() {
         throw new Error(errorMessage)
       }
 
-      // Clear sessionStorage
-      sessionStorage.removeItem('pendingOrderData')
-      sessionStorage.removeItem('pendingCODOrder')
-
-      // Store order ID in localStorage for guest orders
-      if (typeof window !== 'undefined' && data.order) {
+      // Store order ID in localStorage for guest orders BEFORE clearing sessionStorage
+      if (typeof window !== 'undefined' && data.order && data.orderId) {
         const guestOrders = JSON.parse(localStorage.getItem('guestOrders') || '[]')
         if (!guestOrders.includes(data.orderId)) {
           guestOrders.push(data.orderId)
@@ -144,7 +140,15 @@ function OrderConfirmationContent() {
         if (data.order.customerEmail) {
           localStorage.setItem('guestOrderEmail', data.order.customerEmail)
         }
+        
+        // Update URL to include orderId so page refresh works
+        const newUrl = `/order-confirmation?orderId=${data.orderId}`
+        window.history.replaceState({}, '', newUrl)
       }
+
+      // Clear sessionStorage AFTER we've stored orderId
+      sessionStorage.removeItem('pendingOrderData')
+      sessionStorage.removeItem('pendingCODOrder')
 
       setOrder(data.order)
     } catch (error: any) {
@@ -161,8 +165,20 @@ function OrderConfirmationContent() {
 
   const fetchOrder = async (id: string) => {
     try {
+      setLoading(true)
       const response = await fetch(`/api/orders/${id}`)
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
+        throw new Error(errorData.error || `Failed to fetch order: ${response.status}`)
+      }
+      
       const data = await response.json()
+      
+      if (!data || !data.id) {
+        throw new Error('Order not found')
+      }
+      
       setOrder(data)
       
       // Store order ID in localStorage for guest orders
@@ -177,8 +193,9 @@ function OrderConfirmationContent() {
           localStorage.setItem('guestOrderEmail', data.customerEmail)
         }
       }
-    } catch (error) {
-      console.error('Error fetching order:', error)
+    } catch (error: any) {
+      console.error('❌ Error fetching order:', error)
+      toast.error(error.message || 'Failed to load order details')
     } finally {
       setLoading(false)
     }
