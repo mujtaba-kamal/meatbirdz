@@ -12,7 +12,11 @@ export async function GET(
       where: { id: params.id },
       include: {
         items: {
-          include: {
+          select: {
+            id: true,
+            quantity: true,
+            price: true,
+            selectedAddOns: true,
             menuItem: {
               select: {
                 id: true,
@@ -20,7 +24,7 @@ export async function GET(
                 price: true,
               },
             },
-          },
+          } as any, // Type assertion to include selectedAddOns
         },
       },
     })

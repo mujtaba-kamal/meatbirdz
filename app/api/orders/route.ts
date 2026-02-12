@@ -53,13 +53,14 @@ export async function GET(request: NextRequest) {
             id: true,
             quantity: true,
             price: true,
+            selectedAddOns: true,
             menuItem: {
               select: {
                 id: true,
                 name: true,
               },
             },
-          },
+          } as any, // Type assertion to include selectedAddOns (column exists in DB but Prisma client may not be regenerated)
         },
       },
       orderBy: {
