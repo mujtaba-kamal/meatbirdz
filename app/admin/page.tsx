@@ -213,7 +213,7 @@ export default function AdminPage() {
 
   const handleAddAddOn = async () => {
     if (!editingMenuItem || !newAddOn.name || !newAddOn.price) {
-      toast.error('Please fill in add-on name and price')
+      toast.error('Please fill in meal option name and price')
       return
     }
 
@@ -230,7 +230,7 @@ export default function AdminPage() {
       })
 
       if (response.ok) {
-        toast.success('Add-on added successfully')
+        toast.success('Meal option added successfully')
         setNewAddOn({ name: '', price: '', available: true })
         await fetchAddOns(editingMenuItem.id)
       } else {
@@ -479,9 +479,9 @@ export default function AdminPage() {
               </div>
             </div>
             
-            {/* Add-Ons Section */}
+            {/* Meal Options Section */}
             <div className="mt-6 pt-6 border-t border-blue-200">
-              <h4 className="font-semibold text-blue-900 mb-4">Add-Ons</h4>
+              <h4 className="font-semibold text-blue-900 mb-4">Make it a meal - Options</h4>
               <div className="space-y-3">
                 {addOns.map((addOn) => (
                   <div key={addOn.id} className="flex items-center gap-2 p-2 bg-white rounded border">
@@ -510,14 +510,14 @@ export default function AdminPage() {
                   </div>
                 ))}
                 
-                {/* Add New Add-On Form */}
+                {/* Add New Meal Option Form */}
                 <div className="p-3 bg-gray-50 rounded border-2 border-dashed border-gray-300">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <input
                       type="text"
                       value={newAddOn.name}
                       onChange={(e) => setNewAddOn({ ...newAddOn, name: e.target.value })}
-                      placeholder="Add-on name (e.g., Fries, Drink)"
+                      placeholder="Meal option name (e.g., Fries, Drink)"
                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     />
                     <input
