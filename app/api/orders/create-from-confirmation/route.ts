@@ -113,8 +113,69 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Prepare order items with validation
+    const orderItems = items.map((item: any) => {
+      // For menu items, use menuItemId or id
+      const menuItemId = item.menuItemId || item.id
+      
+      // Validate required fields
+      const quantity = parseInt(item.quantity) || 1
+      const price = parseFloat(item.price) || 0
+      
+      if (!quantity || quantity <= 0) {
+        console.error(`❌ Invalid quantity for item:`, item)
+        throw new Error(`Invalid quantity for item ${item.name || item.id}`)
+      }
+      
+      if (!price || price <= 0) {
+        console.error(`❌ Invalid price for item:`, item)
+        throw new Error(`Invalid price for item ${item.name || item.id}`)
+      }
+      
+      // Validate menuItemId exists
+      if (!validMenuItemIds.has(menuItemId)) {
+        console.error(`❌ Invalid menuItemId: ${menuItemId}`)
+        console.error(`   Item:`, { id: item.id, name: item.name, menuItemId: item.menuItemId })
+        // Set to null to avoid foreign key error - but log the issue
+        return {
+          menuItemId: null,
+          quantity: quantity,
+          price: price,
+        }
+      }
+      
+      console.log(`📦 Creating menu item order: menuItemId=${menuItemId}, quantity=${quantity}, price=${price}`)
+      
+      return {
+        menuItemId: menuItemId,
+        quantity: quantity,
+        price: price,
+      }
+    })
+    
+    // Ensure at least one item has a valid menuItemId
+    const validItemsCount = orderItems.filter(item => item.menuItemId !== null).length
+    if (validItemsCount === 0) {
+      console.error('❌ No valid menu items found in order')
+      return NextResponse.json(
+        { error: 'Invalid items', details: 'None of the provided menu item IDs exist in the database' },
+        { status: 400 }
+      )
+    }
+    
+    console.log(`✅ Creating order with ${orderItems.length} items (${validItemsCount} valid)`)
+    console.log('📝 Order data:', {
+      customerName: customerInfo.customerName,
+      customerEmail: customerInfo.customerEmail,
+      totalAmount: total,
+      itemsCount: orderItems.length,
+      paymentStatus,
+    })
+
     // Create order in database
-    const order = await prisma.order.create({
+    let order
+    try {
+      order = await prisma.order.create({
       data: {
         userId: validUserId,
         customerName: customerInfo.customerName,
@@ -128,30 +189,7 @@ export async function POST(request: NextRequest) {
         paymentStatus: paymentStatus,
         stripePaymentId: stripePaymentId,
         items: {
-          create: items.map((item: any) => {
-            // For menu items, use menuItemId or id
-            const menuItemId = item.menuItemId || item.id
-            
-            // Validate menuItemId exists
-            if (!validMenuItemIds.has(menuItemId)) {
-              console.error(`❌ Invalid menuItemId: ${menuItemId}`)
-              console.error(`   Item:`, { id: item.id, name: item.name, menuItemId: item.menuItemId })
-              // Set to null to avoid foreign key error - but log the issue
-              return {
-                menuItemId: null,
-                quantity: item.quantity,
-                price: item.price,
-              }
-            }
-            
-            console.log(`📦 Creating menu item order: menuItemId=${menuItemId}`)
-            
-            return {
-              menuItemId: menuItemId,
-              quantity: item.quantity,
-              price: item.price,
-            }
-          }),
+          create: orderItems,
         },
       },
       include: {
@@ -168,6 +206,18 @@ export async function POST(request: NextRequest) {
         },
       },
     })
+    } catch (prismaError: any) {
+      console.error('❌ Prisma error creating order:', prismaError)
+      console.error('Prisma error details:', {
+        code: prismaError.code,
+        meta: prismaError.meta,
+        message: prismaError.message,
+        clientVersion: prismaError.clientVersion,
+      })
+      throw prismaError
+    }
+
+    console.log(`✅ Order created successfully: ${order.id}`)
 
     return NextResponse.json({
       success: true,
