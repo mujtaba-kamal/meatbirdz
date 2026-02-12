@@ -51,14 +51,7 @@ export async function GET(request: NextRequest) {
             id: true,
             quantity: true,
             price: true,
-            selectedMealOptions: true,
             menuItem: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-            meal: {
               select: {
                 id: true,
                 name: true,
@@ -76,21 +69,12 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching orders:', error)
     const errorMessage = error.message || error.toString() || ''
     
-    // Check if error is due to missing database columns (schema not migrated)
-    if (
-      errorMessage.includes('mealId') ||
-      errorMessage.includes('column') ||
-      errorMessage.includes('does not exist') ||
-      errorMessage.includes('Unknown column') ||
-      errorMessage.includes('relation') ||
-      errorMessage.includes('table')
-    ) {
-      console.error('Database schema mismatch detected.')
-      console.error('The database needs to be migrated. Please run: npx prisma db push')
-    }
-    
-    // Return empty array instead of error to prevent frontend .filter() errors
-    return NextResponse.json([])
+    // Log the error but don't return empty array - let the error propagate
+    // so frontend can handle it properly
+    return NextResponse.json(
+      { error: 'Failed to fetch orders', details: errorMessage },
+      { status: 500 }
+    )
   }
 }
 

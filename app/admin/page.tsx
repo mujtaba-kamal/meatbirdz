@@ -31,11 +31,6 @@ interface OrderItem {
     id: string
     name: string
   } | null
-  meal?: {
-    id: string
-    name: string
-  } | null
-  selectedMealOptions?: string | null // JSON string of selected meal options
 }
 
 interface Order {
@@ -1062,11 +1057,7 @@ export default function AdminPage() {
                           <p className="text-gray-900">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>
                           <p className="text-gray-600 text-xs">
                             {order.items.slice(0, 2).map(item => {
-                              if (item.menuItem?.name && item.meal?.name) {
-                                return `${item.menuItem.name} + ${item.meal.name}`
-                              }
                               if (item.menuItem?.name) return item.menuItem.name
-                              if (item.meal?.name) return item.meal.name
                               return 'Unknown Item'
                             }).filter(Boolean).join(', ')}
                             {order.items.length > 2 && ` +${order.items.length - 2} more`}
@@ -1200,36 +1191,11 @@ export default function AdminPage() {
                           <div>
                             <div>
                               {item.menuItem?.name ? (
-                                item.meal?.name ? (
-                                  <span className="font-semibold">{item.menuItem.name} + {item.meal.name}</span>
-                                ) : (
-                                  <span className="font-semibold">{item.menuItem.name}</span>
-                                )
-                              ) : item.meal?.name ? (
-                                <span className="font-semibold">{item.meal.name}</span>
+                                <span className="font-semibold">{item.menuItem.name}</span>
                               ) : (
                                 <span className="font-semibold">Unknown Item</span>
                               )} x {item.quantity}
                             </div>
-                            {item.selectedMealOptions && typeof item.selectedMealOptions === 'string' && (
-                              <div className="text-xs text-gray-600 mt-1 ml-2">
-                                {(() => {
-                                  try {
-                                    const options = JSON.parse(item.selectedMealOptions as string)
-                                    return options.map((opt: any, idx: number) => (
-                                      <div key={idx}>
-                                        • {opt.menuItemName || opt.name}
-                                        {opt.additionalPrice > 0 && (
-                                          <span className="text-primary-600"> (+£{opt.additionalPrice.toFixed(2)})</span>
-                                        )}
-                                      </div>
-                                    ))
-                                  } catch {
-                                    return null
-                                  }
-                                })()}
-                              </div>
-                            )}
                           </div>
                           <span>${(item.price * item.quantity).toFixed(2)}</span>
                         </div>
@@ -1350,7 +1316,7 @@ export default function AdminPage() {
                           <option key={cat.id} value={cat.id}>{cat.name}</option>
                         ))}
                       </select>
-                    </div>
+    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Name *
