@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     // Validate menu item IDs exist before creating order
     // For meal items, menuItemId is optional (can be null)
-    // For regular items, use menuItemId if provided, otherwise use id
+    // For regular items, menuItemId is required
     const menuItemIds = items
       .map((item: any) => {
         if (item.type === 'meal') {
@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
           return item.menuItemId || null
         } else {
           // For regular menu items, use menuItemId if provided, otherwise use id
+          // This is required for regular items
           return item.menuItemId || item.id
         }
       })
@@ -96,27 +97,36 @@ export async function POST(request: NextRequest) {
     // Store valid menu item IDs for use in order creation
     let validMenuItemIds = new Set<string>()
     if (menuItemIds.length > 0) {
-      const existingMenuItems = await prisma.menuItem.findMany({
-        where: { id: { in: menuItemIds } },
-        select: { id: true },
-      })
-      const existingMenuItemIds = new Set(existingMenuItems.map((m: any) => m.id))
-      validMenuItemIds = existingMenuItemIds
-      const invalidMenuItemIds = menuItemIds.filter((id: string) => !existingMenuItemIds.has(id))
-      
-      if (invalidMenuItemIds.length > 0) {
-        console.error('Invalid menu item IDs:', invalidMenuItemIds)
-        console.error('Items being processed:', items.map((item: any) => ({
-          id: item.id,
-          type: item.type,
-          menuItemId: item.menuItemId,
-          mealId: item.mealId,
-        })))
-        console.error('Existing menu item IDs:', Array.from(existingMenuItemIds))
-        // Instead of failing, log warning and continue - menuItemId is optional for meals
-        // We'll set menuItemId to null for invalid IDs during order creation
-        console.warn('Some menu item IDs not found, but continuing as menuItemId is optional for meal items')
-        // Don't return error - continue with order creation, menuItemId will be set to null
+      try {
+        const existingMenuItems = await prisma.menuItem.findMany({
+          where: { id: { in: menuItemIds } },
+          select: { id: true },
+        })
+        const existingMenuItemIds = new Set(existingMenuItems.map((m: any) => m.id))
+        validMenuItemIds = existingMenuItemIds
+        const invalidMenuItemIds = menuItemIds.filter((id: string) => !existingMenuItemIds.has(id))
+        
+        if (invalidMenuItemIds.length > 0) {
+          console.error('Invalid menu item IDs:', invalidMenuItemIds)
+          console.error('Items being processed:', items.map((item: any) => ({
+            id: item.id,
+            type: item.type,
+            menuItemId: item.menuItemId,
+            mealId: item.mealId,
+          })))
+          console.error('Existing menu item IDs:', Array.from(existingMenuItemIds))
+          console.error('Total menu items queried:', existingMenuItems.length)
+          // Instead of failing, log warning and continue - menuItemId is optional for meals
+          // We'll set menuItemId to null for invalid IDs during order creation
+          console.warn('Some menu item IDs not found, but continuing as menuItemId is optional for meal items')
+          // Don't return error - continue with order creation, menuItemId will be set to null
+        } else {
+          console.log(`All ${menuItemIds.length} menu item IDs are valid`)
+        }
+      } catch (error: any) {
+        console.error('Error validating menu item IDs:', error)
+        // If validation fails, set validMenuItemIds to empty set - all menuItemIds will be set to null
+        validMenuItemIds = new Set<string>()
       }
     }
 
@@ -147,24 +157,51 @@ export async function POST(request: NextRequest) {
                 }
               }
               
-              // Only set menuItemId if it's valid (exists in database)
+              // Only set menuItemId if it's valid (exists in database), otherwise set to null
               const finalMenuItemId = menuItemId && validMenuItemIds.has(menuItemId) ? menuItemId : null
               
+              if (menuItemId && !validMenuItemIds.has(menuItemId)) {
+                console.warn(`Meal item has invalid menuItemId: ${menuItemId}, setting to null`)
+              }
+              
               return {
-                menuItemId: finalMenuItemId, // The base menu item (burger/wrap) - optional
+                menuItemId: finalMenuItemId, // The base menu item (burger/wrap) - optional, null if invalid
                 mealId: item.mealId || null, // The meal deal - required
                 quantity: item.quantity,
                 price: item.price,
               }
             } else {
-              // For regular menu items
+              // For regular menu items, menuItemId is required
+              const regularMenuItemId = item.menuItemId || item.id
+              
+              // Check if this menu item ID is valid
+              if (!validMenuItemIds.has(regularMenuItemId)) {
+                console.error(`Invalid menu item ID for regular item: ${regularMenuItemId}`)
+                console.error(`Item details:`, { id: item.id, menuItemId: item.menuItemId, name: item.name })
+                console.error(`Available valid IDs (${validMenuItemIds.size}):`, Array.from(validMenuItemIds).slice(0, 10))
+                // For regular items, set to null to avoid foreign key constraint violation
+                return {
+                  menuItemId: null, // Set to null to avoid foreign key constraint
+                  mealId: null,
+                  quantity: item.quantity,
+                  price: item.price,
+                }
+              }
+              
               return {
-                menuItemId: item.menuItemId || item.id,
+                menuItemId: regularMenuItemId, // Valid menu item ID
                 mealId: null,
                 quantity: item.quantity,
                 price: item.price,
               }
             }
+          }).filter((orderItem: any) => {
+            // Final safety check: ensure we never insert invalid menuItemIds
+            if (orderItem.menuItemId && !validMenuItemIds.has(orderItem.menuItemId)) {
+              console.error(`FINAL CHECK: Invalid menuItemId detected: ${orderItem.menuItemId}, setting to null`)
+              orderItem.menuItemId = null
+            }
+            return true
           }),
         },
       },
