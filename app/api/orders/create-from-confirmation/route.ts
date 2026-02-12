@@ -49,26 +49,47 @@ export async function POST(request: NextRequest) {
       .filter((item: any) => item.type === 'meal' && item.mealId)
       .map((item: any) => item.mealId)
     
+    // Store valid meal IDs for use in order creation
+    let validMealIds = new Set<string>()
     if (mealIds.length > 0) {
       try {
+        console.log(`\n🍽️ Validating ${mealIds.length} meal IDs:`, mealIds)
         const existingMeals = await (prisma as any).meal.findMany({
           where: { id: { in: mealIds } },
-          select: { id: true },
+          select: { id: true, name: true },
         })
-        const existingMealIds = new Set(existingMeals.map((m: any) => m.id))
+        const existingMealIds = new Set<string>(existingMeals.map((m: any) => m.id as string))
+        validMealIds = existingMealIds
+        
+        console.log(`✅ Found ${existingMeals.length} meals in database:`)
+        existingMeals.forEach((m: any) => {
+          console.log(`   - ${m.id}: ${m.name}`)
+        })
+        
         const invalidMealIds = mealIds.filter((id: string) => !existingMealIds.has(id))
         
         if (invalidMealIds.length > 0) {
-          console.error('Invalid meal IDs:', invalidMealIds)
-          return NextResponse.json(
-            { error: 'Invalid meal IDs provided', details: `Meal IDs not found: ${invalidMealIds.join(', ')}` },
-            { status: 400 }
-          )
+          console.error(`❌ Invalid meal IDs (not found in database): ${invalidMealIds.length}`)
+          invalidMealIds.forEach((id) => {
+            console.error(`   - ${id}`)
+          })
+          console.error('Items with meal IDs:', items.filter((item: any) => item.type === 'meal').map((item: any) => ({
+            id: item.id,
+            mealId: item.mealId,
+            name: item.name,
+          })))
+          // Don't fail - log warning and continue, but mealId will be set to null if invalid
+          console.warn('⚠️ Some meal IDs not found, but continuing. Invalid mealIds will be set to null.')
+        } else {
+          console.log(`✅ All ${mealIds.length} meal IDs are valid`)
         }
       } catch (error: any) {
         // If meal model doesn't exist, log warning but continue
-        console.warn('Meal validation skipped (meal model may not exist):', error.message)
+        console.warn('⚠️ Meal validation skipped (meal model may not exist):', error.message)
+        validMealIds = new Set<string>()
       }
+    } else {
+      console.log('⚠️ No meal IDs to validate')
     }
 
     // Validate menu item IDs exist before creating order
@@ -170,6 +191,9 @@ export async function POST(request: NextRequest) {
               // Only set menuItemId if it's valid (exists in database), otherwise set to null
               const finalMenuItemId = menuItemId && validMenuItemIds.has(menuItemId) ? menuItemId : null
               
+              // Validate mealId - only set if it's valid (exists in database)
+              const finalMealId = item.mealId && validMealIds.has(item.mealId) ? item.mealId : null
+              
               if (menuItemId && !validMenuItemIds.has(menuItemId)) {
                 console.error(`❌ Meal item has invalid menuItemId: ${menuItemId}`)
                 console.error(`   Item details:`, { id: item.id, name: item.name, menuItemId: item.menuItemId })
@@ -179,11 +203,20 @@ export async function POST(request: NextRequest) {
                 console.log(`✅ Meal item has valid menuItemId: ${menuItemId}`)
               }
               
-              console.log(`Creating order item: menuItemId=${finalMenuItemId}, mealId=${item.mealId || null}`)
+              if (item.mealId && !validMealIds.has(item.mealId)) {
+                console.error(`❌ Meal item has invalid mealId: ${item.mealId}`)
+                console.error(`   Item details:`, { id: item.id, name: item.name, mealId: item.mealId })
+                console.error(`   Valid mealIds:`, Array.from(validMealIds))
+                console.error(`   Setting mealId to null to avoid foreign key constraint`)
+              } else if (item.mealId && validMealIds.has(item.mealId)) {
+                console.log(`✅ Meal item has valid mealId: ${item.mealId}`)
+              }
+              
+              console.log(`📦 Creating order item: menuItemId=${finalMenuItemId}, mealId=${finalMealId}`)
               
               return {
                 menuItemId: finalMenuItemId, // The base menu item (burger/wrap) - optional, null if invalid
-                mealId: item.mealId || null, // The meal deal - required
+                mealId: finalMealId, // The meal deal - validated, null if invalid
                 quantity: item.quantity,
                 price: item.price,
               }
@@ -213,10 +246,14 @@ export async function POST(request: NextRequest) {
               }
             }
           }).filter((orderItem: any) => {
-            // Final safety check: ensure we never insert invalid menuItemIds
+            // Final safety check: ensure we never insert invalid menuItemIds or mealIds
             if (orderItem.menuItemId && !validMenuItemIds.has(orderItem.menuItemId)) {
-              console.error(`FINAL CHECK: Invalid menuItemId detected: ${orderItem.menuItemId}, setting to null`)
+              console.error(`🔒 FINAL CHECK: Invalid menuItemId detected: ${orderItem.menuItemId}, setting to null`)
               orderItem.menuItemId = null
+            }
+            if (orderItem.mealId && !validMealIds.has(orderItem.mealId)) {
+              console.error(`🔒 FINAL CHECK: Invalid mealId detected: ${orderItem.mealId}, setting to null`)
+              orderItem.mealId = null
             }
             return true
           }),
