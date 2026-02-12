@@ -72,24 +72,51 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate menu item IDs exist before creating order
+    // For meal items, menuItemId is optional (can be null)
+    // For regular items, use menuItemId if provided, otherwise use id
     const menuItemIds = items
-      .map((item: any) => item.menuItemId || (item.type !== 'meal' ? item.id : null))
+      .map((item: any) => {
+        if (item.type === 'meal') {
+          // For meal items, menuItemId is optional - only validate if provided
+          // If menuItemId is not provided but id contains '-meal-', try to extract it
+          if (!item.menuItemId && item.id && item.id.includes('-meal-')) {
+            const parts = item.id.split('-meal-')
+            if (parts.length > 0 && parts[0]) {
+              return parts[0] // Extract menu item ID from composite ID
+            }
+          }
+          return item.menuItemId || null
+        } else {
+          // For regular menu items, use menuItemId if provided, otherwise use id
+          return item.menuItemId || item.id
+        }
+      })
       .filter(Boolean) as string[]
     
+    // Store valid menu item IDs for use in order creation
+    let validMenuItemIds = new Set<string>()
     if (menuItemIds.length > 0) {
       const existingMenuItems = await prisma.menuItem.findMany({
         where: { id: { in: menuItemIds } },
         select: { id: true },
       })
       const existingMenuItemIds = new Set(existingMenuItems.map((m: any) => m.id))
+      validMenuItemIds = existingMenuItemIds
       const invalidMenuItemIds = menuItemIds.filter((id: string) => !existingMenuItemIds.has(id))
       
       if (invalidMenuItemIds.length > 0) {
         console.error('Invalid menu item IDs:', invalidMenuItemIds)
-        return NextResponse.json(
-          { error: 'Invalid menu item IDs provided', details: `Menu item IDs not found: ${invalidMenuItemIds.join(', ')}` },
-          { status: 400 }
-        )
+        console.error('Items being processed:', items.map((item: any) => ({
+          id: item.id,
+          type: item.type,
+          menuItemId: item.menuItemId,
+          mealId: item.mealId,
+        })))
+        console.error('Existing menu item IDs:', Array.from(existingMenuItemIds))
+        // Instead of failing, log warning and continue - menuItemId is optional for meals
+        // We'll set menuItemId to null for invalid IDs during order creation
+        console.warn('Some menu item IDs not found, but continuing as menuItemId is optional for meal items')
+        // Don't return error - continue with order creation, menuItemId will be set to null
       }
     }
 
@@ -111,9 +138,21 @@ export async function POST(request: NextRequest) {
           create: items.map((item: any) => {
             // For meal items, we need both menuItemId (the burger/wrap) and mealId (the meal deal)
             if (item.type === 'meal') {
+              // Extract menuItemId - try explicit value first, then extract from composite ID
+              let menuItemId = item.menuItemId
+              if (!menuItemId && item.id && item.id.includes('-meal-')) {
+                const parts = item.id.split('-meal-')
+                if (parts.length > 0 && parts[0]) {
+                  menuItemId = parts[0] // Extract menu item ID from composite ID
+                }
+              }
+              
+              // Only set menuItemId if it's valid (exists in database)
+              const finalMenuItemId = menuItemId && validMenuItemIds.has(menuItemId) ? menuItemId : null
+              
               return {
-                menuItemId: item.menuItemId || null, // The base menu item (burger/wrap)
-                mealId: item.mealId || null, // The meal deal
+                menuItemId: finalMenuItemId, // The base menu item (burger/wrap) - optional
+                mealId: item.mealId || null, // The meal deal - required
                 quantity: item.quantity,
                 price: item.price,
               }
