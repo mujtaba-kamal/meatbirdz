@@ -7,10 +7,12 @@ import { useRouter } from 'next/navigation'
 
 export default function CartPage() {
   const router = useRouter()
-  const { items, updateQuantity, removeItem, getTotal, clearCart } =
+  const { items, updateQuantity, removeItem, getTotal, getDeliveryFee, getGrandTotal, clearCart } =
     useCartStore()
 
-  const total = getTotal()
+  const subtotal = getTotal()
+  const deliveryFee = getDeliveryFee()
+  const total = getGrandTotal()
 
   if (items.length === 0) {
     return (
@@ -95,11 +97,25 @@ export default function CartPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-xl font-semibold">Total</span>
-            <span className="text-2xl font-bold text-primary-600">
-              £{total.toFixed(2)}
-            </span>
+          <div className="space-y-2 mb-4">
+            <div className="flex justify-between text-sm">
+              <span>Subtotal</span>
+              <span>£{subtotal.toFixed(2)}</span>
+            </div>
+            {deliveryFee > 0 && (
+              <div className="flex justify-between text-sm">
+                <span>Delivery Fee</span>
+                <span>£{deliveryFee.toFixed(2)}</span>
+              </div>
+            )}
+          </div>
+          <div className="border-t pt-4">
+            <div className="flex justify-between items-center">
+              <span className="text-xl font-semibold">Total</span>
+              <span className="text-2xl font-bold text-primary-600">
+                £{total.toFixed(2)}
+              </span>
+            </div>
           </div>
         </div>
 

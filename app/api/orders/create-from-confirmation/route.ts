@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     
     const requestData = await request.json()
     items = requestData.items || []
-    const { customerInfo, total, paymentIntentId, orderType } = requestData
+    const { customerInfo, total, deliveryFee, paymentIntentId, orderType } = requestData
     
     // Validate required fields
     if (!items || items.length === 0) {

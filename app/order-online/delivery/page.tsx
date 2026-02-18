@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MapPin, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { deliveryFees } from '@/lib/deliveryFees'
 
 const birminghamPostalCodes = [
   { code: 'B1', area: 'Birmingham City Centre' },
@@ -24,10 +25,11 @@ export default function DeliveryPage() {
 
   const handleSelect = (postalCode: string, area: string) => {
     setSelectedPostalCode(postalCode)
-    // Store selected postal code in localStorage
+    const deliveryFee = deliveryFees[postalCode] || 0
+    // Store selected postal code and delivery fee in localStorage
     localStorage.setItem('orderType', 'delivery')
-    localStorage.setItem('selectedLocation', JSON.stringify({ postalCode, area }))
-    toast.success(`Selected ${area} (${postalCode})`)
+    localStorage.setItem('selectedLocation', JSON.stringify({ postalCode, area, deliveryFee }))
+    toast.success(`Selected ${area} (${postalCode}) - Delivery fee: £${deliveryFee.toFixed(2)}`)
     router.push('/menu')
   }
 
@@ -55,17 +57,20 @@ export default function DeliveryPage() {
               }`}
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center">
+                <div className="flex items-center flex-1">
                   <MapPin className="w-5 h-5 text-primary-600 mr-3" />
-                  <div>
+                  <div className="flex-1">
                     <h3 className="text-lg font-bold text-gray-900">
                       {location.code}
                     </h3>
                     <p className="text-sm text-gray-600">{location.area}</p>
+                    <p className="text-sm font-semibold text-primary-600 mt-1">
+                      Delivery fee: £{(deliveryFees[location.code] || 0).toFixed(2)}
+                    </p>
                   </div>
                 </div>
                 {selectedPostalCode === location.code && (
-                  <Check className="w-5 h-5 text-primary-600" />
+                  <Check className="w-5 h-5 text-primary-600 ml-2" />
                 )}
               </div>
             </div>

@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 export default function CheckoutPage() {
   const router = useRouter()
   const { data: session } = useSession()
-  const { items, getTotal, clearCart } = useCartStore()
+  const { items, getTotal, getDeliveryFee, getGrandTotal, clearCart } = useCartStore()
   const [loading, setLoading] = useState(false)
   const [orderType, setOrderType] = useState<string | null>(null)
   const [selectedLocation, setSelectedLocation] = useState<any>(null)
@@ -73,7 +73,9 @@ export default function CheckoutPage() {
     }
   }, [session, router, mounted]) // Added mounted to dependencies
 
-  const total = getTotal()
+  const subtotal = getTotal()
+  const deliveryFee = getDeliveryFee()
+  const total = getGrandTotal()
 
   // Don't render until mounted (prevents SSR issues)
   if (!mounted) {
@@ -95,6 +97,7 @@ export default function CheckoutPage() {
           items,
           customerInfo: formData,
           total,
+          deliveryFee: deliveryFee,
         }),
       })
 
@@ -117,6 +120,7 @@ export default function CheckoutPage() {
           items,
           customerInfo: formData,
           total,
+          deliveryFee: deliveryFee,
           paymentIntentId: data.paymentIntentId,
           orderType: orderType,
         }))
@@ -160,15 +164,25 @@ export default function CheckoutPage() {
                     <span>
                       {item.name} x {item.quantity}
                     </span>
-                    <span>${(item.price * item.quantity).toFixed(2)}</span>
+                    <span>£{(item.price * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
-              <div className="border-t pt-4">
-                <div className="flex justify-between items-center">
+              <div className="border-t pt-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal</span>
+                  <span>£{subtotal.toFixed(2)}</span>
+                </div>
+                {deliveryFee > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span>Delivery Fee</span>
+                    <span>£{deliveryFee.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-2 border-t">
                   <span className="text-lg font-semibold">Total</span>
                   <span className="text-2xl font-bold text-primary-600">
-                    ${total.toFixed(2)}
+                    £{total.toFixed(2)}
                   </span>
                 </div>
               </div>

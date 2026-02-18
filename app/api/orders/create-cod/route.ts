@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    const { items, customerInfo, total } = await request.json()
+    const { items, customerInfo, total, deliveryFee } = await request.json()
     const session = await getServerSession(authOptions)
 
     // Validate userId exists if provided

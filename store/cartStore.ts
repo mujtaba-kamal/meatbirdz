@@ -27,6 +27,8 @@ interface CartStore {
   clearCart: () => void
   getTotal: () => number
   getItemCount: () => number
+  getDeliveryFee: () => number
+  getGrandTotal: () => number
 }
 
 export const useCartStore = create<CartStore>()(
@@ -74,6 +76,22 @@ export const useCartStore = create<CartStore>()(
       },
       getItemCount: () => {
         return get().items.reduce((count, item) => count + item.quantity, 0)
+      },
+      getDeliveryFee: () => {
+        if (typeof window === 'undefined') return 0
+        const orderType = localStorage.getItem('orderType')
+        if (orderType !== 'delivery') return 0
+        const selectedLocation = localStorage.getItem('selectedLocation')
+        if (!selectedLocation) return 0
+        try {
+          const location = JSON.parse(selectedLocation)
+          return location.deliveryFee || 0
+        } catch {
+          return 0
+        }
+      },
+      getGrandTotal: () => {
+        return get().getTotal() + get().getDeliveryFee()
       },
     }),
     {

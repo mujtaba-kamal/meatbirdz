@@ -24,7 +24,7 @@ function CheckoutForm({ paymentIntentId, orderType }: { paymentIntentId: string 
   const [loading, setLoading] = useState(false)
   const [codLoading, setCodLoading] = useState(false)
   const clearCart = useCartStore((state) => state.clearCart)
-  const { items, getTotal } = useCartStore()
+  const { items, getTotal, getDeliveryFee, getGrandTotal } = useCartStore()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,6 +70,7 @@ function CheckoutForm({ paymentIntentId, orderType }: { paymentIntentId: string 
       const checkoutData = JSON.parse(storedData)
       
       // Store COD order data temporarily
+      const deliveryFee = getDeliveryFee()
       const codOrderData = {
         items: items.map(item => ({
           id: item.id,
@@ -79,7 +80,8 @@ function CheckoutForm({ paymentIntentId, orderType }: { paymentIntentId: string 
           price: item.price,
           selectedAddOns: item.selectedAddOns || null,
         })),
-        total: getTotal(),
+        total: getGrandTotal(),
+        deliveryFee: deliveryFee,
         orderType: orderType,
       }
       
