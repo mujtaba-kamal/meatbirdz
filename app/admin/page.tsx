@@ -137,14 +137,15 @@ export default function AdminPage() {
   }, [status, session, router])
 
   useEffect(() => {
-    if (session?.user?.role === 'ADMIN') {
+    if (session?.user?.role === 'ADMIN' && activeTab === 'orders') {
       fetchOrders()
       
       // Set up real-time updates using shorter polling (every 2 seconds)
+      // Only poll when on orders tab to avoid interfering with menu form inputs
       const interval = setInterval(fetchOrders, 2000)
       return () => clearInterval(interval)
     }
-  }, [session, dateFilter, customFromDate, customToDate])
+  }, [session, dateFilter, customFromDate, customToDate, activeTab])
 
   useEffect(() => {
     if (session?.user?.role === 'ADMIN' && activeTab === 'menu') {
