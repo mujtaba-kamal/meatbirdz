@@ -1,13 +1,11 @@
 'use client'
 
-'use client'
-
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Menu, ShoppingCart, Clock, MapPin, ChefHat, Star, Shield, Zap } from 'lucide-react'
+import { Menu, ShoppingCart, MapPin, Star, Shield, Zap } from 'lucide-react'
 
 export default function Home() {
   const { data: session } = useSession()
@@ -192,26 +190,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Gallery Section */}
-      <section id="gallery" className="py-12 sm:py-16 lg:py-20 px-4 scroll-mt-16">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4">Gallery</h2>
-            <p className="text-base sm:text-lg lg:text-xl text-gray-600">See what makes our food special</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
-            {[1, 2, 3, 4, 5, 6].map((item) => (
-              <div
-                key={item}
-                className="bg-gradient-to-br from-primary-100 to-primary-200 rounded-2xl shadow-lg overflow-hidden aspect-square flex items-center justify-center"
-              >
-                <ChefHat className="w-24 h-24 text-primary-600 opacity-50" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Locations Section */}
       <section id="locations" className="py-12 sm:py-16 lg:py-20 px-4 bg-gray-50 scroll-mt-16">
         <div className="max-w-6xl mx-auto">
@@ -219,19 +197,13 @@ export default function Home() {
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4">Our Locations</h2>
             <p className="text-base sm:text-lg lg:text-xl text-gray-600">Find us near you</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {[
-              { name: 'Birmingham City Centre', address: '123 High Street, Birmingham B1 1AA', phone: '0121 123 4567' },
-              { name: 'Birmingham Edgbaston', address: '456 Hagley Road, Birmingham B15 2TT', phone: '0121 234 5678' },
-              { name: 'Birmingham Digbeth', address: '789 Digbeth High Street, Birmingham B5 6DY', phone: '0121 345 6789' },
-            ].map((location, idx) => (
-              <div key={idx} className="bg-white rounded-2xl shadow-lg p-6">
-                <MapPin className="w-8 h-8 text-primary-600 mb-4" />
-                <h3 className="text-xl font-bold mb-2 text-gray-900">{location.name}</h3>
-                <p className="text-gray-600 mb-2">{location.address}</p>
-                <p className="text-gray-600">{location.phone}</p>
-              </div>
-            ))}
+          <div className="max-w-md mx-auto">
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <MapPin className="w-8 h-8 text-primary-600 mb-4" />
+              <h3 className="text-xl font-bold mb-2 text-gray-900">Birmingham City Centre</h3>
+              <p className="text-gray-600 mb-2">123 High Street, Birmingham B1 1AA</p>
+              <p className="text-gray-600">0121 123 4567</p>
+            </div>
           </div>
         </div>
       </section>
