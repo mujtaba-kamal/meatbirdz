@@ -223,7 +223,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-primary-600">
-                      ${order.totalAmount.toFixed(2)}
+                      £{order.totalAmount.toFixed(2)}
                     </p>
                     <p
                       className={`text-sm font-medium ${
@@ -249,7 +249,7 @@ export default function DashboardPage() {
                           <span>
                             {item.menuItem.name} x {item.quantity}
                           </span>
-                          <span>${(item.price * item.quantity).toFixed(2)}</span>
+                          <span>£{(item.price * item.quantity).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>

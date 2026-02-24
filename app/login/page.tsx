@@ -158,14 +158,6 @@ export default function LoginPage() {
               </Link>
             </div>
           </div>
-
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <p className="text-xs text-blue-800 font-semibold mb-2">Test Credentials:</p>
-            <div className="text-xs text-blue-700 space-y-1">
-              <p><strong>Admin:</strong> admin@meatbirdz.com / admin123</p>
-              <p><strong>Customer:</strong> customer@meatbirdz.com / customer123</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

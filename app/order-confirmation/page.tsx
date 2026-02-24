@@ -332,7 +332,7 @@ function OrderConfirmationContent() {
             <div className="border-t mt-4 pt-4 flex justify-between items-center">
               <span className="text-lg font-semibold">Total</span>
               <span className="text-2xl font-bold text-primary-600">
-                ${order.totalAmount.toFixed(2)}
+                £{order.totalAmount.toFixed(2)}
               </span>
             </div>
           </div>

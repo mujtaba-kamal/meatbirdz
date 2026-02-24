@@ -597,7 +597,7 @@ export default function AdminPage() {
                 <h4 className="font-semibold">{item.name}</h4>
                 <p className="text-sm text-gray-600">{item.description}</p>
                 <div className="flex items-center gap-4 mt-1">
-                  <span className="text-sm font-medium text-blue-600">${item.price.toFixed(2)}</span>
+                  <span className="text-sm font-medium text-blue-600">£{item.price.toFixed(2)}</span>
                   <span className="text-xs text-gray-500 capitalize">{item.category}</span>
                   {!item.available && (
                     <span className="text-xs text-red-600 font-medium">Unavailable</span>
@@ -1203,7 +1203,7 @@ export default function AdminPage() {
                       </div>
                       <div className="text-right ml-4">
                         <p className="font-bold text-xl text-primary-600 mb-1">
-                          ${order.totalAmount.toFixed(2)}
+                          £{order.totalAmount.toFixed(2)}
                         </p>
                         {/* Status Dropdown */}
                         <div className="relative" onClick={(e) => e.stopPropagation()}>
@@ -1412,7 +1412,7 @@ export default function AdminPage() {
                     </div>
                     <div className="border-t mt-2 pt-2 flex justify-between font-semibold">
                       <span>Total</span>
-                      <span>${selectedOrder.totalAmount.toFixed(2)}</span>
+                      <span>£{selectedOrder.totalAmount.toFixed(2)}</span>
                     </div>
                   </div>
 

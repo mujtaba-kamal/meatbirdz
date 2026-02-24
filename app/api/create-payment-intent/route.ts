@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
     const itemSummary = items.slice(0, 3).map((item: any) => item.name).join(', ')
     
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(total * 100), // Convert to cents
-      currency: 'usd',
+      amount: Math.round(total * 100), // Convert to pence (GBP smallest unit)
+      currency: 'gbp',
       metadata: {
         // Store only essential summary data (within 500 char limit)
         itemCount: itemCount.toString(),
