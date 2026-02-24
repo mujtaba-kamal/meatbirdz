@@ -20,16 +20,16 @@ export default function Home() {
   // Hero carousel images - Cloudinary images
   const heroImages = [
     {
-      url: 'https://res.cloudinary.com/dzuo7rbfa/image/upload/v1770882589/crispy_bird_2_o3hjtb.jpg',
-      alt: 'Crispy Bird Delicious Food',
+      url: 'https://res.cloudinary.com/dzuo7rbfa/image/upload/v1770882972/Gemini_Generated_Image_3gu4av3gu4av3gu4_lv8p1v.png',
+      alt: 'MeatBirdz Food',
     },
     {
-      url: 'https://res.cloudinary.com/dzuo7rbfa/image/upload/v1770882589/crispy_bird_imzsgf.jpg',
-      alt: 'Crispy Bird Menu',
+      url: 'https://res.cloudinary.com/dzuo7rbfa/image/upload/v1771952599/WhatsApp_Image_2026-02-09_at_11.51.58_2_axgxcv.jpg',
+      alt: 'Delicious Food Selection',
     },
     {
-      url: 'https://res.cloudinary.com/dzuo7rbfa/image/upload/v1770817252/cld-sample-4.jpg',
-      alt: 'Fresh Food Selection',
+      url: 'https://res.cloudinary.com/dzuo7rbfa/image/upload/v1771952609/WhatsApp_Image_2026-02-09_at_11.51.59_6_evr1bk.jpg',
+      alt: 'Fresh Food Menu',
     },
   ]
 
