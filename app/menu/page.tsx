@@ -26,6 +26,18 @@ interface MenuItem {
   addOns?: AddOn[]
 }
 
+// Static meal configuration for burgers
+const burgerFriesOptions = [
+  { id: 'regular', label: 'Regular Fries', price: 0 },
+  { id: 'loaded', label: 'Loaded Fries (upgrade)', price: 0.5 },
+]
+
+const burgerDrinkOptions = [
+  { id: 'coke', label: 'Coke' },
+  { id: 'sprite', label: 'Sprite' },
+  { id: 'water', label: 'Water' },
+]
+
 const categories = [
   { id: 'burger', name: 'Burgers', emoji: '🍔' },
   { id: 'wrap', name: 'Wraps', emoji: '🌯' },
@@ -45,10 +57,14 @@ export default function MenuPage() {
   const [selectedLocation, setSelectedLocation] = useState<any>(null)
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({})
   const [itemInstructions, setItemInstructions] = useState<Record<string, string>>({})
-  const [selectedMeal, setSelectedMeal] = useState<Record<string, string | null>>({}) // menuItemId -> selected addOnId (single selection)
+  const [selectedMeal, setSelectedMeal] = useState<Record<string, string | null>>({}) // menuItemId -> selected addOnId (single selection, non-burgers)
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  // Burger meal specific state
+  const [burgerMealSelected, setBurgerMealSelected] = useState<Record<string, boolean>>({})
+  const [burgerFriesChoice, setBurgerFriesChoice] = useState<Record<string, 'regular' | 'loaded'>>({})
+  const [burgerDrinkChoice, setBurgerDrinkChoice] = useState<Record<string, string>>({})
   const addItem = useCartStore((state) => state.addItem)
 
   useEffect(() => {
@@ -164,6 +180,27 @@ export default function MenuPage() {
 
   const getItemTotalPrice = (item: MenuItem): number => {
     const quantity = itemQuantities[item.id] || 1
+
+    // Special meal logic for burgers
+    if (item.category === 'burger') {
+      let unitPrice = item.price
+      const isMeal = burgerMealSelected[item.id]
+
+      if (isMeal) {
+        // Base meal price (+£2)
+        unitPrice += 2
+
+        // Fries upgrade (+£0.5 if loaded)
+        const friesChoice = burgerFriesChoice[item.id] || 'regular'
+        if (friesChoice === 'loaded') {
+          unitPrice += 0.5
+        }
+      }
+
+      return unitPrice * quantity
+    }
+
+    // Default add-on logic for non-burgers
     const basePrice = item.price * quantity
     const selectedAddOnId = selectedMeal[item.id] || null
     const selectedAddOn = selectedAddOnId ? item.addOns?.find((a) => a.id === selectedAddOnId) : null
@@ -184,26 +221,120 @@ export default function MenuPage() {
     
     const quantity = itemQuantities[item.id] || 1
     const instructions = itemInstructions[item.id] || ''
+
+    // Special meal handling for burgers
+    if (item.category === 'burger') {
+      const isMeal = burgerMealSelected[item.id]
+      let unitPrice = item.price
+      const selectedAddOnsData: {
+        addOnId: string
+        name: string
+        price: number
+      }[] = []
+
+      if (isMeal) {
+        // Base burger meal (+£2)
+        unitPrice += 2
+        selectedAddOnsData.push({
+          addOnId: 'burger-meal',
+          name: 'Make it a meal (Fries + Drink)',
+          price: 2,
+        })
+
+        // Fries choice (default to regular)
+        const friesChoice = burgerFriesChoice[item.id] || 'regular'
+        if (friesChoice === 'loaded') {
+          unitPrice += 0.5
+          selectedAddOnsData.push({
+            addOnId: 'burger-fries-loaded',
+            name: 'Loaded Fries Upgrade',
+            price: 0.5,
+          })
+        } else {
+          selectedAddOnsData.push({
+            addOnId: 'burger-fries-regular',
+            name: 'Regular Fries',
+            price: 0,
+          })
+        }
+
+        // Drink choice (default to first option)
+        const drinkChoiceId = burgerDrinkChoice[item.id] || burgerDrinkOptions[0].id
+        const drinkOption =
+          burgerDrinkOptions.find((d) => d.id === drinkChoiceId) || burgerDrinkOptions[0]
+        selectedAddOnsData.push({
+          addOnId: `burger-drink-${drinkOption.id}`,
+          name: `Drink: ${drinkOption.label}`,
+          price: 0,
+        })
+      }
+
+      const itemTotalPrice = unitPrice
+
+      for (let i = 0; i < quantity; i++) {
+        addItem({
+          id: `${item.id}-${Date.now()}-${i}`, // Unique ID for each item instance
+          name: item.name,
+          price: itemTotalPrice,
+          image: item.image || undefined,
+          instructions: instructions || undefined,
+          type: 'menuItem',
+          menuItemId: item.id,
+          selectedAddOns: selectedAddOnsData,
+        })
+      }
+
+      const mealText = isMeal ? ' as a meal' : ''
+      toast.success(`${quantity}x ${item.name}${mealText} added to cart`)
+
+      // Reset and close drawer
+      setItemQuantities((prev) => ({ ...prev, [item.id]: 1 }))
+      setItemInstructions((prev) => {
+        const newInstructions = { ...prev }
+        delete newInstructions[item.id]
+        return newInstructions
+      })
+      setBurgerMealSelected((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setBurgerFriesChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setBurgerDrinkChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      closeDrawer()
+      return
+    }
+
+    // Default handling for non-burgers (using add-ons from API)
     const selectedAddOnId = selectedMeal[item.id] || null
-    
-    // Get selected meal (add-on) with its details
     const selectedAddOn = selectedAddOnId ? item.addOns?.find((a) => a.id === selectedAddOnId) : null
-    const selectedAddOnsData = selectedAddOn ? [{
-      addOnId: selectedAddOn.id,
-      name: selectedAddOn.name,
-      price: selectedAddOn.price,
-    }] : []
-    
-    // Calculate total price including meal
+    const selectedAddOnsData = selectedAddOn
+      ? [
+          {
+            addOnId: selectedAddOn.id,
+            name: selectedAddOn.name,
+            price: selectedAddOn.price,
+          },
+        ]
+      : []
+
     const basePrice = item.price
-    const mealPrice = selectedAddOn ? selectedAddOn.price : 0
-    const itemTotalPrice = basePrice + mealPrice
-    
+    const addOnPrice = selectedAddOn ? selectedAddOn.price : 0
+    const itemTotalPrice = basePrice + addOnPrice
+
     for (let i = 0; i < quantity; i++) {
       addItem({
         id: `${item.id}-${Date.now()}-${i}`, // Unique ID for each item instance
         name: item.name,
-        price: itemTotalPrice, // Price includes meal
+        price: itemTotalPrice,
         image: item.image || undefined,
         instructions: instructions || undefined,
         type: 'menuItem',
@@ -211,10 +342,8 @@ export default function MenuPage() {
         selectedAddOns: selectedAddOnsData,
       })
     }
-    
-    const mealText = selectedAddOn 
-      ? ` with ${selectedAddOn.name}`
-      : ''
+
+    const mealText = selectedAddOn ? ` with ${selectedAddOn.name}` : ''
     toast.success(`${quantity}x ${item.name}${mealText} added to cart`)
     
     // Reset and close drawer
@@ -528,45 +657,166 @@ export default function MenuPage() {
                       </div>
                     </div>
 
-              {/* Make it a meal */}
-              {selectedItem.addOns && selectedItem.addOns.length > 0 && (
+              {/* Make it a meal - Burgers have special fries & drink options */}
+              {selectedItem.category === 'burger' && (
                 <div>
                   <label className="block text-base font-semibold text-gray-700 mb-3">
                     Make it a meal (Optional):
                   </label>
-                  <div className="space-y-2">
-                    {selectedItem.addOns
-                      .filter((addOn) => addOn.available)
-                      .map((addOn) => {
-                        const isSelected = selectedMeal[selectedItem.id] === addOn.id
-                        return (
-                          <label
-                            key={addOn.id}
-                            className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                              isSelected
-                                ? 'border-primary-600 bg-primary-50'
-                                : 'border-gray-200 bg-white hover:border-gray-300'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <input
-                                type="radio"
-                                name={`meal-${selectedItem.id}`}
-                                checked={isSelected}
-                                onChange={() => selectMeal(selectedItem.id, addOn.id)}
-                                className="w-5 h-5 text-primary-600 border-gray-300 focus:ring-primary-500"
-                              />
-                              <span className="font-medium text-gray-900">{addOn.name}</span>
-                            </div>
-                            <span className="text-primary-600 font-semibold">
-                              +£{addOn.price.toFixed(2)}
-                            </span>
-                          </label>
-                        )
-                      })}
-                  </div>
+                  <label
+                    className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                      burgerMealSelected[selectedItem.id]
+                        ? 'border-primary-600 bg-primary-50'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={!!burgerMealSelected[selectedItem.id]}
+                        onChange={() =>
+                          setBurgerMealSelected((prev) => ({
+                            ...prev,
+                            [selectedItem.id]: !prev[selectedItem.id],
+                          }))
+                        }
+                        className="w-5 h-5 text-primary-600 border-gray-300 focus:ring-primary-500"
+                      />
+                      <span className="font-medium text-gray-900">
+                        Make it a meal (includes fries &amp; drink)
+                      </span>
+                    </div>
+                    <span className="text-primary-600 font-semibold">+£2.00</span>
+                  </label>
+
+                  {burgerMealSelected[selectedItem.id] && (
+                    <div className="mt-4 space-y-4">
+                      {/* Fries options */}
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700 mb-2">Fries:</p>
+                        <div className="space-y-2">
+                          {burgerFriesOptions.map((option) => {
+                            const currentChoice = burgerFriesChoice[selectedItem.id] || 'regular'
+                            const isSelected = currentChoice === option.id
+                            return (
+                              <label
+                                key={option.id}
+                                className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                                  isSelected
+                                    ? 'border-primary-600 bg-primary-50'
+                                    : 'border-gray-200 bg-white hover:border-gray-300'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <input
+                                    type="radio"
+                                    name={`burger-fries-${selectedItem.id}`}
+                                    checked={isSelected}
+                                    onChange={() =>
+                                      setBurgerFriesChoice((prev) => ({
+                                        ...prev,
+                                        [selectedItem.id]: option.id as 'regular' | 'loaded',
+                                      }))
+                                    }
+                                    className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                                  />
+                                  <span className="text-sm text-gray-900">{option.label}</span>
+                                </div>
+                                <span className="text-sm font-medium text-primary-600">
+                                  {option.price > 0 ? `+£${option.price.toFixed(2)}` : 'Included'}
+                                </span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Drink options */}
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700 mb-2">Drink:</p>
+                        <div className="space-y-2">
+                          {burgerDrinkOptions.map((option) => {
+                            const currentChoice =
+                              burgerDrinkChoice[selectedItem.id] || burgerDrinkOptions[0].id
+                            const isSelected = currentChoice === option.id
+                            return (
+                              <label
+                                key={option.id}
+                                className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                                  isSelected
+                                    ? 'border-primary-600 bg-primary-50'
+                                    : 'border-gray-200 bg-white hover:border-gray-300'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <input
+                                    type="radio"
+                                    name={`burger-drink-${selectedItem.id}`}
+                                    checked={isSelected}
+                                    onChange={() =>
+                                      setBurgerDrinkChoice((prev) => ({
+                                        ...prev,
+                                        [selectedItem.id]: option.id,
+                                      }))
+                                    }
+                                    className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                                  />
+                                  <span className="text-sm text-gray-900">{option.label}</span>
+                                </div>
+                                <span className="text-sm font-medium text-primary-600">
+                                  Included
+                                </span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* Make it a meal / add-ons for non-burgers (from admin panel) */}
+              {selectedItem.category !== 'burger' &&
+                selectedItem.addOns &&
+                selectedItem.addOns.length > 0 && (
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Make it a meal - Options (Optional):
+                    </label>
+                    <div className="space-y-2">
+                      {selectedItem.addOns
+                        .filter((addOn) => addOn.available)
+                        .map((addOn) => {
+                          const isSelected = selectedMeal[selectedItem.id] === addOn.id
+                          return (
+                            <label
+                              key={addOn.id}
+                              className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'border-primary-600 bg-primary-50'
+                                  : 'border-gray-200 bg-white hover:border-gray-300'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="radio"
+                                  name={`meal-${selectedItem.id}`}
+                                  checked={isSelected}
+                                  onChange={() => selectMeal(selectedItem.id, addOn.id)}
+                                  className="w-5 h-5 text-primary-600 border-gray-300 focus:ring-primary-500"
+                                />
+                                <span className="font-medium text-gray-900">{addOn.name}</span>
+                              </div>
+                              <span className="text-primary-600 font-semibold">
+                                +£{addOn.price.toFixed(2)}
+                              </span>
+                            </label>
+                          )
+                        })}
+                    </div>
+                  </div>
+                )}
 
               {/* Instructions */}
                     <div>
