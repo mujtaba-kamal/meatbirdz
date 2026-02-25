@@ -28,8 +28,10 @@ interface MenuItem {
 
 // Static meal configuration for burgers
 const burgerFriesOptions = [
-  { id: 'regular', label: 'Regular Fries', price: 0 },
-  { id: 'loaded', label: 'Loaded Fries (upgrade)', price: 0.5 },
+  { id: 'regular', label: 'Skin on fries', price: 0 },
+  { id: 'loaded-chicken', label: 'Loaded skin on fries topped with crispy chicken, melted cheese and drizzled with house sauce.', price: 0.5 },
+  { id: 'loaded-angus', label: 'Loaded skin on fries topped with Angus, melted cheese and drizzled with house sauce.', price: 1.49 },
+  { id: 'loaded-both', label: 'Loaded skin on fries topped with crispy chicken and angus, melted cheese and drizzled with house sauce.', price: 2.49 },
 ]
 
 const burgerDrinkOptions = [
@@ -63,7 +65,7 @@ export default function MenuPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   // Burger meal specific state
   const [burgerMealSelected, setBurgerMealSelected] = useState<Record<string, boolean>>({})
-  const [burgerFriesChoice, setBurgerFriesChoice] = useState<Record<string, 'regular' | 'loaded'>>({})
+  const [burgerFriesChoice, setBurgerFriesChoice] = useState<Record<string, 'regular' | 'loaded-chicken' | 'loaded-angus' | 'loaded-both'>>({})
   const [burgerDrinkChoice, setBurgerDrinkChoice] = useState<Record<string, string>>({})
   const addItem = useCartStore((state) => state.addItem)
 
@@ -190,10 +192,11 @@ export default function MenuPage() {
         // Base meal price (+£2)
         unitPrice += 2
 
-        // Fries upgrade (+£0.5 if loaded)
+        // Fries upgrade price based on selection
         const friesChoice = burgerFriesChoice[item.id] || 'regular'
-        if (friesChoice === 'loaded') {
-          unitPrice += 0.5
+        const friesOption = burgerFriesOptions.find((opt) => opt.id === friesChoice)
+        if (friesOption) {
+          unitPrice += friesOption.price
         }
       }
 
@@ -243,20 +246,13 @@ export default function MenuPage() {
 
         // Fries choice (default to regular)
         const friesChoice = burgerFriesChoice[item.id] || 'regular'
-        if (friesChoice === 'loaded') {
-          unitPrice += 0.5
-          selectedAddOnsData.push({
-            addOnId: 'burger-fries-loaded',
-            name: 'Loaded Fries Upgrade',
-            price: 0.5,
-          })
-        } else {
-          selectedAddOnsData.push({
-            addOnId: 'burger-fries-regular',
-            name: 'Regular Fries',
-            price: 0,
-          })
-        }
+        const friesOption = burgerFriesOptions.find((opt) => opt.id === friesChoice) || burgerFriesOptions[0]
+        unitPrice += friesOption.price
+        selectedAddOnsData.push({
+          addOnId: `burger-fries-${friesOption.id}`,
+          name: friesOption.label,
+          price: friesOption.price,
+        })
 
         // Drink choice (default to first option)
         const drinkChoiceId = burgerDrinkChoice[item.id] || burgerDrinkOptions[0].id
@@ -707,7 +703,7 @@ export default function MenuPage() {
                                     : 'border-gray-200 bg-white hover:border-gray-300'
                                 }`}
                               >
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-3 flex-1">
                                   <input
                                     type="radio"
                                     name={`burger-fries-${selectedItem.id}`}
@@ -715,14 +711,14 @@ export default function MenuPage() {
                                     onChange={() =>
                                       setBurgerFriesChoice((prev) => ({
                                         ...prev,
-                                        [selectedItem.id]: option.id as 'regular' | 'loaded',
+                                        [selectedItem.id]: option.id as 'regular' | 'loaded-chicken' | 'loaded-angus' | 'loaded-both',
                                       }))
                                     }
-                                    className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                                    className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500 flex-shrink-0"
                                   />
                                   <span className="text-sm text-gray-900">{option.label}</span>
                                 </div>
-                                <span className="text-sm font-medium text-primary-600">
+                                <span className="text-sm font-medium text-primary-600 ml-2 flex-shrink-0">
                                   {option.price > 0 ? `+£${option.price.toFixed(2)}` : 'Included'}
                                 </span>
                               </label>
