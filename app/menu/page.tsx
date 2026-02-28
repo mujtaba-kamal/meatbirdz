@@ -35,8 +35,11 @@ const burgerFriesOptions = [
 ]
 
 const burgerDrinkOptions = [
-  { id: 'coke', label: 'Coke' },
-  { id: 'sprite', label: 'Sprite' },
+  { id: 'ice-cola', label: 'Ice Cola (330ml)' },
+  { id: 'ice-mojito', label: 'Ice Mojito' },
+  { id: 'ice-pro-max-diet', label: 'Ice Pro Max Diet (330ml)' },
+  { id: 'rubicon-mango', label: 'Rubicon Mango' },
+  { id: 'rubicon-passion', label: 'Rubicon Passion' },
   { id: 'water', label: 'Water' },
 ]
 
