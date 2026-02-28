@@ -245,14 +245,14 @@ export default function AdminPage() {
       // Try to reinitialize if there's an error
       try {
         audioContextRef.current = null
-        initAudioContext()
+        await initAudioContext()
         await new Promise(resolve => setTimeout(resolve, 100))
-        ctx = audioContextRef.current
-        if (ctx) {
-          if (ctx.state === 'suspended') {
-            await ctx.resume()
+        const retryCtx = audioContextRef.current
+        if (retryCtx) {
+          if (retryCtx.state === 'suspended') {
+            await retryCtx.resume()
           }
-          playTone(ctx)
+          playTone(retryCtx)
         }
       } catch (retryError) {
         console.error('Failed to retry audio playback:', retryError)
