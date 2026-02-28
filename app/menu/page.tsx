@@ -71,9 +71,17 @@ const classicBoxBurgerOptions = [
 ]
 
 const classicBoxFriesOptions = [
+  { id: 'none', label: 'No fries', price: 0 },
   { id: 'loaded-chicken', label: 'Loaded fries with crispy chicken', price: 0 },
   { id: 'loaded-angus-jalapeno', label: 'Skin loaded fries topped with fresh Angus, melted cheese, jalapenos & drizzled with house sauce.', price: 2.99 },
   { id: 'loaded-both-jalapeno', label: 'Skin loaded fries topped with crispy chicken and fresh Angus, melted cheese, jalapenos & drizzled with house sauce.', price: 4.99 },
+]
+
+// HexWrap Box wrap options
+const hexWrapBoxOptions = [
+  { id: 'crispy-bird-hex', label: 'The Crispy Bird Hex', price: 0 },
+  { id: 'grilled-bird-hex', label: 'The Grilled Bird Hex', price: 0 },
+  { id: 'meat-hex', label: 'The Meat Hex', price: 0 },
 ]
 
 const categories = [
@@ -135,6 +143,15 @@ export default function MenuPage() {
   const [houseBoxSixthDip, setHouseBoxSixthDip] = useState<Record<string, string>>({}) // menuItemId -> sixth dip option id
   const [houseBoxSeventhDip, setHouseBoxSeventhDip] = useState<Record<string, string>>({}) // menuItemId -> seventh dip option id
   const [houseBoxEighthDip, setHouseBoxEighthDip] = useState<Record<string, string>>({}) // menuItemId -> eighth dip option id
+  // Char-Flame Box state
+  const [charFlameBoxDoubleBurger, setCharFlameBoxDoubleBurger] = useState<Record<string, boolean>>({}) // menuItemId -> double burger selected
+  const [charFlameBoxDrinkChoice, setCharFlameBoxDrinkChoice] = useState<Record<string, string>>({}) // menuItemId -> selected drink option id
+  const [charFlameBoxDipsChoice, setCharFlameBoxDipsChoice] = useState<Record<string, string[]>>({}) // menuItemId -> selected dips (max 2)
+  // HexWrap Box state
+  const [hexWrapBoxWrapChoice, setHexWrapBoxWrapChoice] = useState<Record<string, string>>({}) // menuItemId -> selected wrap option id
+  const [hexWrapBoxFriesChoice, setHexWrapBoxFriesChoice] = useState<Record<string, string>>({}) // menuItemId -> selected fries option id
+  const [hexWrapBoxDrinkChoice, setHexWrapBoxDrinkChoice] = useState<Record<string, string>>({}) // menuItemId -> selected drink option id
+  const [hexWrapBoxDipsChoice, setHexWrapBoxDipsChoice] = useState<Record<string, string[]>>({}) // menuItemId -> selected dips (max 2)
   const addItem = useCartStore((state) => state.addItem)
 
   useEffect(() => {
@@ -264,6 +281,16 @@ export default function MenuPage() {
     return item.name.toLowerCase().includes('house box')
   }
 
+  // Helper function to check if item is Char-Flame Box
+  const isCharFlameBox = (item: MenuItem): boolean => {
+    return item.name.toLowerCase().includes('char-flame box')
+  }
+
+  // Helper function to check if item is HexWrap Box
+  const isHexWrapBox = (item: MenuItem): boolean => {
+    return item.name.toLowerCase().includes('hexwrap box')
+  }
+
   const openDrawer = async (item: MenuItem) => {
     if (!item.available) {
       toast.error('This item is currently unavailable')
@@ -359,6 +386,27 @@ export default function MenuPage() {
         setHouseBoxFourthDrink((prev) => ({ ...prev, [item.id]: burgerDrinkOptions[0].id }))
       }
     }
+    // Initialize Char-Flame Box customization if not set
+    if (isCharFlameBox(item)) {
+      if (charFlameBoxDoubleBurger[item.id] === undefined) {
+        setCharFlameBoxDoubleBurger((prev) => ({ ...prev, [item.id]: false }))
+      }
+      if (charFlameBoxDrinkChoice[item.id] === undefined) {
+        setCharFlameBoxDrinkChoice((prev) => ({ ...prev, [item.id]: burgerDrinkOptions[0].id }))
+      }
+    }
+    // Initialize HexWrap Box customization if not set
+    if (isHexWrapBox(item)) {
+      if (hexWrapBoxWrapChoice[item.id] === undefined) {
+        setHexWrapBoxWrapChoice((prev) => ({ ...prev, [item.id]: hexWrapBoxOptions[0].id }))
+      }
+      if (hexWrapBoxFriesChoice[item.id] === undefined) {
+        setHexWrapBoxFriesChoice((prev) => ({ ...prev, [item.id]: classicBoxFriesOptions[1].id })) // Default to first fries option (skip 'none')
+      }
+      if (hexWrapBoxDrinkChoice[item.id] === undefined) {
+        setHexWrapBoxDrinkChoice((prev) => ({ ...prev, [item.id]: burgerDrinkOptions[0].id }))
+      }
+    }
   }
 
   const closeDrawer = () => {
@@ -411,6 +459,32 @@ export default function MenuPage() {
       
       // Add fries upgrade price if selected
       const friesChoice = boxFriesChoice[item.id] || classicBoxFriesOptions[0].id
+      const friesOption = classicBoxFriesOptions.find((opt) => opt.id === friesChoice)
+      if (friesOption) {
+        totalPrice += friesOption.price
+      }
+      
+      return totalPrice
+    }
+    
+    // Special pricing for Char-Flame Box
+    if (isCharFlameBox(item)) {
+      let totalPrice = item.price
+      
+      // Add double burger price if selected
+      if (charFlameBoxDoubleBurger[item.id]) {
+        totalPrice += 1.5
+      }
+      
+      return totalPrice
+    }
+    
+    // Special pricing for HexWrap Box
+    if (isHexWrapBox(item)) {
+      let totalPrice = item.price
+      
+      // Add fries upgrade price if selected
+      const friesChoice = hexWrapBoxFriesChoice[item.id] || classicBoxFriesOptions[1].id
       const friesOption = classicBoxFriesOptions.find((opt) => opt.id === friesChoice)
       if (friesOption) {
         totalPrice += friesOption.price
@@ -1011,6 +1085,175 @@ export default function MenuPage() {
         return updated
       })
       setHouseBoxEighthDip((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      closeDrawer()
+      return
+    }
+
+    // Special handling for Char-Flame Box
+    if (isCharFlameBox(item)) {
+      const isDouble = charFlameBoxDoubleBurger[item.id] || false
+      const selectedDrinkId = charFlameBoxDrinkChoice[item.id] || burgerDrinkOptions[0].id
+      const selectedDrink = burgerDrinkOptions.find((opt) => opt.id === selectedDrinkId) || burgerDrinkOptions[0]
+      const selectedDips = charFlameBoxDipsChoice[item.id] || []
+      
+      // Add double burger option if selected
+      if (isDouble) {
+        selectedAddOnsData.push({
+          addOnId: 'char-flame-double-burger',
+          name: 'Make it a double burger',
+          price: 1.5,
+        })
+      }
+      
+      // Add drink
+      selectedAddOnsData.push({
+        addOnId: `char-flame-drink-${selectedDrink.id}`,
+        name: `Drink: ${selectedDrink.label}`,
+        price: 0,
+      })
+      
+      // Add dips
+      selectedDips.forEach((dipId) => {
+        const dipOption = burgerDipOptions.find((d) => d.id === dipId)
+        if (dipOption) {
+          selectedAddOnsData.push({
+            addOnId: `char-flame-dip-${dipOption.id}`,
+            name: `Dip: ${dipOption.label}`,
+            price: 0,
+          })
+        }
+      })
+      
+      const itemTotalPrice = getItemTotalPrice(item)
+      
+      addItem({
+        id: `${item.id}-${Date.now()}`,
+        name: item.name,
+        price: itemTotalPrice,
+        image: item.image || undefined,
+        instructions: instructions || undefined,
+        type: 'menuItem',
+        menuItemId: item.id,
+        selectedAddOns: selectedAddOnsData,
+        quantity: 1,
+      })
+      
+      toast.success(`${item.name} added to cart`)
+      
+      // Reset and close drawer
+      setItemInstructions((prev) => {
+        const newInstructions = { ...prev }
+        delete newInstructions[item.id]
+        return newInstructions
+      })
+      setCharFlameBoxDoubleBurger((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setCharFlameBoxDrinkChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setCharFlameBoxDipsChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      closeDrawer()
+      return
+    }
+
+    // Special handling for HexWrap Box
+    if (isHexWrapBox(item)) {
+      const selectedWrapId = hexWrapBoxWrapChoice[item.id] || hexWrapBoxOptions[0].id
+      const selectedWrap = hexWrapBoxOptions.find((opt) => opt.id === selectedWrapId) || hexWrapBoxOptions[0]
+      
+      const selectedFriesId = hexWrapBoxFriesChoice[item.id] || classicBoxFriesOptions[1].id
+      const selectedFries = classicBoxFriesOptions.find((opt) => opt.id === selectedFriesId) || classicBoxFriesOptions[1]
+      
+      const selectedDrinkId = hexWrapBoxDrinkChoice[item.id] || burgerDrinkOptions[0].id
+      const selectedDrink = burgerDrinkOptions.find((opt) => opt.id === selectedDrinkId) || burgerDrinkOptions[0]
+      
+      const selectedDips = hexWrapBoxDipsChoice[item.id] || []
+      
+      // Add box selections to add-ons
+      selectedAddOnsData.push({
+        addOnId: `hexwrap-wrap-${selectedWrap.id}`,
+        name: `Wrap: ${selectedWrap.label}`,
+        price: selectedWrap.price,
+      })
+      
+      // Only add fries if not "none"
+      if (selectedFries.id !== 'none') {
+        selectedAddOnsData.push({
+          addOnId: `hexwrap-fries-${selectedFries.id}`,
+          name: `Fries: ${selectedFries.label}`,
+          price: selectedFries.price,
+        })
+      }
+      
+      selectedAddOnsData.push({
+        addOnId: `hexwrap-drink-${selectedDrink.id}`,
+        name: `Drink: ${selectedDrink.label}`,
+        price: 0,
+      })
+      
+      // Add dips
+      selectedDips.forEach((dipId) => {
+        const dipOption = burgerDipOptions.find((d) => d.id === dipId)
+        if (dipOption) {
+          selectedAddOnsData.push({
+            addOnId: `hexwrap-dip-${dipOption.id}`,
+            name: `Dip: ${dipOption.label}`,
+            price: 0,
+          })
+        }
+      })
+      
+      const itemTotalPrice = getItemTotalPrice(item)
+      
+      addItem({
+        id: `${item.id}-${Date.now()}`,
+        name: item.name,
+        price: itemTotalPrice,
+        image: item.image || undefined,
+        instructions: instructions || undefined,
+        type: 'menuItem',
+        menuItemId: item.id,
+        selectedAddOns: selectedAddOnsData,
+        quantity: 1,
+      })
+      
+      toast.success(`${item.name} added to cart`)
+      
+      // Reset and close drawer
+      setItemInstructions((prev) => {
+        const newInstructions = { ...prev }
+        delete newInstructions[item.id]
+        return newInstructions
+      })
+      setHexWrapBoxWrapChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHexWrapBoxFriesChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHexWrapBoxDrinkChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHexWrapBoxDipsChoice((prev) => {
         const updated = { ...prev }
         delete updated[item.id]
         return updated
@@ -2741,6 +2984,330 @@ export default function MenuPage() {
                                     [selectedItem.id]: option.id,
                                   }))
                                 }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">Free</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Box Customization - For Char-Flame Box */}
+              {isCharFlameBox(selectedItem) && (
+                <div className="space-y-6">
+                  {/* Make it a double burger */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Burger Options:
+                    </label>
+                    <label
+                      className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                        charFlameBoxDoubleBurger[selectedItem.id]
+                          ? 'border-primary-600 bg-primary-50'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={!!charFlameBoxDoubleBurger[selectedItem.id]}
+                          onChange={() => {
+                            setCharFlameBoxDoubleBurger((prev) => ({
+                              ...prev,
+                              [selectedItem.id]: !prev[selectedItem.id],
+                            }))
+                          }}
+                          className="w-5 h-5 text-primary-600 border-gray-300 focus:ring-primary-500"
+                        />
+                        <span className="font-medium text-gray-900">
+                          Make it a double burger
+                        </span>
+                      </div>
+                      <span className="text-primary-600 font-semibold">+£1.50</span>
+                    </label>
+                  </div>
+
+                  {/* Choose Drink */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose a Drink:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDrinkOptions.map((option) => {
+                        const currentChoice =
+                          charFlameBoxDrinkChoice[selectedItem.id] || burgerDrinkOptions[0].id
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`char-flame-drink-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setCharFlameBoxDrinkChoice((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">
+                              Included
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choice of 2 Dips */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choice of 2 Dips:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDipOptions.map((option) => {
+                        const selectedDips = charFlameBoxDipsChoice[selectedItem.id] || []
+                        const isSelected = selectedDips.includes(option.id)
+                        const canSelect = selectedDips.length < 2 || isSelected
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              !canSelect
+                                ? 'opacity-50 cursor-not-allowed'
+                                : isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={!canSelect}
+                                onChange={() => {
+                                  if (!canSelect) return
+                                  setCharFlameBoxDipsChoice((prev) => {
+                                    const current = prev[selectedItem.id] || []
+                                    if (current.includes(option.id)) {
+                                      return {
+                                        ...prev,
+                                        [selectedItem.id]: current.filter((id) => id !== option.id),
+                                      }
+                                    } else {
+                                      return {
+                                        ...prev,
+                                        [selectedItem.id]: [...current, option.id],
+                                      }
+                                    }
+                                  })
+                                }}
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">Free</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Box Customization - For HexWrap Box */}
+              {isHexWrapBox(selectedItem) && (
+                <div className="space-y-6">
+                  {/* Choose Wrap */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose Wrap:
+                    </label>
+                    <div className="space-y-2">
+                      {hexWrapBoxOptions.map((option) => {
+                        const currentChoice = hexWrapBoxWrapChoice[selectedItem.id] || hexWrapBoxOptions[0].id
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`hexwrap-wrap-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setHexWrapBoxWrapChoice((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="font-medium text-gray-900">{option.label}</span>
+                            </div>
+                            {option.price > 0 && (
+                              <span className="text-primary-600 font-semibold">
+                                +£{option.price.toFixed(2)}
+                              </span>
+                            )}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose Loaded Fries */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose Loaded Fries:
+                    </label>
+                    <div className="space-y-2">
+                      {classicBoxFriesOptions.map((option) => {
+                        const currentChoice = hexWrapBoxFriesChoice[selectedItem.id] || classicBoxFriesOptions[1].id
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 flex-1">
+                              <input
+                                type="radio"
+                                name={`hexwrap-fries-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setHexWrapBoxFriesChoice((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500 flex-shrink-0"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            {option.price > 0 && (
+                              <span className="text-sm font-medium text-primary-600 ml-2 flex-shrink-0">
+                                +£{option.price.toFixed(2)}
+                              </span>
+                            )}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose Drink */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose a Drink:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDrinkOptions.map((option) => {
+                        const currentChoice =
+                          hexWrapBoxDrinkChoice[selectedItem.id] || burgerDrinkOptions[0].id
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`hexwrap-drink-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setHexWrapBoxDrinkChoice((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">
+                              Included
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choice of 2 Dips */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choice of 2 Dips:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDipOptions.map((option) => {
+                        const selectedDips = hexWrapBoxDipsChoice[selectedItem.id] || []
+                        const isSelected = selectedDips.includes(option.id)
+                        const canSelect = selectedDips.length < 2 || isSelected
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              !canSelect
+                                ? 'opacity-50 cursor-not-allowed'
+                                : isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={!canSelect}
+                                onChange={() => {
+                                  if (!canSelect) return
+                                  setHexWrapBoxDipsChoice((prev) => {
+                                    const current = prev[selectedItem.id] || []
+                                    if (current.includes(option.id)) {
+                                      return {
+                                        ...prev,
+                                        [selectedItem.id]: current.filter((id) => id !== option.id),
+                                      }
+                                    } else {
+                                      return {
+                                        ...prev,
+                                        [selectedItem.id]: [...current, option.id],
+                                      }
+                                    }
+                                  })
+                                }}
                                 className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                               />
                               <span className="text-sm text-gray-900">{option.label}</span>
