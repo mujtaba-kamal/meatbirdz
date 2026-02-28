@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/lib/auth'
+import { rateLimiters } from '@/lib/rateLimit'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResponse = await rateLimiters.strict(request)
+  if (rateLimitResponse) {
+    return rateLimitResponse
+  }
+
   try {
     // Auto-migrate: Ensure selectedAddOns column exists
     try {

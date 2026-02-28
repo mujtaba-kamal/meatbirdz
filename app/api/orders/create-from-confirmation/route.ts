@@ -4,10 +4,16 @@ import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/lib/auth'
 import { stripe } from '@/lib/stripe'
 import { PaymentStatus, Prisma } from '@prisma/client'
+import { rateLimiters } from '@/lib/rateLimit'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResponse = await rateLimiters.strict(request)
+  if (rateLimitResponse) {
+    return rateLimitResponse
+  }
   let items: any[] = []
   try {
     // Auto-migrate: Ensure selectedMealOptions column exists

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/lib/auth'
+import { rateLimiters } from '@/lib/rateLimit'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +11,12 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Apply rate limiting
+  const rateLimitResponse = await rateLimiters.standard(request)
+  if (rateLimitResponse) {
+    return rateLimitResponse
+  }
+
   try {
     const session = await getServerSession(authOptions)
 
@@ -50,6 +57,12 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Apply rate limiting
+  const rateLimitResponse = await rateLimiters.standard(request)
+  if (rateLimitResponse) {
+    return rateLimitResponse
+  }
+
   try {
     const session = await getServerSession(authOptions)
 
