@@ -273,10 +273,9 @@ export default function MenuPage() {
           price: 0,
         })
 
-        // Dips for Angus Classic Burger with loaded fries
-        const isAngusClassic = item.name.toLowerCase().includes('angus classic')
+        // Dips for all burgers with loaded fries
         const hasLoadedFries = friesChoice !== 'regular'
-        if (isAngusClassic && hasLoadedFries) {
+        if (hasLoadedFries) {
           const selectedDips = burgerDipsChoice[item.id] || []
           selectedDips.forEach((dipId) => {
             const dipOption = burgerDipOptions.find((d) => d.id === dipId)
@@ -817,9 +816,8 @@ export default function MenuPage() {
                         </div>
                       </div>
 
-                      {/* Dips options - Only for Angus Classic Burger with loaded fries */}
-                      {selectedItem.name.toLowerCase().includes('angus classic') &&
-                        burgerFriesChoice[selectedItem.id] !== 'regular' &&
+                      {/* Dips options - For all burgers with loaded fries */}
+                      {burgerFriesChoice[selectedItem.id] !== 'regular' &&
                         burgerFriesChoice[selectedItem.id] !== undefined && (
                           <div>
                             <p className="text-sm font-semibold text-gray-700 mb-2">
