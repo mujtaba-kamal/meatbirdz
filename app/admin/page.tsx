@@ -90,6 +90,7 @@ export default function AdminPage() {
   const [customToDate, setCustomToDate] = useState<string>('')
   const [showCustomPicker, setShowCustomPicker] = useState(false)
   const [activeTab, setActiveTab] = useState<'orders' | 'menu'>('orders')
+  const [previousOrderIds, setPreviousOrderIds] = useState<Set<string>>(new Set())
   
   // Menu management state
   const [menuItems, setMenuItems] = useState<any[]>([])
@@ -136,8 +137,37 @@ export default function AdminPage() {
     // Don't redirect if already on admin page
   }, [status, session, router])
 
+  // Function to play bell notification sound
+  const playBellSound = () => {
+    try {
+      // Create a simple bell tone using Web Audio API
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const oscillator = audioContext.createOscillator()
+      const gainNode = audioContext.createGain()
+      
+      oscillator.connect(gainNode)
+      gainNode.connect(audioContext.destination)
+      
+      // Bell-like frequency (multiple tones)
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime)
+      oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.1)
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2)
+      
+      oscillator.type = 'sine'
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
+      
+      oscillator.start(audioContext.currentTime)
+      oscillator.stop(audioContext.currentTime + 0.5)
+    } catch (error) {
+      console.error('Error playing bell sound:', error)
+    }
+  }
+
   useEffect(() => {
     if (session?.user?.role === 'ADMIN' && activeTab === 'orders') {
+      // Reset previous order IDs when date filter changes to avoid false notifications
+      setPreviousOrderIds(new Set())
       fetchOrders()
       
       // Set up real-time updates using shorter polling (every 2 seconds)
@@ -780,7 +810,33 @@ export default function AdminPage() {
       // Ensure data is always an array
       if (Array.isArray(data)) {
         console.log(`✅ Loaded ${data.length} orders`)
-      setOrders(data)
+        
+        // Check for new orders (only PENDING status orders that weren't in previous set)
+        if (previousOrderIds.size > 0) {
+          const currentOrderIds = new Set(data.map((order: Order) => order.id))
+          const newPendingOrders = data.filter(
+            (order: Order) => 
+              order.status === 'PENDING' && 
+              !previousOrderIds.has(order.id)
+          )
+          
+          if (newPendingOrders.length > 0) {
+            // Play bell sound for new orders
+            playBellSound()
+            // Show notification
+            toast.success(`🔔 New order received!`, {
+              icon: '🔔',
+              duration: 3000,
+            })
+          }
+          
+          setPreviousOrderIds(currentOrderIds)
+        } else {
+          // First load - initialize with current order IDs
+          setPreviousOrderIds(new Set(data.map((order: Order) => order.id)))
+        }
+        
+        setOrders(data)
       } else {
         console.error('❌ Expected array but got:', data)
         setOrders([])
