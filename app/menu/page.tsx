@@ -40,6 +40,14 @@ const burgerDrinkOptions = [
   { id: 'water', label: 'Water' },
 ]
 
+const burgerDipOptions = [
+  { id: 'signature-sauce', label: 'Signature sauce' },
+  { id: 'garlic', label: 'Garlic' },
+  { id: 'mayo', label: 'Mayo' },
+  { id: 'cajun', label: 'Cajun' },
+  { id: 'tomato', label: 'Tomato' },
+]
+
 const categories = [
   { id: 'burger', name: 'Burgers', emoji: '🍔' },
   { id: 'wrap', name: 'Wraps', emoji: '🌯' },
@@ -67,6 +75,7 @@ export default function MenuPage() {
   const [burgerMealSelected, setBurgerMealSelected] = useState<Record<string, boolean>>({})
   const [burgerFriesChoice, setBurgerFriesChoice] = useState<Record<string, 'regular' | 'loaded-chicken' | 'loaded-angus' | 'loaded-both'>>({})
   const [burgerDrinkChoice, setBurgerDrinkChoice] = useState<Record<string, string>>({})
+  const [burgerDipsChoice, setBurgerDipsChoice] = useState<Record<string, string[]>>({}) // Array of selected dip IDs (max 2)
   const addItem = useCartStore((state) => state.addItem)
 
   useEffect(() => {
@@ -224,7 +233,7 @@ export default function MenuPage() {
     
     const quantity = itemQuantities[item.id] || 1
     const instructions = itemInstructions[item.id] || ''
-
+    
     // Special meal handling for burgers
     if (item.category === 'burger') {
       const isMeal = burgerMealSelected[item.id]
@@ -263,6 +272,23 @@ export default function MenuPage() {
           name: `Drink: ${drinkOption.label}`,
           price: 0,
         })
+
+        // Dips for Angus Classic Burger with loaded fries
+        const isAngusClassic = item.name.toLowerCase().includes('angus classic')
+        const hasLoadedFries = friesChoice !== 'regular'
+        if (isAngusClassic && hasLoadedFries) {
+          const selectedDips = burgerDipsChoice[item.id] || []
+          selectedDips.forEach((dipId) => {
+            const dipOption = burgerDipOptions.find((d) => d.id === dipId)
+            if (dipOption) {
+              selectedAddOnsData.push({
+                addOnId: `burger-dip-${dipOption.id}`,
+                name: `Dip: ${dipOption.label}`,
+                price: 0,
+              })
+            }
+          })
+        }
       }
 
       const itemTotalPrice = unitPrice
@@ -305,6 +331,11 @@ export default function MenuPage() {
         delete updated[item.id]
         return updated
       })
+      setBurgerDipsChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
       closeDrawer()
       return
     }
@@ -338,7 +369,7 @@ export default function MenuPage() {
         selectedAddOns: selectedAddOnsData,
       })
     }
-
+    
     const mealText = selectedAddOn ? ` with ${selectedAddOn.name}` : ''
     toast.success(`${quantity}x ${item.name}${mealText} added to cart`)
     
@@ -670,12 +701,21 @@ export default function MenuPage() {
                       <input
                         type="checkbox"
                         checked={!!burgerMealSelected[selectedItem.id]}
-                        onChange={() =>
+                        onChange={() => {
+                          const newValue = !burgerMealSelected[selectedItem.id]
                           setBurgerMealSelected((prev) => ({
                             ...prev,
-                            [selectedItem.id]: !prev[selectedItem.id],
+                            [selectedItem.id]: newValue,
                           }))
-                        }
+                          // Reset dips if unchecking meal
+                          if (!newValue) {
+                            setBurgerDipsChoice((prev) => {
+                              const updated = { ...prev }
+                              delete updated[selectedItem.id]
+                              return updated
+                            })
+                          }
+                        }}
                         className="w-5 h-5 text-primary-600 border-gray-300 focus:ring-primary-500"
                       />
                       <span className="font-medium text-gray-900">
@@ -708,12 +748,21 @@ export default function MenuPage() {
                                     type="radio"
                                     name={`burger-fries-${selectedItem.id}`}
                                     checked={isSelected}
-                                    onChange={() =>
+                                    onChange={() => {
+                                      const newFriesChoice = option.id as 'regular' | 'loaded-chicken' | 'loaded-angus' | 'loaded-both'
                                       setBurgerFriesChoice((prev) => ({
                                         ...prev,
-                                        [selectedItem.id]: option.id as 'regular' | 'loaded-chicken' | 'loaded-angus' | 'loaded-both',
+                                        [selectedItem.id]: newFriesChoice,
                                       }))
-                                    }
+                                      // Reset dips if changing back to regular fries
+                                      if (newFriesChoice === 'regular') {
+                                        setBurgerDipsChoice((prev) => {
+                                          const updated = { ...prev }
+                                          delete updated[selectedItem.id]
+                                          return updated
+                                        })
+                                      }
+                                    }}
                                     className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500 flex-shrink-0"
                                   />
                                   <span className="text-sm text-gray-900">{option.label}</span>
@@ -767,6 +816,70 @@ export default function MenuPage() {
                           })}
                         </div>
                       </div>
+
+                      {/* Dips options - Only for Angus Classic Burger with loaded fries */}
+                      {selectedItem.name.toLowerCase().includes('angus classic') &&
+                        burgerFriesChoice[selectedItem.id] !== 'regular' &&
+                        burgerFriesChoice[selectedItem.id] !== undefined && (
+                          <div>
+                            <p className="text-sm font-semibold text-gray-700 mb-2">
+                              Dips (Select up to 2):
+                            </p>
+                            <div className="space-y-2">
+                              {burgerDipOptions.map((option) => {
+                                const selectedDips = burgerDipsChoice[selectedItem.id] || []
+                                const isSelected = selectedDips.includes(option.id)
+                                const canSelect = selectedDips.length < 2 || isSelected
+                                return (
+                                  <label
+                                    key={option.id}
+                                    className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                                      !canSelect
+                                        ? 'opacity-50 cursor-not-allowed'
+                                        : isSelected
+                                        ? 'border-primary-600 bg-primary-50'
+                                        : 'border-gray-200 bg-white hover:border-gray-300'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        disabled={!canSelect}
+                                        onChange={() => {
+                                          if (!canSelect) return
+                                          setBurgerDipsChoice((prev) => {
+                                            const current = prev[selectedItem.id] || []
+                                            if (isSelected) {
+                                              // Remove dip
+                                              return {
+                                                ...prev,
+                                                [selectedItem.id]: current.filter(
+                                                  (id) => id !== option.id
+                                                ),
+                                              }
+                                            } else {
+                                              // Add dip (max 2)
+                                              return {
+                                                ...prev,
+                                                [selectedItem.id]: [...current, option.id],
+                                              }
+                                            }
+                                          })
+                                        }}
+                                        className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                                      />
+                                      <span className="text-sm text-gray-900">{option.label}</span>
+                                    </div>
+                                    <span className="text-sm font-medium text-primary-600">
+                                      Free
+                                    </span>
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
                     </div>
                   )}
                 </div>
@@ -834,9 +947,9 @@ export default function MenuPage() {
                     </div>
 
 
-              {/* Add to Cart Button */}
+                    {/* Add to Cart Button */}
               <div className="sticky bottom-0 bg-white pt-4 border-t border-gray-200 -mx-4 px-4 pb-4">
-                <button
+                    <button
                   onClick={() => handleAddToCart(selectedItem)}
                   className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-4 rounded-xl font-semibold hover:from-primary-700 hover:to-primary-800 transition-all shadow-lg"
                 >
@@ -845,9 +958,9 @@ export default function MenuPage() {
                     const totalPrice = getItemTotalPrice(selectedItem)
                     return `Add ${quantity > 1 ? `${quantity}x ` : ''}to Cart - £${totalPrice.toFixed(2)}`
                   })()}
-                </button>
+                    </button>
               </div>
-            </div>
+        </div>
           </div>
         </>
         )}
