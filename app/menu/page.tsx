@@ -118,6 +118,10 @@ export default function MenuPage() {
   const [buddyBoxSecondBurger, setBuddyBoxSecondBurger] = useState<Record<string, string>>({}) // menuItemId -> second burger option id
   const [buddyBoxFirstDrink, setBuddyBoxFirstDrink] = useState<Record<string, string>>({}) // menuItemId -> first drink option id
   const [buddyBoxSecondDrink, setBuddyBoxSecondDrink] = useState<Record<string, string>>({}) // menuItemId -> second drink option id
+  // House Box state (4 burgers, 4 drinks, 8 dips)
+  const [houseBoxBurgerChoices, setHouseBoxBurgerChoices] = useState<Record<string, string[]>>({}) // menuItemId -> selected burger option ids (max 4)
+  const [houseBoxDrinkChoices, setHouseBoxDrinkChoices] = useState<Record<string, string[]>>({}) // menuItemId -> selected drink option ids (max 4)
+  const [houseBoxDipsChoice, setHouseBoxDipsChoice] = useState<Record<string, string[]>>({}) // menuItemId -> selected dips (max 8)
   const addItem = useCartStore((state) => state.addItem)
 
   useEffect(() => {
@@ -242,6 +246,11 @@ export default function MenuPage() {
     return item.name.toLowerCase().includes('buddy box')
   }
 
+  // Helper function to check if item is House Box
+  const isHouseBox = (item: MenuItem): boolean => {
+    return item.name.toLowerCase().includes('house box')
+  }
+
   const openDrawer = async (item: MenuItem) => {
     if (!item.available) {
       toast.error('This item is currently unavailable')
@@ -307,6 +316,18 @@ export default function MenuPage() {
         setBuddyBoxSecondDrink((prev) => ({ ...prev, [item.id]: burgerDrinkOptions[0].id }))
       }
     }
+    // Initialize House Box customization if not set
+    if (isHouseBox(item)) {
+      if (houseBoxBurgerChoices[item.id] === undefined) {
+        setHouseBoxBurgerChoices((prev) => ({ ...prev, [item.id]: [classicBoxBurgerOptions[0].id] }))
+      }
+      if (boxFriesChoice[item.id] === undefined) {
+        setBoxFriesChoice((prev) => ({ ...prev, [item.id]: classicBoxFriesOptions[0].id }))
+      }
+      if (houseBoxDrinkChoices[item.id] === undefined) {
+        setHouseBoxDrinkChoices((prev) => ({ ...prev, [item.id]: [burgerDrinkOptions[0].id] }))
+      }
+    }
   }
 
   const closeDrawer = () => {
@@ -341,6 +362,20 @@ export default function MenuPage() {
     
     // Special pricing for Buddy Box
     if (isBuddyBox(item)) {
+      let totalPrice = item.price
+      
+      // Add fries upgrade price if selected
+      const friesChoice = boxFriesChoice[item.id] || classicBoxFriesOptions[0].id
+      const friesOption = classicBoxFriesOptions.find((opt) => opt.id === friesChoice)
+      if (friesOption) {
+        totalPrice += friesOption.price
+      }
+      
+      return totalPrice
+    }
+    
+    // Special pricing for House Box
+    if (isHouseBox(item)) {
       let totalPrice = item.price
       
       // Add fries upgrade price if selected
@@ -733,6 +768,104 @@ export default function MenuPage() {
       return
     }
 
+    // Special handling for House Box
+    if (isHouseBox(item)) {
+      const selectedBurgerIds = houseBoxBurgerChoices[item.id] || [classicBoxBurgerOptions[0].id]
+      const selectedBurgers = selectedBurgerIds.map((id) =>
+        classicBoxBurgerOptions.find((opt) => opt.id === id) || classicBoxBurgerOptions[0]
+      )
+      
+      const selectedFriesId = boxFriesChoice[item.id] || classicBoxFriesOptions[0].id
+      const selectedFries = classicBoxFriesOptions.find((opt) => opt.id === selectedFriesId) || classicBoxFriesOptions[0]
+      
+      const selectedDrinkIds = houseBoxDrinkChoices[item.id] || [burgerDrinkOptions[0].id]
+      const selectedDrinks = selectedDrinkIds.map((id) =>
+        burgerDrinkOptions.find((opt) => opt.id === id) || burgerDrinkOptions[0]
+      )
+      
+      const selectedDips = houseBoxDipsChoice[item.id] || []
+      
+      // Add box selections to add-ons
+      selectedBurgers.forEach((burger, index) => {
+        selectedAddOnsData.push({
+          addOnId: `box-burger-${burger.id}-${index}`,
+          name: `Burger ${index + 1}: ${burger.label}`,
+          price: burger.price,
+        })
+      })
+      
+      selectedAddOnsData.push({
+        addOnId: `box-fries-${selectedFries.id}`,
+        name: `Fries: ${selectedFries.label}`,
+        price: selectedFries.price,
+      })
+      
+      selectedDrinks.forEach((drink, index) => {
+        selectedAddOnsData.push({
+          addOnId: `box-drink-${drink.id}-${index}`,
+          name: `Drink ${index + 1}: ${drink.label}`,
+          price: 0,
+        })
+      })
+      
+      // Add dips
+      selectedDips.forEach((dipId) => {
+        const dipOption = burgerDipOptions.find((d) => d.id === dipId)
+        if (dipOption) {
+          selectedAddOnsData.push({
+            addOnId: `box-dip-${dipOption.id}`,
+            name: `Dip: ${dipOption.label}`,
+            price: 0,
+          })
+        }
+      })
+      
+      const itemTotalPrice = getItemTotalPrice(item)
+      
+      addItem({
+        id: `${item.id}-${Date.now()}`,
+        name: item.name,
+        price: itemTotalPrice,
+        image: item.image || undefined,
+        instructions: instructions || undefined,
+        type: 'menuItem',
+        menuItemId: item.id,
+        selectedAddOns: selectedAddOnsData,
+        quantity: 1,
+      })
+      
+      toast.success(`${item.name} added to cart`)
+      
+      // Reset and close drawer
+      setItemInstructions((prev) => {
+        const newInstructions = { ...prev }
+        delete newInstructions[item.id]
+        return newInstructions
+      })
+      setHouseBoxBurgerChoices((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setBoxFriesChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHouseBoxDrinkChoices((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHouseBoxDipsChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      closeDrawer()
+      return
+    }
+
     const quantity = itemQuantities[item.id] || 1
 
     // Special meal handling for burgers and wraps
@@ -789,29 +922,29 @@ export default function MenuPage() {
 
       const itemTotalPrice = unitPrice
 
-      for (let i = 0; i < quantity; i++) {
-        addItem({
+    for (let i = 0; i < quantity; i++) {
+      addItem({
           id: `${item.id}-${Date.now()}-${i}`, // Unique ID for each item instance
-          name: item.name,
+        name: item.name,
           price: itemTotalPrice,
-          image: item.image || undefined,
-          instructions: instructions || undefined,
+        image: item.image || undefined,
+        instructions: instructions || undefined,
           type: 'menuItem',
           menuItemId: item.id,
           selectedAddOns: selectedAddOnsData,
-        })
-      }
-
+      })
+    }
+    
       const mealText = isMeal ? ' as a meal' : ''
       toast.success(`${quantity}x ${item.name}${mealText} added to cart`)
-
+    
       // Reset and close drawer
-      setItemQuantities((prev) => ({ ...prev, [item.id]: 1 }))
-      setItemInstructions((prev) => {
-        const newInstructions = { ...prev }
-        delete newInstructions[item.id]
-        return newInstructions
-      })
+    setItemQuantities((prev) => ({ ...prev, [item.id]: 1 }))
+    setItemInstructions((prev) => {
+      const newInstructions = { ...prev }
+      delete newInstructions[item.id]
+      return newInstructions
+    })
       setBurgerMealSelected((prev) => {
         const updated = { ...prev }
         delete updated[item.id]
@@ -983,17 +1116,17 @@ export default function MenuPage() {
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
                     className={`w-full text-left px-4 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
-                      selectedCategory === category.id
+                  selectedCategory === category.id
                         ? 'bg-primary-600 text-white shadow-md'
                         : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
+                }`}
+              >
                     <span className="text-xl">{category.emoji}</span>
-                    {category.name}
-                  </button>
-                ))}
+                {category.name}
+              </button>
+            ))}
               </nav>
-            </div>
+          </div>
           </aside>
 
           {/* Mobile Sidebar Overlay */}
@@ -1013,7 +1146,7 @@ export default function MenuPage() {
                     >
                       <X className="w-5 h-5" />
                     </button>
-                  </div>
+        </div>
                   <nav className="space-y-2">
                     <button
                       onClick={() => {
@@ -1104,21 +1237,21 @@ export default function MenuPage() {
                             e.currentTarget.src = `https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop`
                           }}
                         />
-                      </div>
+                    </div>
                     )}
                     <div className="p-4">
                       <h3 className="font-bold text-lg text-gray-900 mb-1">{item.name}</h3>
-                      {item.description && (
+                    {item.description && (
                         <p className="text-sm text-gray-600 line-clamp-2 mb-2">{item.description}</p>
-                      )}
+                    )}
                       <div className="flex items-center justify-between">
                         <span className="text-xl font-extrabold text-primary-600">
                         £{item.price.toFixed(2)}
                       </span>
-                        {!item.available && (
+                    {!item.available && (
                           <span className="text-xs text-red-600 font-semibold">Unavailable</span>
-                        )}
-                      </div>
+                    )}
+                  </div>
                     </div>
                   </div>
                 ))}
@@ -1129,7 +1262,7 @@ export default function MenuPage() {
               </div>
                     )}
           </main>
-        </div>
+                  </div>
                   </div>
 
       {/* Side Drawer */}
@@ -1224,31 +1357,31 @@ export default function MenuPage() {
                 null
               ) : (
                 /* Regular Quantity Controls for non-tenders */
-                <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between">
                   <label className="text-base font-semibold text-gray-700">Quantity:</label>
-                  <div className="flex items-center gap-3">
-                    <button
+                      <div className="flex items-center gap-3">
+                        <button
                       onClick={() => updateQuantity(selectedItem.id, -1)}
                       className="w-10 h-10 rounded-full bg-primary-100 hover:bg-primary-200 text-primary-600 flex items-center justify-center transition-colors"
                     >
                       <Minus className="w-5 h-5" />
-                    </button>
+                        </button>
                     <span className="text-xl font-bold text-gray-900 w-8 text-center">
                       {itemQuantities[selectedItem.id] || 1}
-                    </span>
-                    <button
+                        </span>
+                        <button
                       onClick={() => updateQuantity(selectedItem.id, 1)}
                       className="w-10 h-10 rounded-full bg-primary-100 hover:bg-primary-200 text-primary-600 flex items-center justify-center transition-colors"
                     >
                       <Plus className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
+                        </button>
+                      </div>
+                    </div>
               )}
 
               {/* Heat Level Selection - For crispy items */}
               {needsHeatLevel(selectedItem) && (
-                <div>
+                    <div>
                   <label className="block text-base font-semibold text-gray-700 mb-3">
                     Heat Level:
                   </label>
@@ -1755,6 +1888,223 @@ export default function MenuPage() {
                 </div>
               )}
 
+              {/* Box Customization - For House Box */}
+              {isHouseBox(selectedItem) && (
+                <div className="space-y-6">
+                  {/* Choose 4 Burgers */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose 4 Burgers:
+                    </label>
+                    <div className="space-y-2">
+                      {classicBoxBurgerOptions.map((option) => {
+                        const selectedBurgers = houseBoxBurgerChoices[selectedItem.id] || [classicBoxBurgerOptions[0].id]
+                        const isSelected = selectedBurgers.includes(option.id)
+                        const canSelect = selectedBurgers.length < 4 || isSelected
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                              !canSelect
+                                ? 'opacity-50 cursor-not-allowed'
+                                : isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={!canSelect}
+                                onChange={() => {
+                                  if (!canSelect) return
+                                  setHouseBoxBurgerChoices((prev) => {
+                                    const current = prev[selectedItem.id] || [classicBoxBurgerOptions[0].id]
+                                    if (current.includes(option.id)) {
+                                      return {
+                                        ...prev,
+                                        [selectedItem.id]: current.filter((id) => id !== option.id),
+                                      }
+                                    } else {
+                                      return {
+                                        ...prev,
+                                        [selectedItem.id]: [...current, option.id],
+                                      }
+                                    }
+                                  })
+                                }}
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="font-medium text-gray-900">{option.label}</span>
+                            </div>
+                            {option.price > 0 && (
+                              <span className="text-primary-600 font-semibold">
+                                +£{option.price.toFixed(2)}
+                              </span>
+                            )}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose Loaded Fries */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose Loaded Fries:
+                    </label>
+                    <div className="space-y-2">
+                      {classicBoxFriesOptions.map((option) => {
+                        const currentChoice = boxFriesChoice[selectedItem.id] || classicBoxFriesOptions[0].id
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 flex-1">
+                              <input
+                                type="radio"
+                                name={`box-fries-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setBoxFriesChoice((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500 flex-shrink-0"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            {option.price > 0 && (
+                              <span className="text-sm font-medium text-primary-600 ml-2 flex-shrink-0">
+                                +£{option.price.toFixed(2)}
+                              </span>
+                            )}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose 4 Drinks */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose 4 Drinks:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDrinkOptions.map((option) => {
+                        const selectedDrinks = houseBoxDrinkChoices[selectedItem.id] || [burgerDrinkOptions[0].id]
+                        const isSelected = selectedDrinks.includes(option.id)
+                        const canSelect = selectedDrinks.length < 4 || isSelected
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              !canSelect
+                                ? 'opacity-50 cursor-not-allowed'
+                                : isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={!canSelect}
+                                onChange={() => {
+                                  if (!canSelect) return
+                                  setHouseBoxDrinkChoices((prev) => {
+                                    const current = prev[selectedItem.id] || [burgerDrinkOptions[0].id]
+                                    if (current.includes(option.id)) {
+                                      return {
+                                        ...prev,
+                                        [selectedItem.id]: current.filter((id) => id !== option.id),
+                                      }
+                                    } else {
+                                      return {
+                                        ...prev,
+                                        [selectedItem.id]: [...current, option.id],
+                                      }
+                                    }
+                                  })
+                                }}
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">
+                              Included
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choice of 8 Dips */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choice of 8 Dips:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDipOptions.map((option) => {
+                        const selectedDips = houseBoxDipsChoice[selectedItem.id] || []
+                        const isSelected = selectedDips.includes(option.id)
+                        const canSelect = selectedDips.length < 8 || isSelected
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              !canSelect
+                                ? 'opacity-50 cursor-not-allowed'
+                                : isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={!canSelect}
+                                onChange={() => {
+                                  if (!canSelect) return
+                                  setHouseBoxDipsChoice((prev) => {
+                                    const current = prev[selectedItem.id] || []
+                                    if (current.includes(option.id)) {
+                                      return {
+                                        ...prev,
+                                        [selectedItem.id]: current.filter((id) => id !== option.id),
+                                      }
+                                    } else {
+                                      return {
+                                        ...prev,
+                                        [selectedItem.id]: [...current, option.id],
+                                      }
+                                    }
+                                  })
+                                }}
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">Free</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Make it a meal - For Tenders */}
               {isTender(selectedItem) && (
                 <div>
@@ -2119,9 +2469,9 @@ export default function MenuPage() {
                     return `Add ${quantity > 1 ? `${quantity}x ` : ''}to Cart - £${totalPrice.toFixed(2)}`
                   })()}
                     </button>
+                  </div>
               </div>
         </div>
-          </div>
         </>
         )}
     </div>
