@@ -109,10 +109,13 @@ export default function MenuPage() {
   // Tender quantity selection state
   const [tenderQuantityChoice, setTenderQuantityChoice] = useState<Record<string, string>>({}) // menuItemId -> selected quantity option id (e.g., '3', '6', '9', '12')
   // Box customization state
-  const [boxBurgerChoice, setBoxBurgerChoice] = useState<Record<string, string>>({}) // menuItemId -> selected burger option id
+  const [boxBurgerChoice, setBoxBurgerChoice] = useState<Record<string, string>>({}) // menuItemId -> selected burger option id (Classic Box)
   const [boxFriesChoice, setBoxFriesChoice] = useState<Record<string, string>>({}) // menuItemId -> selected fries option id
-  const [boxDrinkChoice, setBoxDrinkChoice] = useState<Record<string, string>>({}) // menuItemId -> selected drink option id
+  const [boxDrinkChoice, setBoxDrinkChoice] = useState<Record<string, string>>({}) // menuItemId -> selected drink option id (Classic Box)
   const [boxDipsChoice, setBoxDipsChoice] = useState<Record<string, string[]>>({}) // menuItemId -> selected dips (max 2)
+  // Buddy Box state (2 burgers, 2 drinks)
+  const [buddyBoxBurgerChoices, setBuddyBoxBurgerChoices] = useState<Record<string, string[]>>({}) // menuItemId -> selected burger option ids (max 2)
+  const [buddyBoxDrinkChoices, setBuddyBoxDrinkChoices] = useState<Record<string, string[]>>({}) // menuItemId -> selected drink option ids (max 2)
   const addItem = useCartStore((state) => state.addItem)
 
   useEffect(() => {
@@ -232,6 +235,11 @@ export default function MenuPage() {
     return item.name.toLowerCase().includes('classic box')
   }
 
+  // Helper function to check if item is Buddy Box
+  const isBuddyBox = (item: MenuItem): boolean => {
+    return item.name.toLowerCase().includes('buddy box')
+  }
+
   const openDrawer = async (item: MenuItem) => {
     if (!item.available) {
       toast.error('This item is currently unavailable')
@@ -279,6 +287,18 @@ export default function MenuPage() {
         setBoxDrinkChoice((prev) => ({ ...prev, [item.id]: burgerDrinkOptions[0].id }))
       }
     }
+    // Initialize Buddy Box customization if not set
+    if (isBuddyBox(item)) {
+      if (buddyBoxBurgerChoices[item.id] === undefined) {
+        setBuddyBoxBurgerChoices((prev) => ({ ...prev, [item.id]: [classicBoxBurgerOptions[0].id] }))
+      }
+      if (boxFriesChoice[item.id] === undefined) {
+        setBoxFriesChoice((prev) => ({ ...prev, [item.id]: classicBoxFriesOptions[0].id }))
+      }
+      if (buddyBoxDrinkChoices[item.id] === undefined) {
+        setBuddyBoxDrinkChoices((prev) => ({ ...prev, [item.id]: [burgerDrinkOptions[0].id] }))
+      }
+    }
   }
 
   const closeDrawer = () => {
@@ -299,6 +319,20 @@ export default function MenuPage() {
   const getItemTotalPrice = (item: MenuItem): number => {
     // Special pricing for Classic Box
     if (isClassicBox(item)) {
+      let totalPrice = item.price
+      
+      // Add fries upgrade price if selected
+      const friesChoice = boxFriesChoice[item.id] || classicBoxFriesOptions[0].id
+      const friesOption = classicBoxFriesOptions.find((opt) => opt.id === friesChoice)
+      if (friesOption) {
+        totalPrice += friesOption.price
+      }
+      
+      return totalPrice
+    }
+    
+    // Special pricing for Buddy Box
+    if (isBuddyBox(item)) {
       let totalPrice = item.price
       
       // Add fries upgrade price if selected
@@ -560,6 +594,104 @@ export default function MenuPage() {
         return updated
       })
       setBoxDrinkChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setBoxDipsChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      closeDrawer()
+      return
+    }
+
+    // Special handling for Buddy Box
+    if (isBuddyBox(item)) {
+      const selectedBurgerIds = buddyBoxBurgerChoices[item.id] || [classicBoxBurgerOptions[0].id]
+      const selectedBurgers = selectedBurgerIds.map((id) =>
+        classicBoxBurgerOptions.find((opt) => opt.id === id) || classicBoxBurgerOptions[0]
+      )
+      
+      const selectedFriesId = boxFriesChoice[item.id] || classicBoxFriesOptions[0].id
+      const selectedFries = classicBoxFriesOptions.find((opt) => opt.id === selectedFriesId) || classicBoxFriesOptions[0]
+      
+      const selectedDrinkIds = buddyBoxDrinkChoices[item.id] || [burgerDrinkOptions[0].id]
+      const selectedDrinks = selectedDrinkIds.map((id) =>
+        burgerDrinkOptions.find((opt) => opt.id === id) || burgerDrinkOptions[0]
+      )
+      
+      const selectedDips = boxDipsChoice[item.id] || []
+      
+      // Add box selections to add-ons
+      selectedBurgers.forEach((burger, index) => {
+        selectedAddOnsData.push({
+          addOnId: `box-burger-${burger.id}-${index}`,
+          name: `Burger ${index + 1}: ${burger.label}`,
+          price: burger.price,
+        })
+      })
+      
+      selectedAddOnsData.push({
+        addOnId: `box-fries-${selectedFries.id}`,
+        name: `Fries: ${selectedFries.label}`,
+        price: selectedFries.price,
+      })
+      
+      selectedDrinks.forEach((drink, index) => {
+        selectedAddOnsData.push({
+          addOnId: `box-drink-${drink.id}-${index}`,
+          name: `Drink ${index + 1}: ${drink.label}`,
+          price: 0,
+        })
+      })
+      
+      // Add dips
+      selectedDips.forEach((dipId) => {
+        const dipOption = burgerDipOptions.find((d) => d.id === dipId)
+        if (dipOption) {
+          selectedAddOnsData.push({
+            addOnId: `box-dip-${dipOption.id}`,
+            name: `Dip: ${dipOption.label}`,
+            price: 0,
+          })
+        }
+      })
+      
+      const itemTotalPrice = getItemTotalPrice(item)
+      
+      addItem({
+        id: `${item.id}-${Date.now()}`,
+        name: item.name,
+        price: itemTotalPrice,
+        image: item.image || undefined,
+        instructions: instructions || undefined,
+        type: 'menuItem',
+        menuItemId: item.id,
+        selectedAddOns: selectedAddOnsData,
+        quantity: 1,
+      })
+      
+      toast.success(`${item.name} added to cart`)
+      
+      // Reset and close drawer
+      setItemInstructions((prev) => {
+        const newInstructions = { ...prev }
+        delete newInstructions[item.id]
+        return newInstructions
+      })
+      setBuddyBoxBurgerChoices((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setBoxFriesChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setBuddyBoxDrinkChoices((prev) => {
         const updated = { ...prev }
         delete updated[item.id]
         return updated
@@ -1059,6 +1191,9 @@ export default function MenuPage() {
                     })}
                   </div>
                 </div>
+              ) : isBox(selectedItem) ? (
+                /* No quantity controls for boxes - always 1 */
+                null
               ) : (
                 /* Regular Quantity Controls for non-tenders */
                 <div className="flex items-center justify-between">
@@ -1248,6 +1383,223 @@ export default function MenuPage() {
                                     [selectedItem.id]: option.id,
                                   }))
                                 }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">
+                              Included
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choice of 2 Dips */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choice of 2 Dips:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDipOptions.map((option) => {
+                        const selectedDips = boxDipsChoice[selectedItem.id] || []
+                        const isSelected = selectedDips.includes(option.id)
+                        const canSelect = selectedDips.length < 2 || isSelected
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              !canSelect
+                                ? 'opacity-50 cursor-not-allowed'
+                                : isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={!canSelect}
+                                onChange={() => {
+                                  if (!canSelect) return
+                                  setBoxDipsChoice((prev) => {
+                                    const current = prev[selectedItem.id] || []
+                                    if (current.includes(option.id)) {
+                                      return {
+                                        ...prev,
+                                        [selectedItem.id]: current.filter((id) => id !== option.id),
+                                      }
+                                    } else {
+                                      return {
+                                        ...prev,
+                                        [selectedItem.id]: [...current, option.id],
+                                      }
+                                    }
+                                  })
+                                }}
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">Free</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Box Customization - For Buddy Box */}
+              {isBuddyBox(selectedItem) && (
+                <div className="space-y-6">
+                  {/* Choose 2 Burgers */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose 2 Burgers:
+                    </label>
+                    <div className="space-y-2">
+                      {classicBoxBurgerOptions.map((option) => {
+                        const selectedBurgers = buddyBoxBurgerChoices[selectedItem.id] || [classicBoxBurgerOptions[0].id]
+                        const isSelected = selectedBurgers.includes(option.id)
+                        const canSelect = selectedBurgers.length < 2 || isSelected
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                              !canSelect
+                                ? 'opacity-50 cursor-not-allowed'
+                                : isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={!canSelect}
+                                onChange={() => {
+                                  if (!canSelect) return
+                                  setBuddyBoxBurgerChoices((prev) => {
+                                    const current = prev[selectedItem.id] || [classicBoxBurgerOptions[0].id]
+                                    if (current.includes(option.id)) {
+                                      return {
+                                        ...prev,
+                                        [selectedItem.id]: current.filter((id) => id !== option.id),
+                                      }
+                                    } else {
+                                      return {
+                                        ...prev,
+                                        [selectedItem.id]: [...current, option.id],
+                                      }
+                                    }
+                                  })
+                                }}
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="font-medium text-gray-900">{option.label}</span>
+                            </div>
+                            {option.price > 0 && (
+                              <span className="text-primary-600 font-semibold">
+                                +£{option.price.toFixed(2)}
+                              </span>
+                            )}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose Loaded Fries */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose Loaded Fries:
+                    </label>
+                    <div className="space-y-2">
+                      {classicBoxFriesOptions.map((option) => {
+                        const currentChoice = boxFriesChoice[selectedItem.id] || classicBoxFriesOptions[0].id
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 flex-1">
+                              <input
+                                type="radio"
+                                name={`box-fries-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setBoxFriesChoice((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500 flex-shrink-0"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            {option.price > 0 && (
+                              <span className="text-sm font-medium text-primary-600 ml-2 flex-shrink-0">
+                                +£{option.price.toFixed(2)}
+                              </span>
+                            )}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose 2 Drinks */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose 2 Drinks:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDrinkOptions.map((option) => {
+                        const selectedDrinks = buddyBoxDrinkChoices[selectedItem.id] || [burgerDrinkOptions[0].id]
+                        const isSelected = selectedDrinks.includes(option.id)
+                        const canSelect = selectedDrinks.length < 2 || isSelected
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              !canSelect
+                                ? 'opacity-50 cursor-not-allowed'
+                                : isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={!canSelect}
+                                onChange={() => {
+                                  if (!canSelect) return
+                                  setBuddyBoxDrinkChoices((prev) => {
+                                    const current = prev[selectedItem.id] || [burgerDrinkOptions[0].id]
+                                    if (current.includes(option.id)) {
+                                      return {
+                                        ...prev,
+                                        [selectedItem.id]: current.filter((id) => id !== option.id),
+                                      }
+                                    } else {
+                                      return {
+                                        ...prev,
+                                        [selectedItem.id]: [...current, option.id],
+                                      }
+                                    }
+                                  })
+                                }}
                                 className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                               />
                               <span className="text-sm text-gray-900">{option.label}</span>
