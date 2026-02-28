@@ -224,6 +224,12 @@ export default function MenuPage() {
       setBurgerFriesChoice((prev) => ({ ...prev, [item.id]: 'regular' }))
       setBurgerDrinkChoice((prev) => ({ ...prev, [item.id]: burgerDrinkOptions[0].id }))
     }
+    // Initialize tender meal state if not set
+    if (isTender(item) && burgerMealSelected[item.id] === undefined) {
+      setBurgerMealSelected((prev) => ({ ...prev, [item.id]: false }))
+      setBurgerFriesChoice((prev) => ({ ...prev, [item.id]: 'regular' })) // Always regular for tenders
+      setBurgerDrinkChoice((prev) => ({ ...prev, [item.id]: burgerDrinkOptions[0].id }))
+    }
     // Initialize heat level if not set (default to classic)
     if (needsHeatLevel(item) && heatLevelChoice[item.id] === undefined) {
       setHeatLevelChoice((prev) => ({ ...prev, [item.id]: 'classic' }))
@@ -255,7 +261,16 @@ export default function MenuPage() {
       const selectedQuantityId = tenderQuantityChoice[item.id] || '3'
       const tenderOptions = getTenderOptions(item)
       const selectedOption = tenderOptions.find((opt) => opt.id === selectedQuantityId) || tenderOptions[0]
-      return selectedOption.price
+      let totalPrice = selectedOption.price
+      
+      // Add meal price if selected
+      const isMeal = burgerMealSelected[item.id]
+      if (isMeal) {
+        totalPrice += 2 // Base meal price (+£2)
+        // Fries are always regular (skin on fries) for tenders, no extra cost
+      }
+      
+      return totalPrice
     }
 
     const quantity = itemQuantities[item.id] || 1
@@ -330,7 +345,36 @@ export default function MenuPage() {
         price: 0,
       })
       
-      const itemTotalPrice = selectedOption.price
+      let itemTotalPrice = selectedOption.price
+      const isMeal = burgerMealSelected[item.id]
+      
+      if (isMeal) {
+        // Base tender meal (+£2)
+        itemTotalPrice += 2
+        selectedAddOnsData.push({
+          addOnId: 'tender-meal',
+          name: 'Make it a meal (Fries + Drink)',
+          price: 2,
+        })
+        
+        // Fries choice (always regular/skin on fries for tenders)
+        const friesOption = burgerFriesOptions.find((opt) => opt.id === 'regular') || burgerFriesOptions[0]
+        selectedAddOnsData.push({
+          addOnId: `tender-fries-${friesOption.id}`,
+          name: friesOption.label,
+          price: friesOption.price,
+        })
+        
+        // Drink choice (default to first option)
+        const drinkChoiceId = burgerDrinkChoice[item.id] || burgerDrinkOptions[0].id
+        const drinkOption =
+          burgerDrinkOptions.find((d) => d.id === drinkChoiceId) || burgerDrinkOptions[0]
+        selectedAddOnsData.push({
+          addOnId: `tender-drink-${drinkOption.id}`,
+          name: `Drink: ${drinkOption.label}`,
+          price: 0,
+        })
+      }
       
       addItem({
         id: `${item.id}-${Date.now()}`,
@@ -344,7 +388,8 @@ export default function MenuPage() {
         quantity: 1,
       })
       
-      toast.success(`${selectedOption.quantity}x ${item.name} added to cart`)
+      const mealText = isMeal ? ' as a meal' : ''
+      toast.success(`${selectedOption.quantity}x ${item.name}${mealText} added to cart`)
       
       // Reset and close drawer
       setItemInstructions((prev) => {
@@ -360,6 +405,21 @@ export default function MenuPage() {
         })
       }
       setTenderQuantityChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setBurgerMealSelected((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setBurgerFriesChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setBurgerDrinkChoice((prev) => {
         const updated = { ...prev }
         delete updated[item.id]
         return updated
@@ -919,6 +979,96 @@ export default function MenuPage() {
                       )
                     })}
                   </div>
+                </div>
+              )}
+
+              {/* Make it a meal - For Tenders */}
+              {isTender(selectedItem) && (
+                <div>
+                  <label className="block text-base font-semibold text-gray-700 mb-3">
+                    Make it a meal (Optional):
+                  </label>
+                  <label
+                    className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                      burgerMealSelected[selectedItem.id]
+                        ? 'border-primary-600 bg-primary-50'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={!!burgerMealSelected[selectedItem.id]}
+                        onChange={() => {
+                          setBurgerMealSelected((prev) => ({
+                            ...prev,
+                            [selectedItem.id]: !prev[selectedItem.id],
+                          }))
+                        }}
+                        className="w-5 h-5 text-primary-600 border-gray-300 focus:ring-primary-500"
+                      />
+                      <span className="font-medium text-gray-900">
+                        Make it a meal (includes fries &amp; drink)
+                      </span>
+                    </div>
+                    <span className="text-primary-600 font-semibold">+£2.00</span>
+                  </label>
+
+                  {burgerMealSelected[selectedItem.id] && (
+                    <div className="mt-4 space-y-4">
+                      {/* Fries - Only Skin on fries for tenders */}
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700 mb-2">Fries:</p>
+                        <div className="p-2 border rounded-lg bg-gray-50">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-900">Skin on fries</span>
+                            <span className="text-sm font-medium text-primary-600">Included</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Drink options */}
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700 mb-2">Drink:</p>
+                        <div className="space-y-2">
+                          {burgerDrinkOptions.map((option) => {
+                            const currentChoice =
+                              burgerDrinkChoice[selectedItem.id] || burgerDrinkOptions[0].id
+                            const isSelected = currentChoice === option.id
+                            return (
+                              <label
+                                key={option.id}
+                                className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                                  isSelected
+                                    ? 'border-primary-600 bg-primary-50'
+                                    : 'border-gray-200 bg-white hover:border-gray-300'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <input
+                                    type="radio"
+                                    name={`tender-drink-${selectedItem.id}`}
+                                    checked={isSelected}
+                                    onChange={() =>
+                                      setBurgerDrinkChoice((prev) => ({
+                                        ...prev,
+                                        [selectedItem.id]: option.id,
+                                      }))
+                                    }
+                                    className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                                  />
+                                  <span className="text-sm text-gray-900">{option.label}</span>
+                                </div>
+                                <span className="text-sm font-medium text-primary-600">
+                                  Included
+                                </span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
