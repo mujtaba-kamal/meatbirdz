@@ -139,7 +139,7 @@ export default function AdminPage() {
   }, [status, session, router])
 
   // Initialize audio context on user interaction
-  const initAudioContext = () => {
+  const initAudioContext = async () => {
     if (!audioContextRef.current) {
       try {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
@@ -150,12 +150,37 @@ export default function AdminPage() {
           
           // Resume if suspended
           if (ctx.state === 'suspended') {
-            ctx.resume().then(() => {
-              console.log('Audio context resumed')
-            }).catch(err => {
-              console.error('Failed to resume audio context:', err)
-            })
+            await ctx.resume()
+            console.log('Audio context resumed, state:', ctx.state)
           }
+          
+          // Keep audio context alive by playing a silent sound periodically
+          // This prevents the browser from suspending it
+          const keepAlive = () => {
+            if (audioContextRef.current && audioContextRef.current.state === 'running') {
+              try {
+                const osc = audioContextRef.current.createOscillator()
+                const gain = audioContextRef.current.createGain()
+                osc.connect(gain)
+                gain.connect(audioContextRef.current.destination)
+                gain.gain.value = 0.001 // Very quiet, almost silent
+                osc.frequency.value = 1 // Very low frequency
+                osc.start()
+                osc.stop(audioContextRef.current.currentTime + 0.01)
+              } catch (e) {
+                // Ignore errors in keep-alive
+              }
+            }
+          }
+          
+          // Play keep-alive sound every 10 seconds
+          const keepAliveInterval = setInterval(() => {
+            if (audioContextRef.current && audioContextRef.current.state === 'running') {
+              keepAlive()
+            } else {
+              clearInterval(keepAliveInterval)
+            }
+          }, 10000)
         }
       } catch (error) {
         console.error('Error initializing audio context:', error)
@@ -166,18 +191,33 @@ export default function AdminPage() {
   // Function to play bell notification sound
   const playBellSound = async () => {
     console.log('🔔 Attempting to play bell sound...')
+    console.log('Audio context state:', audioContextRef.current?.state)
     
     // Initialize audio context if not already done
     if (!audioContextRef.current) {
+      console.log('Initializing audio context...')
       initAudioContext()
       // Wait a bit for initialization
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await new Promise(resolve => setTimeout(resolve, 100))
     }
     
-    const ctx = audioContextRef.current
+    let ctx = audioContextRef.current
     if (!ctx) {
       console.error('❌ Audio context not available')
       return
+    }
+    
+    // Check if context is closed and recreate if needed
+    if (ctx.state === 'closed') {
+      console.log('Audio context closed, recreating...')
+      audioContextRef.current = null
+      initAudioContext()
+      await new Promise(resolve => setTimeout(resolve, 100))
+      ctx = audioContextRef.current
+      if (!ctx) {
+        console.error('❌ Failed to recreate audio context')
+        return
+      }
     }
     
     try {
@@ -188,15 +228,34 @@ export default function AdminPage() {
         console.log('Audio context resumed, state:', ctx.state)
       }
       
+      // Double check state after resume
+      if (ctx.state !== 'running') {
+        console.warn('Audio context not running after resume, state:', ctx.state)
+        // Try one more time
+        if (ctx.state === 'suspended') {
+          await ctx.resume()
+        }
+      }
+      
       // Play the tone
+      console.log('Playing tone, audio context state:', ctx.state)
       playTone(ctx)
     } catch (error) {
       console.error('Error playing bell sound:', error)
       // Try to reinitialize if there's an error
-      if (error && ctx.state === 'closed') {
-        console.log('Audio context closed, reinitializing...')
+      try {
         audioContextRef.current = null
         initAudioContext()
+        await new Promise(resolve => setTimeout(resolve, 100))
+        ctx = audioContextRef.current
+        if (ctx) {
+          if (ctx.state === 'suspended') {
+            await ctx.resume()
+          }
+          playTone(ctx)
+        }
+      } catch (retryError) {
+        console.error('Failed to retry audio playback:', retryError)
       }
     }
   }
