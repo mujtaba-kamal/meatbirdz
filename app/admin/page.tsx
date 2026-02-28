@@ -164,12 +164,14 @@ export default function AdminPage() {
   }
 
   // Function to play bell notification sound
-  const playBellSound = () => {
+  const playBellSound = async () => {
     console.log('🔔 Attempting to play bell sound...')
     
     // Initialize audio context if not already done
     if (!audioContextRef.current) {
       initAudioContext()
+      // Wait a bit for initialization
+      await new Promise(resolve => setTimeout(resolve, 50))
     }
     
     const ctx = audioContextRef.current
@@ -179,18 +181,23 @@ export default function AdminPage() {
     }
     
     try {
-      // Resume if suspended
+      // Always try to resume first (browsers may suspend it)
       if (ctx.state === 'suspended') {
-        ctx.resume().then(() => {
-          playTone(ctx)
-        }).catch(err => {
-          console.error('Failed to resume audio context:', err)
-        })
-      } else {
-        playTone(ctx)
+        console.log('Audio context suspended, resuming...')
+        await ctx.resume()
+        console.log('Audio context resumed, state:', ctx.state)
       }
+      
+      // Play the tone
+      playTone(ctx)
     } catch (error) {
       console.error('Error playing bell sound:', error)
+      // Try to reinitialize if there's an error
+      if (error && ctx.state === 'closed') {
+        console.log('Audio context closed, reinitializing...')
+        audioContextRef.current = null
+        initAudioContext()
+      }
     }
   }
 
@@ -891,11 +898,13 @@ export default function AdminPage() {
           
           if (newPendingOrders.length > 0) {
             console.log(`🔔 Detected ${newPendingOrders.length} new pending order(s)`)
-            // Play bell sound for new orders
-            try {
-              playBellSound()
-            } catch (err) {
-              console.error('Failed to play bell:', err)
+            // Play bell sound for new orders (only if audio context is initialized)
+            if (audioContextRef.current) {
+              playBellSound().catch(err => {
+                console.error('Failed to play bell:', err)
+              })
+            } else {
+              console.warn('⚠️ Audio context not initialized - bell sound skipped. Click "Test Bell" to enable audio.')
             }
             // Show notification
             toast.success(`🔔 New order received!`, {
@@ -910,7 +919,7 @@ export default function AdminPage() {
           setPreviousOrderIds(new Set(data.map((order: Order) => order.id)))
         }
         
-        setOrders(data)
+      setOrders(data)
       } else {
         console.error('❌ Expected array but got:', data)
         setOrders([])
@@ -1078,13 +1087,12 @@ export default function AdminPage() {
             {lastUpdateTime && activeTab === 'orders' && (
               <div className="flex items-center gap-4">
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     console.log('Testing bell sound...')
                     initAudioContext() // Initialize on click
-                    setTimeout(() => {
-                      playBellSound()
-                      toast.success('🔔 Test bell sound played')
-                    }, 100)
+                    await new Promise(resolve => setTimeout(resolve, 100))
+                    await playBellSound()
+                    toast.success('🔔 Test bell sound played')
                   }}
                   className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1"
                   title="Test bell sound (click to enable audio)"
