@@ -114,8 +114,10 @@ export default function MenuPage() {
   const [boxDrinkChoice, setBoxDrinkChoice] = useState<Record<string, string>>({}) // menuItemId -> selected drink option id (Classic Box)
   const [boxDipsChoice, setBoxDipsChoice] = useState<Record<string, string[]>>({}) // menuItemId -> selected dips (max 2)
   // Buddy Box state (2 burgers, 2 drinks)
-  const [buddyBoxBurgerChoices, setBuddyBoxBurgerChoices] = useState<Record<string, string[]>>({}) // menuItemId -> selected burger option ids (max 2)
-  const [buddyBoxDrinkChoices, setBuddyBoxDrinkChoices] = useState<Record<string, string[]>>({}) // menuItemId -> selected drink option ids (max 2)
+  const [buddyBoxFirstBurger, setBuddyBoxFirstBurger] = useState<Record<string, string>>({}) // menuItemId -> first burger option id
+  const [buddyBoxSecondBurger, setBuddyBoxSecondBurger] = useState<Record<string, string>>({}) // menuItemId -> second burger option id
+  const [buddyBoxFirstDrink, setBuddyBoxFirstDrink] = useState<Record<string, string>>({}) // menuItemId -> first drink option id
+  const [buddyBoxSecondDrink, setBuddyBoxSecondDrink] = useState<Record<string, string>>({}) // menuItemId -> second drink option id
   const addItem = useCartStore((state) => state.addItem)
 
   useEffect(() => {
@@ -289,14 +291,20 @@ export default function MenuPage() {
     }
     // Initialize Buddy Box customization if not set
     if (isBuddyBox(item)) {
-      if (buddyBoxBurgerChoices[item.id] === undefined) {
-        setBuddyBoxBurgerChoices((prev) => ({ ...prev, [item.id]: [classicBoxBurgerOptions[0].id] }))
+      if (buddyBoxFirstBurger[item.id] === undefined) {
+        setBuddyBoxFirstBurger((prev) => ({ ...prev, [item.id]: classicBoxBurgerOptions[0].id }))
+      }
+      if (buddyBoxSecondBurger[item.id] === undefined) {
+        setBuddyBoxSecondBurger((prev) => ({ ...prev, [item.id]: classicBoxBurgerOptions[0].id }))
       }
       if (boxFriesChoice[item.id] === undefined) {
         setBoxFriesChoice((prev) => ({ ...prev, [item.id]: classicBoxFriesOptions[0].id }))
       }
-      if (buddyBoxDrinkChoices[item.id] === undefined) {
-        setBuddyBoxDrinkChoices((prev) => ({ ...prev, [item.id]: [burgerDrinkOptions[0].id] }))
+      if (buddyBoxFirstDrink[item.id] === undefined) {
+        setBuddyBoxFirstDrink((prev) => ({ ...prev, [item.id]: burgerDrinkOptions[0].id }))
+      }
+      if (buddyBoxSecondDrink[item.id] === undefined) {
+        setBuddyBoxSecondDrink((prev) => ({ ...prev, [item.id]: burgerDrinkOptions[0].id }))
       }
     }
   }
@@ -609,28 +617,34 @@ export default function MenuPage() {
 
     // Special handling for Buddy Box
     if (isBuddyBox(item)) {
-      const selectedBurgerIds = buddyBoxBurgerChoices[item.id] || [classicBoxBurgerOptions[0].id]
-      const selectedBurgers = selectedBurgerIds.map((id) =>
-        classicBoxBurgerOptions.find((opt) => opt.id === id) || classicBoxBurgerOptions[0]
-      )
+      const firstBurgerId = buddyBoxFirstBurger[item.id] || classicBoxBurgerOptions[0].id
+      const firstBurger = classicBoxBurgerOptions.find((opt) => opt.id === firstBurgerId) || classicBoxBurgerOptions[0]
+      
+      const secondBurgerId = buddyBoxSecondBurger[item.id] || classicBoxBurgerOptions[0].id
+      const secondBurger = classicBoxBurgerOptions.find((opt) => opt.id === secondBurgerId) || classicBoxBurgerOptions[0]
       
       const selectedFriesId = boxFriesChoice[item.id] || classicBoxFriesOptions[0].id
       const selectedFries = classicBoxFriesOptions.find((opt) => opt.id === selectedFriesId) || classicBoxFriesOptions[0]
       
-      const selectedDrinkIds = buddyBoxDrinkChoices[item.id] || [burgerDrinkOptions[0].id]
-      const selectedDrinks = selectedDrinkIds.map((id) =>
-        burgerDrinkOptions.find((opt) => opt.id === id) || burgerDrinkOptions[0]
-      )
+      const firstDrinkId = buddyBoxFirstDrink[item.id] || burgerDrinkOptions[0].id
+      const firstDrink = burgerDrinkOptions.find((opt) => opt.id === firstDrinkId) || burgerDrinkOptions[0]
+      
+      const secondDrinkId = buddyBoxSecondDrink[item.id] || burgerDrinkOptions[0].id
+      const secondDrink = burgerDrinkOptions.find((opt) => opt.id === secondDrinkId) || burgerDrinkOptions[0]
       
       const selectedDips = boxDipsChoice[item.id] || []
       
       // Add box selections to add-ons
-      selectedBurgers.forEach((burger, index) => {
-        selectedAddOnsData.push({
-          addOnId: `box-burger-${burger.id}-${index}`,
-          name: `Burger ${index + 1}: ${burger.label}`,
-          price: burger.price,
-        })
+      selectedAddOnsData.push({
+        addOnId: `box-burger-first-${firstBurger.id}`,
+        name: `First Burger: ${firstBurger.label}`,
+        price: firstBurger.price,
+      })
+      
+      selectedAddOnsData.push({
+        addOnId: `box-burger-second-${secondBurger.id}`,
+        name: `Second Burger: ${secondBurger.label}`,
+        price: secondBurger.price,
       })
       
       selectedAddOnsData.push({
@@ -639,12 +653,16 @@ export default function MenuPage() {
         price: selectedFries.price,
       })
       
-      selectedDrinks.forEach((drink, index) => {
-        selectedAddOnsData.push({
-          addOnId: `box-drink-${drink.id}-${index}`,
-          name: `Drink ${index + 1}: ${drink.label}`,
-          price: 0,
-        })
+      selectedAddOnsData.push({
+        addOnId: `box-drink-first-${firstDrink.id}`,
+        name: `First Drink: ${firstDrink.label}`,
+        price: 0,
+      })
+      
+      selectedAddOnsData.push({
+        addOnId: `box-drink-second-${secondDrink.id}`,
+        name: `Second Drink: ${secondDrink.label}`,
+        price: 0,
       })
       
       // Add dips
@@ -681,7 +699,12 @@ export default function MenuPage() {
         delete newInstructions[item.id]
         return newInstructions
       })
-      setBuddyBoxBurgerChoices((prev) => {
+      setBuddyBoxFirstBurger((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setBuddyBoxSecondBurger((prev) => {
         const updated = { ...prev }
         delete updated[item.id]
         return updated
@@ -691,7 +714,12 @@ export default function MenuPage() {
         delete updated[item.id]
         return updated
       })
-      setBuddyBoxDrinkChoices((prev) => {
+      setBuddyBoxFirstDrink((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setBuddyBoxSecondDrink((prev) => {
         const updated = { ...prev }
         delete updated[item.id]
         return updated
@@ -1455,49 +1483,79 @@ export default function MenuPage() {
               {/* Box Customization - For Buddy Box */}
               {isBuddyBox(selectedItem) && (
                 <div className="space-y-6">
-                  {/* Choose 2 Burgers */}
+                  {/* Choose First Burger */}
                   <div>
                     <label className="block text-base font-semibold text-gray-700 mb-3">
-                      Choose 2 Burgers:
+                      Choose First Burger:
                     </label>
                     <div className="space-y-2">
                       {classicBoxBurgerOptions.map((option) => {
-                        const selectedBurgers = buddyBoxBurgerChoices[selectedItem.id] || [classicBoxBurgerOptions[0].id]
-                        const isSelected = selectedBurgers.includes(option.id)
-                        const canSelect = selectedBurgers.length < 2 || isSelected
+                        const currentChoice = buddyBoxFirstBurger[selectedItem.id] || classicBoxBurgerOptions[0].id
+                        const isSelected = currentChoice === option.id
                         return (
                           <label
                             key={option.id}
                             className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                              !canSelect
-                                ? 'opacity-50 cursor-not-allowed'
-                                : isSelected
+                              isSelected
                                 ? 'border-primary-600 bg-primary-50'
                                 : 'border-gray-200 bg-white hover:border-gray-300'
                             }`}
                           >
                             <div className="flex items-center gap-3">
                               <input
-                                type="checkbox"
+                                type="radio"
+                                name={`buddy-box-first-burger-${selectedItem.id}`}
                                 checked={isSelected}
-                                disabled={!canSelect}
-                                onChange={() => {
-                                  if (!canSelect) return
-                                  setBuddyBoxBurgerChoices((prev) => {
-                                    const current = prev[selectedItem.id] || [classicBoxBurgerOptions[0].id]
-                                    if (current.includes(option.id)) {
-                                      return {
-                                        ...prev,
-                                        [selectedItem.id]: current.filter((id) => id !== option.id),
-                                      }
-                                    } else {
-                                      return {
-                                        ...prev,
-                                        [selectedItem.id]: [...current, option.id],
-                                      }
-                                    }
-                                  })
-                                }}
+                                onChange={() =>
+                                  setBuddyBoxFirstBurger((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="font-medium text-gray-900">{option.label}</span>
+                            </div>
+                            {option.price > 0 && (
+                              <span className="text-primary-600 font-semibold">
+                                +£{option.price.toFixed(2)}
+                              </span>
+                            )}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose Second Burger */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose Second Burger:
+                    </label>
+                    <div className="space-y-2">
+                      {classicBoxBurgerOptions.map((option) => {
+                        const currentChoice = buddyBoxSecondBurger[selectedItem.id] || classicBoxBurgerOptions[0].id
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`buddy-box-second-burger-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setBuddyBoxSecondBurger((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
                                 className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                               />
                               <span className="font-medium text-gray-900">{option.label}</span>
@@ -1557,49 +1615,77 @@ export default function MenuPage() {
                     </div>
                   </div>
 
-                  {/* Choose 2 Drinks */}
+                  {/* Choose First Drink */}
                   <div>
                     <label className="block text-base font-semibold text-gray-700 mb-3">
-                      Choose 2 Drinks:
+                      Choose First Drink:
                     </label>
                     <div className="space-y-2">
                       {burgerDrinkOptions.map((option) => {
-                        const selectedDrinks = buddyBoxDrinkChoices[selectedItem.id] || [burgerDrinkOptions[0].id]
-                        const isSelected = selectedDrinks.includes(option.id)
-                        const canSelect = selectedDrinks.length < 2 || isSelected
+                        const currentChoice = buddyBoxFirstDrink[selectedItem.id] || burgerDrinkOptions[0].id
+                        const isSelected = currentChoice === option.id
                         return (
                           <label
                             key={option.id}
                             className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
-                              !canSelect
-                                ? 'opacity-50 cursor-not-allowed'
-                                : isSelected
+                              isSelected
                                 ? 'border-primary-600 bg-primary-50'
                                 : 'border-gray-200 bg-white hover:border-gray-300'
                             }`}
                           >
                             <div className="flex items-center gap-3">
                               <input
-                                type="checkbox"
+                                type="radio"
+                                name={`buddy-box-first-drink-${selectedItem.id}`}
                                 checked={isSelected}
-                                disabled={!canSelect}
-                                onChange={() => {
-                                  if (!canSelect) return
-                                  setBuddyBoxDrinkChoices((prev) => {
-                                    const current = prev[selectedItem.id] || [burgerDrinkOptions[0].id]
-                                    if (current.includes(option.id)) {
-                                      return {
-                                        ...prev,
-                                        [selectedItem.id]: current.filter((id) => id !== option.id),
-                                      }
-                                    } else {
-                                      return {
-                                        ...prev,
-                                        [selectedItem.id]: [...current, option.id],
-                                      }
-                                    }
-                                  })
-                                }}
+                                onChange={() =>
+                                  setBuddyBoxFirstDrink((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">
+                              Included
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose Second Drink */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose Second Drink:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDrinkOptions.map((option) => {
+                        const currentChoice = buddyBoxSecondDrink[selectedItem.id] || burgerDrinkOptions[0].id
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`buddy-box-second-drink-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setBuddyBoxSecondDrink((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
                                 className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                               />
                               <span className="text-sm text-gray-900">{option.label}</span>
