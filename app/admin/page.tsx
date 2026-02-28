@@ -91,7 +91,6 @@ export default function AdminPage() {
   const [showCustomPicker, setShowCustomPicker] = useState(false)
   const [activeTab, setActiveTab] = useState<'orders' | 'menu'>('orders')
   const [previousOrderIds, setPreviousOrderIds] = useState<Set<string>>(new Set())
-  const [audioContext, setAudioContext] = useState<AudioContext | null>(null)
   
   // Menu management state
   const [menuItems, setMenuItems] = useState<any[]>([])
@@ -138,105 +137,75 @@ export default function AdminPage() {
     // Don't redirect if already on admin page
   }, [status, session, router])
 
-  // Initialize audio context after user interaction
-  useEffect(() => {
-    const initAudio = () => {
-      try {
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-        setAudioContext(ctx)
-      } catch (error) {
-        console.error('Error initializing audio context:', error)
-      }
-    }
-    
-    // Initialize on any user interaction
-    const handleUserInteraction = () => {
-      if (!audioContext) {
-        initAudio()
-      }
-    }
-    
-    window.addEventListener('click', handleUserInteraction, { once: true })
-    window.addEventListener('keydown', handleUserInteraction, { once: true })
-    
-    return () => {
-      window.removeEventListener('click', handleUserInteraction)
-      window.removeEventListener('keydown', handleUserInteraction)
-    }
-  }, [audioContext])
-
-  // Function to play bell notification sound
-  const playBellSound = async () => {
+  // Function to play bell notification sound using Web Audio API
+  const playBellSound = () => {
     try {
-      let ctx = audioContext
-      
-      // Create audio context if it doesn't exist
-      if (!ctx) {
-        ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-        setAudioContext(ctx)
+      // Create audio context
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+      if (!AudioContextClass) {
+        console.error('Web Audio API not supported')
+        return
       }
       
-      // Resume audio context if suspended (required by browsers)
-      if (ctx.state === 'suspended') {
-        console.log('Resuming suspended audio context...')
-        await ctx.resume()
-        console.log('Audio context resumed, state:', ctx.state)
-      }
+      const ctx = new AudioContextClass()
+      console.log('Audio context created, state:', ctx.state)
       
-      // Create bell tone with multiple frequencies for a more bell-like sound
-      const oscillator1 = ctx.createOscillator()
-      const oscillator2 = ctx.createOscillator()
-      const gainNode = ctx.createGain()
-      
-      oscillator1.connect(gainNode)
-      oscillator2.connect(gainNode)
-      gainNode.connect(ctx.destination)
-      
-      // Bell frequencies (two oscillators for richer sound)
-      const now = ctx.currentTime
-      oscillator1.frequency.setValueAtTime(800, now)
-      oscillator1.frequency.setValueAtTime(1000, now + 0.1)
-      oscillator1.frequency.setValueAtTime(800, now + 0.2)
-      
-      oscillator2.frequency.setValueAtTime(1200, now)
-      oscillator2.frequency.setValueAtTime(1400, now + 0.1)
-      oscillator2.frequency.setValueAtTime(1200, now + 0.2)
-      
-      oscillator1.type = 'sine'
-      oscillator2.type = 'sine'
-      
-      gainNode.gain.setValueAtTime(0.2, now)
-      gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.6)
-      
-      oscillator1.start(now)
-      oscillator2.start(now)
-      oscillator1.stop(now + 0.6)
-      oscillator2.stop(now + 0.6)
-      
-      console.log('🔔 Bell sound played successfully')
-    } catch (error) {
-      console.error('Error playing bell sound:', error)
-      // Fallback: Use HTML5 audio with a simple tone
-      try {
-        // Create a simple beep using Web Audio API as fallback
-        const fallbackCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-        if (fallbackCtx.state === 'suspended') {
-          await fallbackCtx.resume()
+      // Function to actually play the sound
+      const playTone = () => {
+        try {
+          // Create a bell-like tone with multiple oscillators
+          const osc1 = ctx.createOscillator()
+          const osc2 = ctx.createOscillator()
+          const gain = ctx.createGain()
+          
+          osc1.connect(gain)
+          osc2.connect(gain)
+          gain.connect(ctx.destination)
+          
+          const now = ctx.currentTime
+          
+          // Bell frequencies
+          osc1.frequency.setValueAtTime(800, now)
+          osc1.frequency.setValueAtTime(1000, now + 0.1)
+          osc1.frequency.setValueAtTime(800, now + 0.2)
+          
+          osc2.frequency.setValueAtTime(1200, now)
+          osc2.frequency.setValueAtTime(1400, now + 0.1)
+          osc2.frequency.setValueAtTime(1200, now + 0.2)
+          
+          osc1.type = 'sine'
+          osc2.type = 'sine'
+          
+          gain.gain.setValueAtTime(0.3, now)
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5)
+          
+          osc1.start(now)
+          osc2.start(now)
+          osc1.stop(now + 0.5)
+          osc2.stop(now + 0.5)
+          
+          console.log('🔔 Bell sound played successfully')
+        } catch (error) {
+          console.error('Error playing tone:', error)
         }
-        const osc = fallbackCtx.createOscillator()
-        const gain = fallbackCtx.createGain()
-        osc.connect(gain)
-        gain.connect(fallbackCtx.destination)
-        osc.frequency.value = 800
-        osc.type = 'sine'
-        gain.gain.setValueAtTime(0.3, fallbackCtx.currentTime)
-        gain.gain.exponentialRampToValueAtTime(0.01, fallbackCtx.currentTime + 0.3)
-        osc.start()
-        osc.stop(fallbackCtx.currentTime + 0.3)
-        console.log('🔔 Fallback bell sound played')
-      } catch (fallbackError) {
-        console.error('All audio methods failed:', fallbackError)
       }
+      
+      // Resume if suspended (required by browser autoplay policies)
+      if (ctx.state === 'suspended') {
+        console.log('Audio context suspended, resuming...')
+        ctx.resume().then(() => {
+          console.log('Audio context resumed, state:', ctx.state)
+          playTone()
+        }).catch(err => {
+          console.error('Failed to resume audio context:', err)
+          // Try playing anyway - might work in some browsers
+          playTone()
+        })
+      } else {
+        playTone()
+      }
+    } catch (error) {
+      console.error('Error creating audio context:', error)
     }
   }
 
@@ -244,26 +213,6 @@ export default function AdminPage() {
     if (session?.user?.role === 'ADMIN' && activeTab === 'orders') {
       // Reset previous order IDs when date filter changes to avoid false notifications
       setPreviousOrderIds(new Set())
-      
-      // Initialize audio context if not already done (after user interaction)
-      if (!audioContext) {
-        const initAudio = async () => {
-          try {
-            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-            // Resume if suspended
-            if (ctx.state === 'suspended') {
-              await ctx.resume()
-            }
-            setAudioContext(ctx)
-            console.log('Audio context initialized')
-          } catch (error) {
-            console.error('Error initializing audio context:', error)
-          }
-        }
-        // Try to initialize on mount (may require user interaction)
-        initAudio()
-      }
-      
       fetchOrders()
       
       // Set up real-time updates using shorter polling (every 2 seconds)
@@ -271,7 +220,7 @@ export default function AdminPage() {
       const interval = setInterval(fetchOrders, 2000)
       return () => clearInterval(interval)
     }
-  }, [session, dateFilter, customFromDate, customToDate, activeTab, audioContext])
+  }, [session, dateFilter, customFromDate, customToDate, activeTab])
 
   useEffect(() => {
     if (session?.user?.role === 'ADMIN' && activeTab === 'menu') {
@@ -919,7 +868,11 @@ export default function AdminPage() {
           if (newPendingOrders.length > 0) {
             console.log(`🔔 Detected ${newPendingOrders.length} new pending order(s)`)
             // Play bell sound for new orders
-            playBellSound().catch(err => console.error('Failed to play bell:', err))
+            try {
+              playBellSound()
+            } catch (err) {
+              console.error('Failed to play bell:', err)
+            }
             // Show notification
             toast.success(`🔔 New order received!`, {
               icon: '🔔',
@@ -1099,12 +1052,26 @@ export default function AdminPage() {
           <p className="text-sm sm:text-base text-gray-600">Manage orders and track deliveries</p>
             </div>
             {lastUpdateTime && activeTab === 'orders' && (
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span>Live updates</span>
-                <span className="text-gray-400">
-                  {lastUpdateTime.toLocaleTimeString()}
-                </span>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => {
+                    console.log('Testing bell sound...')
+                    playBellSound()
+                    toast.success('🔔 Test bell sound played')
+                  }}
+                  className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1"
+                  title="Test bell sound"
+                >
+                  <Bell className="w-3 h-3" />
+                  Test Bell
+                </button>
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Live updates</span>
+                  <span className="text-gray-400">
+                    {lastUpdateTime.toLocaleTimeString()}
+                  </span>
+                </div>
               </div>
             )}
         </div>
