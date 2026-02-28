@@ -91,6 +91,7 @@ export default function AdminPage() {
   const [showCustomPicker, setShowCustomPicker] = useState(false)
   const [activeTab, setActiveTab] = useState<'orders' | 'menu'>('orders')
   const [previousOrderIds, setPreviousOrderIds] = useState<Set<string>>(new Set())
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null)
   
   // Menu management state
   const [menuItems, setMenuItems] = useState<any[]>([])
@@ -137,30 +138,105 @@ export default function AdminPage() {
     // Don't redirect if already on admin page
   }, [status, session, router])
 
+  // Initialize audio context after user interaction
+  useEffect(() => {
+    const initAudio = () => {
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+        setAudioContext(ctx)
+      } catch (error) {
+        console.error('Error initializing audio context:', error)
+      }
+    }
+    
+    // Initialize on any user interaction
+    const handleUserInteraction = () => {
+      if (!audioContext) {
+        initAudio()
+      }
+    }
+    
+    window.addEventListener('click', handleUserInteraction, { once: true })
+    window.addEventListener('keydown', handleUserInteraction, { once: true })
+    
+    return () => {
+      window.removeEventListener('click', handleUserInteraction)
+      window.removeEventListener('keydown', handleUserInteraction)
+    }
+  }, [audioContext])
+
   // Function to play bell notification sound
-  const playBellSound = () => {
+  const playBellSound = async () => {
     try {
-      // Create a simple bell tone using Web Audio API
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-      const oscillator = audioContext.createOscillator()
-      const gainNode = audioContext.createGain()
+      let ctx = audioContext
       
-      oscillator.connect(gainNode)
-      gainNode.connect(audioContext.destination)
+      // Create audio context if it doesn't exist
+      if (!ctx) {
+        ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+        setAudioContext(ctx)
+      }
       
-      // Bell-like frequency (multiple tones)
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime)
-      oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.1)
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2)
+      // Resume audio context if suspended (required by browsers)
+      if (ctx.state === 'suspended') {
+        console.log('Resuming suspended audio context...')
+        await ctx.resume()
+        console.log('Audio context resumed, state:', ctx.state)
+      }
       
-      oscillator.type = 'sine'
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
+      // Create bell tone with multiple frequencies for a more bell-like sound
+      const oscillator1 = ctx.createOscillator()
+      const oscillator2 = ctx.createOscillator()
+      const gainNode = ctx.createGain()
       
-      oscillator.start(audioContext.currentTime)
-      oscillator.stop(audioContext.currentTime + 0.5)
+      oscillator1.connect(gainNode)
+      oscillator2.connect(gainNode)
+      gainNode.connect(ctx.destination)
+      
+      // Bell frequencies (two oscillators for richer sound)
+      const now = ctx.currentTime
+      oscillator1.frequency.setValueAtTime(800, now)
+      oscillator1.frequency.setValueAtTime(1000, now + 0.1)
+      oscillator1.frequency.setValueAtTime(800, now + 0.2)
+      
+      oscillator2.frequency.setValueAtTime(1200, now)
+      oscillator2.frequency.setValueAtTime(1400, now + 0.1)
+      oscillator2.frequency.setValueAtTime(1200, now + 0.2)
+      
+      oscillator1.type = 'sine'
+      oscillator2.type = 'sine'
+      
+      gainNode.gain.setValueAtTime(0.2, now)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.6)
+      
+      oscillator1.start(now)
+      oscillator2.start(now)
+      oscillator1.stop(now + 0.6)
+      oscillator2.stop(now + 0.6)
+      
+      console.log('🔔 Bell sound played successfully')
     } catch (error) {
       console.error('Error playing bell sound:', error)
+      // Fallback: Use HTML5 audio with a simple tone
+      try {
+        // Create a simple beep using Web Audio API as fallback
+        const fallbackCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+        if (fallbackCtx.state === 'suspended') {
+          await fallbackCtx.resume()
+        }
+        const osc = fallbackCtx.createOscillator()
+        const gain = fallbackCtx.createGain()
+        osc.connect(gain)
+        gain.connect(fallbackCtx.destination)
+        osc.frequency.value = 800
+        osc.type = 'sine'
+        gain.gain.setValueAtTime(0.3, fallbackCtx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.01, fallbackCtx.currentTime + 0.3)
+        osc.start()
+        osc.stop(fallbackCtx.currentTime + 0.3)
+        console.log('🔔 Fallback bell sound played')
+      } catch (fallbackError) {
+        console.error('All audio methods failed:', fallbackError)
+      }
     }
   }
 
@@ -168,6 +244,26 @@ export default function AdminPage() {
     if (session?.user?.role === 'ADMIN' && activeTab === 'orders') {
       // Reset previous order IDs when date filter changes to avoid false notifications
       setPreviousOrderIds(new Set())
+      
+      // Initialize audio context if not already done (after user interaction)
+      if (!audioContext) {
+        const initAudio = async () => {
+          try {
+            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+            // Resume if suspended
+            if (ctx.state === 'suspended') {
+              await ctx.resume()
+            }
+            setAudioContext(ctx)
+            console.log('Audio context initialized')
+          } catch (error) {
+            console.error('Error initializing audio context:', error)
+          }
+        }
+        // Try to initialize on mount (may require user interaction)
+        initAudio()
+      }
+      
       fetchOrders()
       
       // Set up real-time updates using shorter polling (every 2 seconds)
@@ -175,7 +271,7 @@ export default function AdminPage() {
       const interval = setInterval(fetchOrders, 2000)
       return () => clearInterval(interval)
     }
-  }, [session, dateFilter, customFromDate, customToDate, activeTab])
+  }, [session, dateFilter, customFromDate, customToDate, activeTab, audioContext])
 
   useEffect(() => {
     if (session?.user?.role === 'ADMIN' && activeTab === 'menu') {
@@ -821,8 +917,9 @@ export default function AdminPage() {
           )
           
           if (newPendingOrders.length > 0) {
+            console.log(`🔔 Detected ${newPendingOrders.length} new pending order(s)`)
             // Play bell sound for new orders
-            playBellSound()
+            playBellSound().catch(err => console.error('Failed to play bell:', err))
             // Show notification
             toast.success(`🔔 New order received!`, {
               icon: '🔔',
