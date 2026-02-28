@@ -76,6 +76,8 @@ export default function MenuPage() {
   const [burgerFriesChoice, setBurgerFriesChoice] = useState<Record<string, 'regular' | 'loaded-chicken' | 'loaded-angus' | 'loaded-both'>>({})
   const [burgerDrinkChoice, setBurgerDrinkChoice] = useState<Record<string, string>>({})
   const [burgerDipsChoice, setBurgerDipsChoice] = useState<Record<string, string[]>>({}) // Array of selected dip IDs (max 2)
+  // Heat level state for crispy items
+  const [heatLevelChoice, setHeatLevelChoice] = useState<Record<string, 'classic' | 'heat'>>({})
   const addItem = useCartStore((state) => state.addItem)
 
   useEffect(() => {
@@ -157,6 +159,16 @@ export default function MenuPage() {
     })
   }
 
+  // Helper function to check if item needs heat level option
+  const needsHeatLevel = (item: MenuItem): boolean => {
+    const name = item.name.toLowerCase()
+    return (
+      name.includes('crispy bird') ||
+      name.includes('big bird') ||
+      name.includes('crispy chicken tenders')
+    )
+  }
+
   const openDrawer = async (item: MenuItem) => {
     if (!item.available) {
       toast.error('This item is currently unavailable')
@@ -177,6 +189,10 @@ export default function MenuPage() {
       setBurgerMealSelected((prev) => ({ ...prev, [item.id]: false }))
       setBurgerFriesChoice((prev) => ({ ...prev, [item.id]: 'regular' }))
       setBurgerDrinkChoice((prev) => ({ ...prev, [item.id]: burgerDrinkOptions[0].id }))
+    }
+    // Initialize heat level if not set (default to classic)
+    if (needsHeatLevel(item) && heatLevelChoice[item.id] === undefined) {
+      setHeatLevelChoice((prev) => ({ ...prev, [item.id]: 'classic' }))
     }
   }
 
@@ -240,15 +256,26 @@ export default function MenuPage() {
     const quantity = itemQuantities[item.id] || 1
     const instructions = itemInstructions[item.id] || ''
     
+    // Add heat level if needed (for crispy items)
+    const selectedAddOnsData: {
+      addOnId: string
+      name: string
+      price: number
+    }[] = []
+    
+    if (needsHeatLevel(item)) {
+      const heatLevel = heatLevelChoice[item.id] || 'classic'
+      selectedAddOnsData.push({
+        addOnId: `heat-level-${heatLevel}`,
+        name: `Heat Level: ${heatLevel.charAt(0).toUpperCase() + heatLevel.slice(1)}`,
+        price: 0,
+      })
+    }
+
     // Special meal handling for burgers and wraps
     if (item.category === 'burger' || item.category === 'wrap') {
       const isMeal = burgerMealSelected[item.id]
       let unitPrice = item.price
-      const selectedAddOnsData: {
-        addOnId: string
-        name: string
-        price: number
-      }[] = []
 
       if (isMeal) {
         // Base burger meal (+£2)
@@ -342,6 +369,13 @@ export default function MenuPage() {
         delete updated[item.id]
         return updated
       })
+      if (needsHeatLevel(item)) {
+        setHeatLevelChoice((prev) => {
+          const updated = { ...prev }
+          delete updated[item.id]
+          return updated
+        })
+      }
       closeDrawer()
       return
     }
@@ -349,7 +383,7 @@ export default function MenuPage() {
     // Default handling for non-burgers (using add-ons from API)
     const selectedAddOnId = selectedMeal[item.id] || null
     const selectedAddOn = selectedAddOnId ? item.addOns?.find((a) => a.id === selectedAddOnId) : null
-    const selectedAddOnsData = selectedAddOn
+    const nonBurgerAddOns = selectedAddOn
       ? [
           {
             addOnId: selectedAddOn.id,
@@ -358,6 +392,9 @@ export default function MenuPage() {
           },
         ]
       : []
+    
+    // Combine heat level (if needed) with other add-ons
+    const finalSelectedAddOnsData = [...selectedAddOnsData, ...nonBurgerAddOns]
 
     const basePrice = item.price
     const addOnPrice = selectedAddOn ? selectedAddOn.price : 0
@@ -372,7 +409,7 @@ export default function MenuPage() {
         instructions: instructions || undefined,
         type: 'menuItem',
         menuItemId: item.id,
-        selectedAddOns: selectedAddOnsData,
+        selectedAddOns: finalSelectedAddOnsData,
       })
     }
     
@@ -391,6 +428,13 @@ export default function MenuPage() {
       delete newMeal[item.id]
       return newMeal
     })
+    if (needsHeatLevel(item)) {
+      setHeatLevelChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+    }
     closeDrawer()
   }
 
@@ -689,6 +733,50 @@ export default function MenuPage() {
                         </button>
                       </div>
                     </div>
+
+              {/* Heat Level Selection - For crispy items */}
+              {needsHeatLevel(selectedItem) && (
+                <div>
+                  <label className="block text-base font-semibold text-gray-700 mb-3">
+                    Heat Level:
+                  </label>
+                  <div className="space-y-2">
+                    {[
+                      { id: 'classic', label: 'Classic' },
+                      { id: 'heat', label: 'Heat' },
+                    ].map((option) => {
+                      const currentChoice = heatLevelChoice[selectedItem.id] || 'classic'
+                      const isSelected = currentChoice === option.id
+                      return (
+                        <label
+                          key={option.id}
+                          className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                            isSelected
+                              ? 'border-primary-600 bg-primary-50'
+                              : 'border-gray-200 bg-white hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="radio"
+                              name={`heat-level-${selectedItem.id}`}
+                              checked={isSelected}
+                              onChange={() =>
+                                setHeatLevelChoice((prev) => ({
+                                  ...prev,
+                                  [selectedItem.id]: option.id as 'classic' | 'heat',
+                                }))
+                              }
+                              className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                            />
+                            <span className="font-medium text-gray-900">{option.label}</span>
+                          </div>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Make it a meal - Burgers and Wraps have special fries & drink options */}
               {(selectedItem.category === 'burger' || selectedItem.category === 'wrap') && (
