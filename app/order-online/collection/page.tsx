@@ -8,23 +8,9 @@ import toast from 'react-hot-toast'
 const restaurants = [
   {
     id: 1,
-    name: 'MeatBirdz City Centre',
-    address: '123 High Street, Birmingham B1 1AA',
+    name: 'MeatBirdz Collection Point',
+    address: '198 heybarnes road B10 9JF',
     phone: '0121 123 4567',
-    hours: 'Mon-Sun: 11:00 AM - 11:00 PM',
-  },
-  {
-    id: 2,
-    name: 'MeatBirdz Edgbaston',
-    address: '456 Hagley Road, Birmingham B15 2TT',
-    phone: '0121 234 5678',
-    hours: 'Mon-Sun: 11:00 AM - 11:00 PM',
-  },
-  {
-    id: 3,
-    name: 'MeatBirdz Digbeth',
-    address: '789 Digbeth High Street, Birmingham B5 6DY',
-    phone: '0121 345 6789',
     hours: 'Mon-Sun: 11:00 AM - 11:00 PM',
   },
 ]
