@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, XCircle, Clock, Package, Bell, BellRing, X, Banknote, CreditCard, DollarSign, Calendar, Filter, ChevronDown, Mail, Phone, MapPin, Utensils, Plus, Trash2, Edit, Save, X as XIcon, GripVertical } from 'lucide-react'
@@ -91,7 +91,6 @@ export default function AdminPage() {
   const [showCustomPicker, setShowCustomPicker] = useState(false)
   const [activeTab, setActiveTab] = useState<'orders' | 'menu'>('orders')
   const [previousOrderIds, setPreviousOrderIds] = useState<Set<string>>(new Set())
-  const audioContextRef = useRef<AudioContext | null>(null)
   
   // Menu management state
   const [menuItems, setMenuItems] = useState<any[]>([])
@@ -138,166 +137,6 @@ export default function AdminPage() {
     // Don't redirect if already on admin page
   }, [status, session, router])
 
-  // Initialize audio context on user interaction
-  const initAudioContext = async () => {
-    if (!audioContextRef.current) {
-      try {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
-        if (AudioContextClass) {
-          const ctx = new AudioContextClass()
-          audioContextRef.current = ctx
-          console.log('Audio context initialized, state:', ctx.state)
-          
-          // Resume if suspended
-          if (ctx.state === 'suspended') {
-            await ctx.resume()
-            console.log('Audio context resumed, state:', ctx.state)
-          }
-          
-          // Keep audio context alive by playing a silent sound periodically
-          // This prevents the browser from suspending it
-          const keepAlive = () => {
-            if (audioContextRef.current && audioContextRef.current.state === 'running') {
-              try {
-                const osc = audioContextRef.current.createOscillator()
-                const gain = audioContextRef.current.createGain()
-                osc.connect(gain)
-                gain.connect(audioContextRef.current.destination)
-                gain.gain.value = 0.001 // Very quiet, almost silent
-                osc.frequency.value = 1 // Very low frequency
-                osc.start()
-                osc.stop(audioContextRef.current.currentTime + 0.01)
-              } catch (e) {
-                // Ignore errors in keep-alive
-              }
-            }
-          }
-          
-          // Play keep-alive sound every 10 seconds
-          const keepAliveInterval = setInterval(() => {
-            if (audioContextRef.current && audioContextRef.current.state === 'running') {
-              keepAlive()
-            } else {
-              clearInterval(keepAliveInterval)
-            }
-          }, 10000)
-        }
-      } catch (error) {
-        console.error('Error initializing audio context:', error)
-      }
-    }
-  }
-
-  // Function to play bell notification sound
-  const playBellSound = async () => {
-    console.log('🔔 Attempting to play bell sound...')
-    console.log('Audio context state:', audioContextRef.current?.state)
-    
-    // Initialize audio context if not already done
-    if (!audioContextRef.current) {
-      console.log('Initializing audio context...')
-      initAudioContext()
-      // Wait a bit for initialization
-      await new Promise(resolve => setTimeout(resolve, 100))
-    }
-    
-    let ctx = audioContextRef.current
-    if (!ctx) {
-      console.error('❌ Audio context not available')
-      return
-    }
-    
-    // Check if context is closed and recreate if needed
-    if (ctx.state === 'closed') {
-      console.log('Audio context closed, recreating...')
-      audioContextRef.current = null
-      initAudioContext()
-      await new Promise(resolve => setTimeout(resolve, 100))
-      ctx = audioContextRef.current
-      if (!ctx) {
-        console.error('❌ Failed to recreate audio context')
-        return
-      }
-    }
-    
-    try {
-      // Always try to resume first (browsers may suspend it)
-      if (ctx.state === 'suspended') {
-        console.log('Audio context suspended, resuming...')
-        await ctx.resume()
-        console.log('Audio context resumed, state:', ctx.state)
-      }
-      
-      // Double check state after resume
-      if (ctx.state !== 'running') {
-        console.warn('Audio context not running after resume, state:', ctx.state)
-        // Try one more time
-        if (ctx.state === 'suspended') {
-          await ctx.resume()
-        }
-      }
-      
-      // Play the tone
-      console.log('Playing tone, audio context state:', ctx.state)
-      playTone(ctx)
-    } catch (error) {
-      console.error('Error playing bell sound:', error)
-      // Try to reinitialize if there's an error
-      try {
-        audioContextRef.current = null
-        await initAudioContext()
-        await new Promise(resolve => setTimeout(resolve, 100))
-        const retryCtx = audioContextRef.current
-        if (retryCtx) {
-          if (retryCtx.state === 'suspended') {
-            await retryCtx.resume()
-          }
-          playTone(retryCtx)
-        }
-      } catch (retryError) {
-        console.error('Failed to retry audio playback:', retryError)
-      }
-    }
-  }
-
-  const playTone = (ctx: AudioContext) => {
-    try {
-      // Create a bell-like tone with multiple oscillators
-      const osc1 = ctx.createOscillator()
-      const osc2 = ctx.createOscillator()
-      const gain = ctx.createGain()
-      
-      osc1.connect(gain)
-      osc2.connect(gain)
-      gain.connect(ctx.destination)
-      
-      const now = ctx.currentTime
-      
-      // Bell frequencies
-      osc1.frequency.setValueAtTime(800, now)
-      osc1.frequency.setValueAtTime(1000, now + 0.1)
-      osc1.frequency.setValueAtTime(800, now + 0.2)
-      
-      osc2.frequency.setValueAtTime(1200, now)
-      osc2.frequency.setValueAtTime(1400, now + 0.1)
-      osc2.frequency.setValueAtTime(1200, now + 0.2)
-      
-      osc1.type = 'sine'
-      osc2.type = 'sine'
-      
-      gain.gain.setValueAtTime(0.5, now)
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6)
-      
-      osc1.start(now)
-      osc2.start(now)
-      osc1.stop(now + 0.6)
-      osc2.stop(now + 0.6)
-      
-      console.log('🔔 Bell sound played successfully')
-    } catch (error) {
-      console.error('Error playing tone:', error)
-    }
-  }
 
   useEffect(() => {
     if (session?.user?.role === 'ADMIN' && activeTab === 'orders') {
@@ -957,14 +796,6 @@ export default function AdminPage() {
           
           if (newPendingOrders.length > 0) {
             console.log(`🔔 Detected ${newPendingOrders.length} new pending order(s)`)
-            // Play bell sound for new orders (only if audio context is initialized)
-            if (audioContextRef.current) {
-              playBellSound().catch(err => {
-                console.error('Failed to play bell:', err)
-              })
-            } else {
-              console.warn('⚠️ Audio context not initialized - bell sound skipped. Click "Test Bell" to enable audio.')
-            }
             // Show notification
             toast.success(`🔔 New order received!`, {
               icon: '🔔',
@@ -1145,20 +976,6 @@ export default function AdminPage() {
             </div>
             {lastUpdateTime && activeTab === 'orders' && (
               <div className="flex items-center gap-4">
-                <button
-                  onClick={async () => {
-                    console.log('Testing bell sound...')
-                    initAudioContext() // Initialize on click
-                    await new Promise(resolve => setTimeout(resolve, 100))
-                    await playBellSound()
-                    toast.success('🔔 Test bell sound played')
-                  }}
-                  className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1"
-                  title="Test bell sound (click to enable audio)"
-                >
-                  <Bell className="w-3 h-3" />
-                  Test Bell
-                </button>
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                   <span>Live updates</span>
