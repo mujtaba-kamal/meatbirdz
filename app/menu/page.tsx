@@ -48,6 +48,21 @@ const burgerDipOptions = [
   { id: 'tomato', label: 'Tomato' },
 ]
 
+// Tender quantity options
+const crispyTenderOptions = [
+  { id: '3', quantity: 3, price: 4.99 },
+  { id: '6', quantity: 6, price: 6.99 },
+  { id: '9', quantity: 9, price: 8.99 },
+  { id: '12', quantity: 12, price: 11.99 },
+]
+
+const chargrilledTenderOptions = [
+  { id: '3', quantity: 3, price: 5.99 },
+  { id: '6', quantity: 6, price: 7.99 },
+  { id: '9', quantity: 9, price: 9.99 },
+  { id: '12', quantity: 12, price: 12.99 },
+]
+
 const categories = [
   { id: 'burger', name: 'Burgers', emoji: '🍔' },
   { id: 'wrap', name: 'Wraps', emoji: '🌯' },
@@ -78,6 +93,8 @@ export default function MenuPage() {
   const [burgerDipsChoice, setBurgerDipsChoice] = useState<Record<string, string[]>>({}) // Array of selected dip IDs (max 2)
   // Heat level state for crispy items
   const [heatLevelChoice, setHeatLevelChoice] = useState<Record<string, 'classic' | 'heat'>>({})
+  // Tender quantity selection state
+  const [tenderQuantityChoice, setTenderQuantityChoice] = useState<Record<string, string>>({}) // menuItemId -> selected quantity option id (e.g., '3', '6', '9', '12')
   const addItem = useCartStore((state) => state.addItem)
 
   useEffect(() => {
@@ -169,6 +186,23 @@ export default function MenuPage() {
     )
   }
 
+  // Helper function to check if item is a tender
+  const isTender = (item: MenuItem): boolean => {
+    const name = item.name.toLowerCase()
+    return name.includes('crispy chicken tenders') || name.includes('chargrilled tenders')
+  }
+
+  // Helper function to get tender quantity options
+  const getTenderOptions = (item: MenuItem) => {
+    const name = item.name.toLowerCase()
+    if (name.includes('crispy chicken tenders')) {
+      return crispyTenderOptions
+    } else if (name.includes('chargrilled tenders')) {
+      return chargrilledTenderOptions
+    }
+    return []
+  }
+
   const openDrawer = async (item: MenuItem) => {
     if (!item.available) {
       toast.error('This item is currently unavailable')
@@ -194,6 +228,10 @@ export default function MenuPage() {
     if (needsHeatLevel(item) && heatLevelChoice[item.id] === undefined) {
       setHeatLevelChoice((prev) => ({ ...prev, [item.id]: 'classic' }))
     }
+    // Initialize tender quantity if not set (default to 3)
+    if (isTender(item) && tenderQuantityChoice[item.id] === undefined) {
+      setTenderQuantityChoice((prev) => ({ ...prev, [item.id]: '3' }))
+    }
   }
 
   const closeDrawer = () => {
@@ -212,6 +250,14 @@ export default function MenuPage() {
   }
 
   const getItemTotalPrice = (item: MenuItem): number => {
+    // Special pricing for tenders (use selected quantity option price)
+    if (isTender(item)) {
+      const selectedQuantityId = tenderQuantityChoice[item.id] || '3'
+      const tenderOptions = getTenderOptions(item)
+      const selectedOption = tenderOptions.find((opt) => opt.id === selectedQuantityId) || tenderOptions[0]
+      return selectedOption.price
+    }
+
     const quantity = itemQuantities[item.id] || 1
 
     // Special meal logic for burgers and wraps
@@ -253,7 +299,6 @@ export default function MenuPage() {
       return
     }
     
-    const quantity = itemQuantities[item.id] || 1
     const instructions = itemInstructions[item.id] || ''
     
     // Add heat level if needed (for crispy items)
@@ -271,6 +316,59 @@ export default function MenuPage() {
         price: 0,
       })
     }
+
+    // Special handling for tenders (use selected quantity option)
+    if (isTender(item)) {
+      const selectedQuantityId = tenderQuantityChoice[item.id] || '3'
+      const tenderOptions = getTenderOptions(item)
+      const selectedOption = tenderOptions.find((opt) => opt.id === selectedQuantityId) || tenderOptions[0]
+      
+      // Add quantity info to add-ons
+      selectedAddOnsData.push({
+        addOnId: `tender-quantity-${selectedOption.id}`,
+        name: `${selectedOption.quantity}x Tenders`,
+        price: 0,
+      })
+      
+      const itemTotalPrice = selectedOption.price
+      
+      addItem({
+        id: `${item.id}-${Date.now()}`,
+        name: item.name,
+        price: itemTotalPrice,
+        image: item.image || undefined,
+        instructions: instructions || undefined,
+        type: 'menuItem',
+        menuItemId: item.id,
+        selectedAddOns: selectedAddOnsData,
+        quantity: 1,
+      })
+      
+      toast.success(`${selectedOption.quantity}x ${item.name} added to cart`)
+      
+      // Reset and close drawer
+      setItemInstructions((prev) => {
+        const newInstructions = { ...prev }
+        delete newInstructions[item.id]
+        return newInstructions
+      })
+      if (needsHeatLevel(item)) {
+        setHeatLevelChoice((prev) => {
+          const updated = { ...prev }
+          delete updated[item.id]
+          return updated
+        })
+      }
+      setTenderQuantityChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      closeDrawer()
+      return
+    }
+
+    const quantity = itemQuantities[item.id] || 1
 
     // Special meal handling for burgers and wraps
     if (item.category === 'burger' || item.category === 'wrap') {
@@ -709,30 +807,76 @@ export default function MenuPage() {
 
               {/* Price */}
               <div className="text-2xl font-extrabold text-primary-600">
-                £{selectedItem.price.toFixed(2)}
+                £{getItemTotalPrice(selectedItem).toFixed(2)}
               </div>
 
-                    {/* Quantity Controls */}
-                    <div className="flex items-center justify-between">
-                <label className="text-base font-semibold text-gray-700">Quantity:</label>
-                      <div className="flex items-center gap-3">
-                        <button
-                    onClick={() => updateQuantity(selectedItem.id, -1)}
-                    className="w-10 h-10 rounded-full bg-primary-100 hover:bg-primary-200 text-primary-600 flex items-center justify-center transition-colors"
-                  >
-                    <Minus className="w-5 h-5" />
-                        </button>
-                  <span className="text-xl font-bold text-gray-900 w-8 text-center">
-                    {itemQuantities[selectedItem.id] || 1}
-                        </span>
-                        <button
-                    onClick={() => updateQuantity(selectedItem.id, 1)}
-                    className="w-10 h-10 rounded-full bg-primary-100 hover:bg-primary-200 text-primary-600 flex items-center justify-center transition-colors"
-                  >
-                    <Plus className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </div>
+              {/* Quantity Selection - Special handling for tenders */}
+              {isTender(selectedItem) ? (
+                <div>
+                  <label className="block text-base font-semibold text-gray-700 mb-3">
+                    Select Quantity:
+                  </label>
+                  <div className="space-y-2">
+                    {getTenderOptions(selectedItem).map((option) => {
+                      const currentChoice = tenderQuantityChoice[selectedItem.id] || '3'
+                      const isSelected = currentChoice === option.id
+                      return (
+                        <label
+                          key={option.id}
+                          className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                            isSelected
+                              ? 'border-primary-600 bg-primary-50'
+                              : 'border-gray-200 bg-white hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="radio"
+                              name={`tender-quantity-${selectedItem.id}`}
+                              checked={isSelected}
+                              onChange={() =>
+                                setTenderQuantityChoice((prev) => ({
+                                  ...prev,
+                                  [selectedItem.id]: option.id,
+                                }))
+                              }
+                              className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                            />
+                            <span className="font-medium text-gray-900">
+                              {option.quantity}x
+                            </span>
+                          </div>
+                          <span className="text-primary-600 font-semibold">
+                            £{option.price.toFixed(2)}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                /* Regular Quantity Controls for non-tenders */
+                <div className="flex items-center justify-between">
+                  <label className="text-base font-semibold text-gray-700">Quantity:</label>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => updateQuantity(selectedItem.id, -1)}
+                      className="w-10 h-10 rounded-full bg-primary-100 hover:bg-primary-200 text-primary-600 flex items-center justify-center transition-colors"
+                    >
+                      <Minus className="w-5 h-5" />
+                    </button>
+                    <span className="text-xl font-bold text-gray-900 w-8 text-center">
+                      {itemQuantities[selectedItem.id] || 1}
+                    </span>
+                    <button
+                      onClick={() => updateQuantity(selectedItem.id, 1)}
+                      className="w-10 h-10 rounded-full bg-primary-100 hover:bg-primary-200 text-primary-600 flex items-center justify-center transition-colors"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Heat Level Selection - For crispy items */}
               {needsHeatLevel(selectedItem) && (
