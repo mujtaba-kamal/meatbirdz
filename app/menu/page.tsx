@@ -172,6 +172,12 @@ export default function MenuPage() {
     if (!selectedMeal[item.id]) {
       setSelectedMeal((prev) => ({ ...prev, [item.id]: null }))
     }
+    // Initialize burger/wrap meal state if not set
+    if ((item.category === 'burger' || item.category === 'wrap') && burgerMealSelected[item.id] === undefined) {
+      setBurgerMealSelected((prev) => ({ ...prev, [item.id]: false }))
+      setBurgerFriesChoice((prev) => ({ ...prev, [item.id]: 'regular' }))
+      setBurgerDrinkChoice((prev) => ({ ...prev, [item.id]: burgerDrinkOptions[0].id }))
+    }
   }
 
   const closeDrawer = () => {
@@ -192,8 +198,8 @@ export default function MenuPage() {
   const getItemTotalPrice = (item: MenuItem): number => {
     const quantity = itemQuantities[item.id] || 1
 
-    // Special meal logic for burgers
-    if (item.category === 'burger') {
+    // Special meal logic for burgers and wraps
+    if (item.category === 'burger' || item.category === 'wrap') {
       let unitPrice = item.price
       const isMeal = burgerMealSelected[item.id]
 
@@ -234,8 +240,8 @@ export default function MenuPage() {
     const quantity = itemQuantities[item.id] || 1
     const instructions = itemInstructions[item.id] || ''
     
-    // Special meal handling for burgers
-    if (item.category === 'burger') {
+    // Special meal handling for burgers and wraps
+    if (item.category === 'burger' || item.category === 'wrap') {
       const isMeal = burgerMealSelected[item.id]
       let unitPrice = item.price
       const selectedAddOnsData: {
@@ -248,7 +254,7 @@ export default function MenuPage() {
         // Base burger meal (+£2)
         unitPrice += 2
         selectedAddOnsData.push({
-          addOnId: 'burger-meal',
+          addOnId: item.category === 'burger' ? 'burger-meal' : 'wrap-meal',
           name: 'Make it a meal (Fries + Drink)',
           price: 2,
         })
@@ -257,8 +263,9 @@ export default function MenuPage() {
         const friesChoice = burgerFriesChoice[item.id] || 'regular'
         const friesOption = burgerFriesOptions.find((opt) => opt.id === friesChoice) || burgerFriesOptions[0]
         unitPrice += friesOption.price
+        const prefix = item.category === 'burger' ? 'burger' : 'wrap'
         selectedAddOnsData.push({
-          addOnId: `burger-fries-${friesOption.id}`,
+          addOnId: `${prefix}-fries-${friesOption.id}`,
           name: friesOption.label,
           price: friesOption.price,
         })
@@ -268,12 +275,12 @@ export default function MenuPage() {
         const drinkOption =
           burgerDrinkOptions.find((d) => d.id === drinkChoiceId) || burgerDrinkOptions[0]
         selectedAddOnsData.push({
-          addOnId: `burger-drink-${drinkOption.id}`,
+          addOnId: `${prefix}-drink-${drinkOption.id}`,
           name: `Drink: ${drinkOption.label}`,
           price: 0,
         })
 
-        // Dips for all burgers with loaded fries
+        // Dips for all burgers and wraps with loaded fries
         const hasLoadedFries = friesChoice !== 'regular'
         if (hasLoadedFries) {
           const selectedDips = burgerDipsChoice[item.id] || []
@@ -281,7 +288,7 @@ export default function MenuPage() {
             const dipOption = burgerDipOptions.find((d) => d.id === dipId)
             if (dipOption) {
               selectedAddOnsData.push({
-                addOnId: `burger-dip-${dipOption.id}`,
+                addOnId: `${prefix}-dip-${dipOption.id}`,
                 name: `Dip: ${dipOption.label}`,
                 price: 0,
               })
@@ -683,8 +690,8 @@ export default function MenuPage() {
                       </div>
                     </div>
 
-              {/* Make it a meal - Burgers have special fries & drink options */}
-              {selectedItem.category === 'burger' && (
+              {/* Make it a meal - Burgers and Wraps have special fries & drink options */}
+              {(selectedItem.category === 'burger' || selectedItem.category === 'wrap') && (
                 <div>
                   <label className="block text-base font-semibold text-gray-700 mb-3">
                     Make it a meal (Optional):
@@ -745,7 +752,7 @@ export default function MenuPage() {
                                 <div className="flex items-center gap-3 flex-1">
                                   <input
                                     type="radio"
-                                    name={`burger-fries-${selectedItem.id}`}
+                                    name={`${selectedItem.category}-fries-${selectedItem.id}`}
                                     checked={isSelected}
                                     onChange={() => {
                                       const newFriesChoice = option.id as 'regular' | 'loaded-chicken' | 'loaded-angus' | 'loaded-both'
@@ -795,7 +802,7 @@ export default function MenuPage() {
                                 <div className="flex items-center gap-3">
                                   <input
                                     type="radio"
-                                    name={`burger-drink-${selectedItem.id}`}
+                                    name={`${selectedItem.category}-drink-${selectedItem.id}`}
                                     checked={isSelected}
                                     onChange={() =>
                                       setBurgerDrinkChoice((prev) => ({
