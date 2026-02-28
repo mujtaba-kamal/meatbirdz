@@ -333,7 +333,7 @@ export default function MenuPage() {
       if (!buddyBoxBurgerQuantities[item.id]) {
         setBuddyBoxBurgerQuantities((prev) => ({
           ...prev,
-          [item.id]: { [classicBoxBurgerOptions[0].id]: 2 }, // Default: 2 of first burger
+          [item.id]: {}, // Start empty
         }))
       }
       if (boxFriesChoice[item.id] === undefined) {
@@ -342,7 +342,7 @@ export default function MenuPage() {
       if (!buddyBoxDrinkQuantities[item.id]) {
         setBuddyBoxDrinkQuantities((prev) => ({
           ...prev,
-          [item.id]: { [burgerDrinkOptions[0].id]: 2 }, // Default: 2 of first drink
+          [item.id]: {}, // Start empty
         }))
       }
       if (!buddyBoxDipQuantities[item.id]) {
@@ -357,7 +357,7 @@ export default function MenuPage() {
       if (!houseBoxBurgerQuantities[item.id]) {
         setHouseBoxBurgerQuantities((prev) => ({
           ...prev,
-          [item.id]: { [classicBoxBurgerOptions[0].id]: 4 }, // Default: 4 of first burger
+          [item.id]: {}, // Start empty
         }))
       }
       if (boxFriesChoice[item.id] === undefined) {
@@ -366,7 +366,7 @@ export default function MenuPage() {
       if (!houseBoxDrinkQuantities[item.id]) {
         setHouseBoxDrinkQuantities((prev) => ({
           ...prev,
-          [item.id]: { [burgerDrinkOptions[0].id]: 4 }, // Default: 4 of first drink
+          [item.id]: {}, // Start empty
         }))
       }
       if (!houseBoxDipQuantities[item.id]) {
@@ -528,6 +528,30 @@ export default function MenuPage() {
     const selectedAddOn = selectedAddOnId ? item.addOns?.find((a) => a.id === selectedAddOnId) : null
     const addOnPrice = selectedAddOn ? selectedAddOn.price * quantity : 0
     return basePrice + addOnPrice
+  }
+
+  // Validation function to check if box selections are complete
+  const isBoxSelectionComplete = (item: MenuItem): boolean => {
+    if (isBuddyBox(item)) {
+      const burgerTotal = Object.values(buddyBoxBurgerQuantities[item.id] || {}).reduce((sum, q) => sum + q, 0)
+      const drinkTotal = Object.values(buddyBoxDrinkQuantities[item.id] || {}).reduce((sum, q) => sum + q, 0)
+      const dipTotal = Object.values(buddyBoxDipQuantities[item.id] || {}).reduce((sum, q) => sum + q, 0)
+      return burgerTotal === 2 && drinkTotal === 2 && dipTotal === 2
+    }
+    if (isHouseBox(item)) {
+      const burgerTotal = Object.values(houseBoxBurgerQuantities[item.id] || {}).reduce((sum, q) => sum + q, 0)
+      const drinkTotal = Object.values(houseBoxDrinkQuantities[item.id] || {}).reduce((sum, q) => sum + q, 0)
+      const dipTotal = Object.values(houseBoxDipQuantities[item.id] || {}).reduce((sum, q) => sum + q, 0)
+      return burgerTotal === 4 && drinkTotal === 4 && dipTotal === 8
+    }
+    if (isClassicBox(item)) {
+      // Classic Box has 1 burger, 1 drink, 2 dips - check if all are selected
+      const burgerSelected = !!boxBurgerChoice[item.id]
+      const drinkSelected = !!boxDrinkChoice[item.id]
+      const dipsSelected = (boxDipsChoice[item.id] || []).length === 2
+      return burgerSelected && drinkSelected && dipsSelected
+    }
+    return true // Other items don't need validation
   }
 
   const handleAddToCart = (item: MenuItem) => {
@@ -3047,9 +3071,38 @@ export default function MenuPage() {
               <div className="sticky bottom-0 bg-white pt-4 border-t border-gray-200 -mx-4 px-4 pb-4">
                     <button
                   onClick={() => handleAddToCart(selectedItem)}
-                  className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-4 rounded-xl font-semibold hover:from-primary-700 hover:to-primary-800 transition-all shadow-lg"
+                  disabled={isBox(selectedItem) && !isBoxSelectionComplete(selectedItem)}
+                  className={`w-full py-4 rounded-xl font-semibold transition-all shadow-lg ${
+                    isBox(selectedItem) && !isBoxSelectionComplete(selectedItem)
+                      ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800'
+                  }`}
                 >
                   {(() => {
+                    if (isBox(selectedItem) && !isBoxSelectionComplete(selectedItem)) {
+                      if (isBuddyBox(selectedItem)) {
+                        const burgerTotal = Object.values(buddyBoxBurgerQuantities[selectedItem.id] || {}).reduce((sum, q) => sum + q, 0)
+                        const drinkTotal = Object.values(buddyBoxDrinkQuantities[selectedItem.id] || {}).reduce((sum, q) => sum + q, 0)
+                        const dipTotal = Object.values(buddyBoxDipQuantities[selectedItem.id] || {}).reduce((sum, q) => sum + q, 0)
+                        return `Please select ${2 - burgerTotal} more burger(s), ${2 - drinkTotal} more drink(s), ${2 - dipTotal} more dip(s)`
+                      }
+                      if (isHouseBox(selectedItem)) {
+                        const burgerTotal = Object.values(houseBoxBurgerQuantities[selectedItem.id] || {}).reduce((sum, q) => sum + q, 0)
+                        const drinkTotal = Object.values(houseBoxDrinkQuantities[selectedItem.id] || {}).reduce((sum, q) => sum + q, 0)
+                        const dipTotal = Object.values(houseBoxDipQuantities[selectedItem.id] || {}).reduce((sum, q) => sum + q, 0)
+                        return `Please select ${4 - burgerTotal} more burger(s), ${4 - drinkTotal} more drink(s), ${8 - dipTotal} more dip(s)`
+                      }
+                      if (isClassicBox(selectedItem)) {
+                        const burgerSelected = !!boxBurgerChoice[selectedItem.id]
+                        const drinkSelected = !!boxDrinkChoice[selectedItem.id]
+                        const dipsSelected = (boxDipsChoice[selectedItem.id] || []).length
+                        const missing = []
+                        if (!burgerSelected) missing.push('1 burger')
+                        if (!drinkSelected) missing.push('1 drink')
+                        if (dipsSelected < 2) missing.push(`${2 - dipsSelected} more dip(s)`)
+                        return `Please select ${missing.join(', ')}`
+                      }
+                    }
                     const quantity = itemQuantities[selectedItem.id] || 1
                     const totalPrice = getItemTotalPrice(selectedItem)
                     return `Add ${quantity > 1 ? `${quantity}x ` : ''}to Cart - £${totalPrice.toFixed(2)}`
