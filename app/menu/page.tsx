@@ -119,9 +119,22 @@ export default function MenuPage() {
   const [buddyBoxFirstDrink, setBuddyBoxFirstDrink] = useState<Record<string, string>>({}) // menuItemId -> first drink option id
   const [buddyBoxSecondDrink, setBuddyBoxSecondDrink] = useState<Record<string, string>>({}) // menuItemId -> second drink option id
   // House Box state (4 burgers, 4 drinks, 8 dips)
-  const [houseBoxBurgerChoices, setHouseBoxBurgerChoices] = useState<Record<string, string[]>>({}) // menuItemId -> selected burger option ids (max 4)
-  const [houseBoxDrinkChoices, setHouseBoxDrinkChoices] = useState<Record<string, string[]>>({}) // menuItemId -> selected drink option ids (max 4)
-  const [houseBoxDipsChoice, setHouseBoxDipsChoice] = useState<Record<string, string[]>>({}) // menuItemId -> selected dips (max 8)
+  const [houseBoxFirstBurger, setHouseBoxFirstBurger] = useState<Record<string, string>>({}) // menuItemId -> first burger option id
+  const [houseBoxSecondBurger, setHouseBoxSecondBurger] = useState<Record<string, string>>({}) // menuItemId -> second burger option id
+  const [houseBoxThirdBurger, setHouseBoxThirdBurger] = useState<Record<string, string>>({}) // menuItemId -> third burger option id
+  const [houseBoxFourthBurger, setHouseBoxFourthBurger] = useState<Record<string, string>>({}) // menuItemId -> fourth burger option id
+  const [houseBoxFirstDrink, setHouseBoxFirstDrink] = useState<Record<string, string>>({}) // menuItemId -> first drink option id
+  const [houseBoxSecondDrink, setHouseBoxSecondDrink] = useState<Record<string, string>>({}) // menuItemId -> second drink option id
+  const [houseBoxThirdDrink, setHouseBoxThirdDrink] = useState<Record<string, string>>({}) // menuItemId -> third drink option id
+  const [houseBoxFourthDrink, setHouseBoxFourthDrink] = useState<Record<string, string>>({}) // menuItemId -> fourth drink option id
+  const [houseBoxFirstDip, setHouseBoxFirstDip] = useState<Record<string, string>>({}) // menuItemId -> first dip option id
+  const [houseBoxSecondDip, setHouseBoxSecondDip] = useState<Record<string, string>>({}) // menuItemId -> second dip option id
+  const [houseBoxThirdDip, setHouseBoxThirdDip] = useState<Record<string, string>>({}) // menuItemId -> third dip option id
+  const [houseBoxFourthDip, setHouseBoxFourthDip] = useState<Record<string, string>>({}) // menuItemId -> fourth dip option id
+  const [houseBoxFifthDip, setHouseBoxFifthDip] = useState<Record<string, string>>({}) // menuItemId -> fifth dip option id
+  const [houseBoxSixthDip, setHouseBoxSixthDip] = useState<Record<string, string>>({}) // menuItemId -> sixth dip option id
+  const [houseBoxSeventhDip, setHouseBoxSeventhDip] = useState<Record<string, string>>({}) // menuItemId -> seventh dip option id
+  const [houseBoxEighthDip, setHouseBoxEighthDip] = useState<Record<string, string>>({}) // menuItemId -> eighth dip option id
   const addItem = useCartStore((state) => state.addItem)
 
   useEffect(() => {
@@ -318,14 +331,32 @@ export default function MenuPage() {
     }
     // Initialize House Box customization if not set
     if (isHouseBox(item)) {
-      if (houseBoxBurgerChoices[item.id] === undefined) {
-        setHouseBoxBurgerChoices((prev) => ({ ...prev, [item.id]: [classicBoxBurgerOptions[0].id] }))
+      if (houseBoxFirstBurger[item.id] === undefined) {
+        setHouseBoxFirstBurger((prev) => ({ ...prev, [item.id]: classicBoxBurgerOptions[0].id }))
+      }
+      if (houseBoxSecondBurger[item.id] === undefined) {
+        setHouseBoxSecondBurger((prev) => ({ ...prev, [item.id]: classicBoxBurgerOptions[0].id }))
+      }
+      if (houseBoxThirdBurger[item.id] === undefined) {
+        setHouseBoxThirdBurger((prev) => ({ ...prev, [item.id]: classicBoxBurgerOptions[0].id }))
+      }
+      if (houseBoxFourthBurger[item.id] === undefined) {
+        setHouseBoxFourthBurger((prev) => ({ ...prev, [item.id]: classicBoxBurgerOptions[0].id }))
       }
       if (boxFriesChoice[item.id] === undefined) {
         setBoxFriesChoice((prev) => ({ ...prev, [item.id]: classicBoxFriesOptions[0].id }))
       }
-      if (houseBoxDrinkChoices[item.id] === undefined) {
-        setHouseBoxDrinkChoices((prev) => ({ ...prev, [item.id]: [burgerDrinkOptions[0].id] }))
+      if (houseBoxFirstDrink[item.id] === undefined) {
+        setHouseBoxFirstDrink((prev) => ({ ...prev, [item.id]: burgerDrinkOptions[0].id }))
+      }
+      if (houseBoxSecondDrink[item.id] === undefined) {
+        setHouseBoxSecondDrink((prev) => ({ ...prev, [item.id]: burgerDrinkOptions[0].id }))
+      }
+      if (houseBoxThirdDrink[item.id] === undefined) {
+        setHouseBoxThirdDrink((prev) => ({ ...prev, [item.id]: burgerDrinkOptions[0].id }))
+      }
+      if (houseBoxFourthDrink[item.id] === undefined) {
+        setHouseBoxFourthDrink((prev) => ({ ...prev, [item.id]: burgerDrinkOptions[0].id }))
       }
     }
   }
@@ -770,28 +801,56 @@ export default function MenuPage() {
 
     // Special handling for House Box
     if (isHouseBox(item)) {
-      const selectedBurgerIds = houseBoxBurgerChoices[item.id] || [classicBoxBurgerOptions[0].id]
-      const selectedBurgers = selectedBurgerIds.map((id) =>
-        classicBoxBurgerOptions.find((opt) => opt.id === id) || classicBoxBurgerOptions[0]
-      )
+      const firstBurgerId = houseBoxFirstBurger[item.id] || classicBoxBurgerOptions[0].id
+      const firstBurger = classicBoxBurgerOptions.find((opt) => opt.id === firstBurgerId) || classicBoxBurgerOptions[0]
+      
+      const secondBurgerId = houseBoxSecondBurger[item.id] || classicBoxBurgerOptions[0].id
+      const secondBurger = classicBoxBurgerOptions.find((opt) => opt.id === secondBurgerId) || classicBoxBurgerOptions[0]
+      
+      const thirdBurgerId = houseBoxThirdBurger[item.id] || classicBoxBurgerOptions[0].id
+      const thirdBurger = classicBoxBurgerOptions.find((opt) => opt.id === thirdBurgerId) || classicBoxBurgerOptions[0]
+      
+      const fourthBurgerId = houseBoxFourthBurger[item.id] || classicBoxBurgerOptions[0].id
+      const fourthBurger = classicBoxBurgerOptions.find((opt) => opt.id === fourthBurgerId) || classicBoxBurgerOptions[0]
       
       const selectedFriesId = boxFriesChoice[item.id] || classicBoxFriesOptions[0].id
       const selectedFries = classicBoxFriesOptions.find((opt) => opt.id === selectedFriesId) || classicBoxFriesOptions[0]
       
-      const selectedDrinkIds = houseBoxDrinkChoices[item.id] || [burgerDrinkOptions[0].id]
-      const selectedDrinks = selectedDrinkIds.map((id) =>
-        burgerDrinkOptions.find((opt) => opt.id === id) || burgerDrinkOptions[0]
-      )
+      const firstDrinkId = houseBoxFirstDrink[item.id] || burgerDrinkOptions[0].id
+      const firstDrink = burgerDrinkOptions.find((opt) => opt.id === firstDrinkId) || burgerDrinkOptions[0]
       
-      const selectedDips = houseBoxDipsChoice[item.id] || []
+      const secondDrinkId = houseBoxSecondDrink[item.id] || burgerDrinkOptions[0].id
+      const secondDrink = burgerDrinkOptions.find((opt) => opt.id === secondDrinkId) || burgerDrinkOptions[0]
+      
+      const thirdDrinkId = houseBoxThirdDrink[item.id] || burgerDrinkOptions[0].id
+      const thirdDrink = burgerDrinkOptions.find((opt) => opt.id === thirdDrinkId) || burgerDrinkOptions[0]
+      
+      const fourthDrinkId = houseBoxFourthDrink[item.id] || burgerDrinkOptions[0].id
+      const fourthDrink = burgerDrinkOptions.find((opt) => opt.id === fourthDrinkId) || burgerDrinkOptions[0]
       
       // Add box selections to add-ons
-      selectedBurgers.forEach((burger, index) => {
-        selectedAddOnsData.push({
-          addOnId: `box-burger-${burger.id}-${index}`,
-          name: `Burger ${index + 1}: ${burger.label}`,
-          price: burger.price,
-        })
+      selectedAddOnsData.push({
+        addOnId: `box-burger-first-${firstBurger.id}`,
+        name: `First Burger: ${firstBurger.label}`,
+        price: firstBurger.price,
+      })
+      
+      selectedAddOnsData.push({
+        addOnId: `box-burger-second-${secondBurger.id}`,
+        name: `Second Burger: ${secondBurger.label}`,
+        price: secondBurger.price,
+      })
+      
+      selectedAddOnsData.push({
+        addOnId: `box-burger-third-${thirdBurger.id}`,
+        name: `Third Burger: ${thirdBurger.label}`,
+        price: thirdBurger.price,
+      })
+      
+      selectedAddOnsData.push({
+        addOnId: `box-burger-fourth-${fourthBurger.id}`,
+        name: `Fourth Burger: ${fourthBurger.label}`,
+        price: fourthBurger.price,
       })
       
       selectedAddOnsData.push({
@@ -800,23 +859,52 @@ export default function MenuPage() {
         price: selectedFries.price,
       })
       
-      selectedDrinks.forEach((drink, index) => {
-        selectedAddOnsData.push({
-          addOnId: `box-drink-${drink.id}-${index}`,
-          name: `Drink ${index + 1}: ${drink.label}`,
-          price: 0,
-        })
+      selectedAddOnsData.push({
+        addOnId: `box-drink-first-${firstDrink.id}`,
+        name: `First Drink: ${firstDrink.label}`,
+        price: 0,
+      })
+      
+      selectedAddOnsData.push({
+        addOnId: `box-drink-second-${secondDrink.id}`,
+        name: `Second Drink: ${secondDrink.label}`,
+        price: 0,
+      })
+      
+      selectedAddOnsData.push({
+        addOnId: `box-drink-third-${thirdDrink.id}`,
+        name: `Third Drink: ${thirdDrink.label}`,
+        price: 0,
+      })
+      
+      selectedAddOnsData.push({
+        addOnId: `box-drink-fourth-${fourthDrink.id}`,
+        name: `Fourth Drink: ${fourthDrink.label}`,
+        price: 0,
       })
       
       // Add dips
-      selectedDips.forEach((dipId) => {
-        const dipOption = burgerDipOptions.find((d) => d.id === dipId)
-        if (dipOption) {
-          selectedAddOnsData.push({
-            addOnId: `box-dip-${dipOption.id}`,
-            name: `Dip: ${dipOption.label}`,
-            price: 0,
-          })
+      const dipSelections = [
+        { id: houseBoxFirstDip[item.id], label: '1st' },
+        { id: houseBoxSecondDip[item.id], label: '2nd' },
+        { id: houseBoxThirdDip[item.id], label: '3rd' },
+        { id: houseBoxFourthDip[item.id], label: '4th' },
+        { id: houseBoxFifthDip[item.id], label: '5th' },
+        { id: houseBoxSixthDip[item.id], label: '6th' },
+        { id: houseBoxSeventhDip[item.id], label: '7th' },
+        { id: houseBoxEighthDip[item.id], label: '8th' },
+      ]
+      
+      dipSelections.forEach((dip, index) => {
+        if (dip.id) {
+          const dipOption = burgerDipOptions.find((d) => d.id === dip.id)
+          if (dipOption) {
+            selectedAddOnsData.push({
+              addOnId: `box-dip-${dipOption.id}-${index}`,
+              name: `${dip.label} Dip: ${dipOption.label}`,
+              price: 0,
+            })
+          }
         }
       })
       
@@ -842,7 +930,22 @@ export default function MenuPage() {
         delete newInstructions[item.id]
         return newInstructions
       })
-      setHouseBoxBurgerChoices((prev) => {
+      setHouseBoxFirstBurger((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHouseBoxSecondBurger((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHouseBoxThirdBurger((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHouseBoxFourthBurger((prev) => {
         const updated = { ...prev }
         delete updated[item.id]
         return updated
@@ -852,12 +955,62 @@ export default function MenuPage() {
         delete updated[item.id]
         return updated
       })
-      setHouseBoxDrinkChoices((prev) => {
+      setHouseBoxFirstDrink((prev) => {
         const updated = { ...prev }
         delete updated[item.id]
         return updated
       })
-      setHouseBoxDipsChoice((prev) => {
+      setHouseBoxSecondDrink((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHouseBoxThirdDrink((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHouseBoxFourthDrink((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHouseBoxFirstDip((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHouseBoxSecondDip((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHouseBoxThirdDip((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHouseBoxFourthDip((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHouseBoxFifthDip((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHouseBoxSixthDip((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHouseBoxSeventhDip((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHouseBoxEighthDip((prev) => {
         const updated = { ...prev }
         delete updated[item.id]
         return updated
@@ -1891,49 +2044,167 @@ export default function MenuPage() {
               {/* Box Customization - For House Box */}
               {isHouseBox(selectedItem) && (
                 <div className="space-y-6">
-                  {/* Choose 4 Burgers */}
+                  {/* Choose First Burger */}
                   <div>
                     <label className="block text-base font-semibold text-gray-700 mb-3">
-                      Choose 4 Burgers:
+                      Choose First Burger:
                     </label>
                     <div className="space-y-2">
                       {classicBoxBurgerOptions.map((option) => {
-                        const selectedBurgers = houseBoxBurgerChoices[selectedItem.id] || [classicBoxBurgerOptions[0].id]
-                        const isSelected = selectedBurgers.includes(option.id)
-                        const canSelect = selectedBurgers.length < 4 || isSelected
+                        const currentChoice = houseBoxFirstBurger[selectedItem.id] || classicBoxBurgerOptions[0].id
+                        const isSelected = currentChoice === option.id
                         return (
                           <label
                             key={option.id}
                             className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                              !canSelect
-                                ? 'opacity-50 cursor-not-allowed'
-                                : isSelected
+                              isSelected
                                 ? 'border-primary-600 bg-primary-50'
                                 : 'border-gray-200 bg-white hover:border-gray-300'
                             }`}
                           >
                             <div className="flex items-center gap-3">
                               <input
-                                type="checkbox"
+                                type="radio"
+                                name={`house-box-first-burger-${selectedItem.id}`}
                                 checked={isSelected}
-                                disabled={!canSelect}
-                                onChange={() => {
-                                  if (!canSelect) return
-                                  setHouseBoxBurgerChoices((prev) => {
-                                    const current = prev[selectedItem.id] || [classicBoxBurgerOptions[0].id]
-                                    if (current.includes(option.id)) {
-                                      return {
-                                        ...prev,
-                                        [selectedItem.id]: current.filter((id) => id !== option.id),
-                                      }
-                                    } else {
-                                      return {
-                                        ...prev,
-                                        [selectedItem.id]: [...current, option.id],
-                                      }
-                                    }
-                                  })
-                                }}
+                                onChange={() =>
+                                  setHouseBoxFirstBurger((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="font-medium text-gray-900">{option.label}</span>
+                            </div>
+                            {option.price > 0 && (
+                              <span className="text-primary-600 font-semibold">
+                                +£{option.price.toFixed(2)}
+                              </span>
+                            )}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose Second Burger */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose Second Burger:
+                    </label>
+                    <div className="space-y-2">
+                      {classicBoxBurgerOptions.map((option) => {
+                        const currentChoice = houseBoxSecondBurger[selectedItem.id] || classicBoxBurgerOptions[0].id
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`house-box-second-burger-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setHouseBoxSecondBurger((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="font-medium text-gray-900">{option.label}</span>
+                            </div>
+                            {option.price > 0 && (
+                              <span className="text-primary-600 font-semibold">
+                                +£{option.price.toFixed(2)}
+                              </span>
+                            )}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose Third Burger */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose Third Burger:
+                    </label>
+                    <div className="space-y-2">
+                      {classicBoxBurgerOptions.map((option) => {
+                        const currentChoice = houseBoxThirdBurger[selectedItem.id] || classicBoxBurgerOptions[0].id
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`house-box-third-burger-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setHouseBoxThirdBurger((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="font-medium text-gray-900">{option.label}</span>
+                            </div>
+                            {option.price > 0 && (
+                              <span className="text-primary-600 font-semibold">
+                                +£{option.price.toFixed(2)}
+                              </span>
+                            )}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose Fourth Burger */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose Fourth Burger:
+                    </label>
+                    <div className="space-y-2">
+                      {classicBoxBurgerOptions.map((option) => {
+                        const currentChoice = houseBoxFourthBurger[selectedItem.id] || classicBoxBurgerOptions[0].id
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`house-box-fourth-burger-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setHouseBoxFourthBurger((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
                                 className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                               />
                               <span className="font-medium text-gray-900">{option.label}</span>
@@ -1993,49 +2264,35 @@ export default function MenuPage() {
                     </div>
                   </div>
 
-                  {/* Choose 4 Drinks */}
+                  {/* Choose First Drink */}
                   <div>
                     <label className="block text-base font-semibold text-gray-700 mb-3">
-                      Choose 4 Drinks:
+                      Choose First Drink:
                     </label>
                     <div className="space-y-2">
                       {burgerDrinkOptions.map((option) => {
-                        const selectedDrinks = houseBoxDrinkChoices[selectedItem.id] || [burgerDrinkOptions[0].id]
-                        const isSelected = selectedDrinks.includes(option.id)
-                        const canSelect = selectedDrinks.length < 4 || isSelected
+                        const currentChoice = houseBoxFirstDrink[selectedItem.id] || burgerDrinkOptions[0].id
+                        const isSelected = currentChoice === option.id
                         return (
                           <label
                             key={option.id}
                             className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
-                              !canSelect
-                                ? 'opacity-50 cursor-not-allowed'
-                                : isSelected
+                              isSelected
                                 ? 'border-primary-600 bg-primary-50'
                                 : 'border-gray-200 bg-white hover:border-gray-300'
                             }`}
                           >
                             <div className="flex items-center gap-3">
                               <input
-                                type="checkbox"
+                                type="radio"
+                                name={`house-box-first-drink-${selectedItem.id}`}
                                 checked={isSelected}
-                                disabled={!canSelect}
-                                onChange={() => {
-                                  if (!canSelect) return
-                                  setHouseBoxDrinkChoices((prev) => {
-                                    const current = prev[selectedItem.id] || [burgerDrinkOptions[0].id]
-                                    if (current.includes(option.id)) {
-                                      return {
-                                        ...prev,
-                                        [selectedItem.id]: current.filter((id) => id !== option.id),
-                                      }
-                                    } else {
-                                      return {
-                                        ...prev,
-                                        [selectedItem.id]: [...current, option.id],
-                                      }
-                                    }
-                                  })
-                                }}
+                                onChange={() =>
+                                  setHouseBoxFirstDrink((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
                                 className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                               />
                               <span className="text-sm text-gray-900">{option.label}</span>
@@ -2049,49 +2306,441 @@ export default function MenuPage() {
                     </div>
                   </div>
 
-                  {/* Choice of 8 Dips */}
+                  {/* Choose Second Drink */}
                   <div>
                     <label className="block text-base font-semibold text-gray-700 mb-3">
-                      Choice of 8 Dips:
+                      Choose Second Drink:
                     </label>
                     <div className="space-y-2">
-                      {burgerDipOptions.map((option) => {
-                        const selectedDips = houseBoxDipsChoice[selectedItem.id] || []
-                        const isSelected = selectedDips.includes(option.id)
-                        const canSelect = selectedDips.length < 8 || isSelected
+                      {burgerDrinkOptions.map((option) => {
+                        const currentChoice = houseBoxSecondDrink[selectedItem.id] || burgerDrinkOptions[0].id
+                        const isSelected = currentChoice === option.id
                         return (
                           <label
                             key={option.id}
                             className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
-                              !canSelect
-                                ? 'opacity-50 cursor-not-allowed'
-                                : isSelected
+                              isSelected
                                 ? 'border-primary-600 bg-primary-50'
                                 : 'border-gray-200 bg-white hover:border-gray-300'
                             }`}
                           >
                             <div className="flex items-center gap-3">
                               <input
-                                type="checkbox"
+                                type="radio"
+                                name={`house-box-second-drink-${selectedItem.id}`}
                                 checked={isSelected}
-                                disabled={!canSelect}
-                                onChange={() => {
-                                  if (!canSelect) return
-                                  setHouseBoxDipsChoice((prev) => {
-                                    const current = prev[selectedItem.id] || []
-                                    if (current.includes(option.id)) {
-                                      return {
-                                        ...prev,
-                                        [selectedItem.id]: current.filter((id) => id !== option.id),
-                                      }
-                                    } else {
-                                      return {
-                                        ...prev,
-                                        [selectedItem.id]: [...current, option.id],
-                                      }
-                                    }
-                                  })
-                                }}
+                                onChange={() =>
+                                  setHouseBoxSecondDrink((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">
+                              Included
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose Third Drink */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose Third Drink:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDrinkOptions.map((option) => {
+                        const currentChoice = houseBoxThirdDrink[selectedItem.id] || burgerDrinkOptions[0].id
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`house-box-third-drink-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setHouseBoxThirdDrink((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">
+                              Included
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose Fourth Drink */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose Fourth Drink:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDrinkOptions.map((option) => {
+                        const currentChoice = houseBoxFourthDrink[selectedItem.id] || burgerDrinkOptions[0].id
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`house-box-fourth-drink-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setHouseBoxFourthDrink((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">
+                              Included
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose 1st Dip */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose 1st Dip:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDipOptions.map((option) => {
+                        const currentChoice = houseBoxFirstDip[selectedItem.id] || ''
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`house-box-1st-dip-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setHouseBoxFirstDip((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">Free</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose 2nd Dip */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose 2nd Dip:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDipOptions.map((option) => {
+                        const currentChoice = houseBoxSecondDip[selectedItem.id] || ''
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`house-box-2nd-dip-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setHouseBoxSecondDip((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">Free</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose 3rd Dip */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose 3rd Dip:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDipOptions.map((option) => {
+                        const currentChoice = houseBoxThirdDip[selectedItem.id] || ''
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`house-box-3rd-dip-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setHouseBoxThirdDip((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">Free</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose 4th Dip */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose 4th Dip:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDipOptions.map((option) => {
+                        const currentChoice = houseBoxFourthDip[selectedItem.id] || ''
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`house-box-4th-dip-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setHouseBoxFourthDip((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">Free</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose 5th Dip */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose 5th Dip:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDipOptions.map((option) => {
+                        const currentChoice = houseBoxFifthDip[selectedItem.id] || ''
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`house-box-5th-dip-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setHouseBoxFifthDip((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">Free</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose 6th Dip */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose 6th Dip:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDipOptions.map((option) => {
+                        const currentChoice = houseBoxSixthDip[selectedItem.id] || ''
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`house-box-6th-dip-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setHouseBoxSixthDip((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">Free</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose 7th Dip */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose 7th Dip:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDipOptions.map((option) => {
+                        const currentChoice = houseBoxSeventhDip[selectedItem.id] || ''
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`house-box-7th-dip-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setHouseBoxSeventhDip((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
+                                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-900">{option.label}</span>
+                            </div>
+                            <span className="text-sm font-medium text-primary-600">Free</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Choose 8th Dip */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Choose 8th Dip:
+                    </label>
+                    <div className="space-y-2">
+                      {burgerDipOptions.map((option) => {
+                        const currentChoice = houseBoxEighthDip[selectedItem.id] || ''
+                        const isSelected = currentChoice === option.id
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-primary-600 bg-primary-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`house-box-8th-dip-${selectedItem.id}`}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setHouseBoxEighthDip((prev) => ({
+                                    ...prev,
+                                    [selectedItem.id]: option.id,
+                                  }))
+                                }
                                 className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                               />
                               <span className="text-sm text-gray-900">{option.label}</span>
