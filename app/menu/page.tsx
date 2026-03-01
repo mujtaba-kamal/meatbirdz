@@ -77,8 +77,8 @@ const classicBoxBurgerOptions = [
 const classicBoxFriesOptions = [
   { id: 'none', label: 'No fries', price: 0 },
   { id: 'loaded-chicken', label: 'Loaded fries with crispy chicken', price: 0 },
-  { id: 'loaded-angus-jalapeno', label: 'Skin loaded fries topped with fresh Angus, melted cheese, jalapenos & drizzled with house sauce.', price: 2.99 },
-  { id: 'loaded-both-jalapeno', label: 'Skin loaded fries topped with crispy chicken and fresh Angus, melted cheese, jalapenos & drizzled with house sauce.', price: 4.99 },
+  { id: 'loaded-angus-jalapeno', label: 'Skin loaded fries topped with fresh Angus, melted cheese, jalapenos & drizzled with house sauce.', price: 0 },
+  { id: 'loaded-both-jalapeno', label: 'Skin loaded fries topped with crispy chicken and fresh Angus, melted cheese, jalapenos & drizzled with house sauce.', price: 3.99 },
 ]
 
 // HexWrap Box wrap options
