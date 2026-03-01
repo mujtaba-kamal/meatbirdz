@@ -90,8 +90,8 @@ const hexWrapBoxOptions = [
 
 const categories = [
   { id: 'burger', name: 'Burgers', emoji: '🍔' },
-  { id: 'wrap', name: 'Wraps', emoji: '🌯' },
-  { id: 'fries', name: 'Fries', emoji: '🍟' },
+  { id: 'wrap', name: 'Hex-Wraps', emoji: '🌯' },
+  { id: 'fries', name: 'Loaded-Fries', emoji: '🍟' },
   { id: 'side', name: 'Sides', emoji: '🥔' },
   { id: 'box', name: 'Boxes', emoji: '📦' },
   { id: 'drink', name: 'Drinks', emoji: '🥤' },
@@ -493,7 +493,7 @@ export default function MenuPage() {
       // Add meal price if selected
       const isMeal = burgerMealSelected[item.id]
       if (isMeal) {
-        totalPrice += 2 // Base meal price (+£2)
+        totalPrice += 2.5 // Base meal price (+£2.50)
         // Fries are always regular (skin on fries) for tenders, no extra cost
       }
       
@@ -508,8 +508,8 @@ export default function MenuPage() {
       const isMeal = burgerMealSelected[item.id]
 
       if (isMeal) {
-        // Base meal price (+£2)
-        unitPrice += 2
+        // Base meal price (+£2.50)
+        unitPrice += 2.5
 
         // Fries upgrade price based on selection
         const friesChoice = burgerFriesChoice[item.id] || 'regular'
@@ -600,12 +600,12 @@ export default function MenuPage() {
       const isMeal = burgerMealSelected[item.id]
       
       if (isMeal) {
-        // Base tender meal (+£2)
-        itemTotalPrice += 2
+        // Base tender meal (+£2.50)
+        itemTotalPrice += 2.5
         selectedAddOnsData.push({
           addOnId: 'tender-meal',
-          name: 'Make it a meal (Fries + Drink)',
-          price: 2,
+          name: 'Make it a meal (Fries + Drink + 2 Dips)',
+          price: 2.5,
         })
         
         // Fries choice (always regular/skin on fries for tenders)
@@ -624,6 +624,19 @@ export default function MenuPage() {
           addOnId: `tender-drink-${drinkOption.id}`,
           name: `Drink: ${drinkOption.label}`,
           price: 0,
+        })
+        
+        // Dips choice (choice of 2)
+        const selectedDips = burgerDipsChoice[item.id] || []
+        selectedDips.forEach((dipId) => {
+          const dipOption = burgerDipOptions.find((d) => d.id === dipId)
+          if (dipOption) {
+            selectedAddOnsData.push({
+              addOnId: `tender-dip-${dipOption.id}`,
+              name: `Dip: ${dipOption.label}`,
+              price: 0,
+            })
+          }
         })
       }
       
@@ -1158,12 +1171,12 @@ export default function MenuPage() {
       let unitPrice = item.price
 
       if (isMeal) {
-        // Base burger meal (+£2)
-        unitPrice += 2
+        // Base burger meal (+£2.50)
+        unitPrice += 2.5
         selectedAddOnsData.push({
           addOnId: item.category === 'burger' ? 'burger-meal' : 'wrap-meal',
-          name: 'Make it a meal (Fries + Drink)',
-          price: 2,
+          name: 'Make it a meal (Fries + Drink + 2 Dips)',
+          price: 2.5,
         })
 
         // Fries choice (default to regular)
@@ -1187,21 +1200,18 @@ export default function MenuPage() {
           price: 0,
         })
 
-        // Dips for all burgers and wraps with loaded fries
-        const hasLoadedFries = friesChoice !== 'regular'
-        if (hasLoadedFries) {
-          const selectedDips = burgerDipsChoice[item.id] || []
-          selectedDips.forEach((dipId) => {
-            const dipOption = burgerDipOptions.find((d) => d.id === dipId)
-            if (dipOption) {
-              selectedAddOnsData.push({
-                addOnId: `${prefix}-dip-${dipOption.id}`,
-                name: `Dip: ${dipOption.label}`,
-                price: 0,
-              })
-            }
-          })
-        }
+        // Dips for all burger meals (choice of 2)
+        const selectedDips = burgerDipsChoice[item.id] || []
+        selectedDips.forEach((dipId) => {
+          const dipOption = burgerDipOptions.find((d) => d.id === dipId)
+          if (dipOption) {
+            selectedAddOnsData.push({
+              addOnId: `${prefix}-dip-${dipOption.id}`,
+              name: `Dip: ${dipOption.label}`,
+              price: 0,
+            })
+          }
+        })
       }
 
       const itemTotalPrice = unitPrice
@@ -2733,10 +2743,19 @@ export default function MenuPage() {
                         type="checkbox"
                         checked={!!burgerMealSelected[selectedItem.id]}
                         onChange={() => {
+                          const newValue = !burgerMealSelected[selectedItem.id]
                           setBurgerMealSelected((prev) => ({
                             ...prev,
-                            [selectedItem.id]: !prev[selectedItem.id],
+                            [selectedItem.id]: newValue,
                           }))
+                          // Reset dips if unchecking meal
+                          if (!newValue) {
+                            setBurgerDipsChoice((prev) => {
+                              const updated = { ...prev }
+                              delete updated[selectedItem.id]
+                              return updated
+                            })
+                          }
                         }}
                         className="w-5 h-5 text-primary-600 border-gray-300 focus:ring-primary-500"
                       />
@@ -2744,7 +2763,7 @@ export default function MenuPage() {
                         Make it a meal (includes fries &amp; drink)
                       </span>
                     </div>
-                    <span className="text-primary-600 font-semibold">+£2.00</span>
+                    <span className="text-primary-600 font-semibold">+£2.50</span>
                   </label>
 
                   {burgerMealSelected[selectedItem.id] && (
@@ -2800,6 +2819,66 @@ export default function MenuPage() {
                           })}
                         </div>
                       </div>
+
+                      {/* Dips options - For tenders meal */}
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700 mb-2">
+                          Choice of 2 Dips:
+                        </p>
+                        <div className="space-y-2">
+                          {burgerDipOptions.map((option) => {
+                            const selectedDips = burgerDipsChoice[selectedItem.id] || []
+                            const isSelected = selectedDips.includes(option.id)
+                            const canSelect = selectedDips.length < 2 || isSelected
+                            return (
+                              <label
+                                key={option.id}
+                                className={`flex items-center justify-between p-2 border rounded-lg cursor-pointer transition-all ${
+                                  !canSelect
+                                    ? 'opacity-50 cursor-not-allowed'
+                                    : isSelected
+                                    ? 'border-primary-600 bg-primary-50'
+                                    : 'border-gray-200 bg-white hover:border-gray-300'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    disabled={!canSelect}
+                                    onChange={() => {
+                                      if (!canSelect) return
+                                      setBurgerDipsChoice((prev) => {
+                                        const current = prev[selectedItem.id] || []
+                                        if (isSelected) {
+                                          // Remove dip
+                                          return {
+                                            ...prev,
+                                            [selectedItem.id]: current.filter(
+                                              (id) => id !== option.id
+                                            ),
+                                          }
+                                        } else {
+                                          // Add dip (max 2)
+                                          return {
+                                            ...prev,
+                                            [selectedItem.id]: [...current, option.id],
+                                          }
+                                        }
+                                      })
+                                    }}
+                                    className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                                  />
+                                  <span className="text-sm text-gray-900">{option.label}</span>
+                                </div>
+                                <span className="text-sm font-medium text-primary-600">
+                                  Free
+                                </span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -2843,7 +2922,7 @@ export default function MenuPage() {
                         Make it a meal (includes fries &amp; drink)
                       </span>
                     </div>
-                    <span className="text-primary-600 font-semibold">+£2.00</span>
+                    <span className="text-primary-600 font-semibold">+£2.50</span>
                   </label>
 
                   {burgerMealSelected[selectedItem.id] && (
@@ -2869,21 +2948,14 @@ export default function MenuPage() {
                                     type="radio"
                                     name={`${selectedItem.category}-fries-${selectedItem.id}`}
                                     checked={isSelected}
-                                    onChange={() => {
-                                      const newFriesChoice = option.id as 'regular' | 'loaded-chicken' | 'loaded-angus' | 'loaded-both'
-                                      setBurgerFriesChoice((prev) => ({
-                                        ...prev,
-                                        [selectedItem.id]: newFriesChoice,
-                                      }))
-                                      // Reset dips if changing back to regular fries
-                                      if (newFriesChoice === 'regular') {
-                                        setBurgerDipsChoice((prev) => {
-                                          const updated = { ...prev }
-                                          delete updated[selectedItem.id]
-                                          return updated
-                                        })
-                                      }
-                                    }}
+                        onChange={() => {
+                          const newFriesChoice = option.id as 'regular' | 'loaded-chicken' | 'loaded-angus' | 'loaded-both'
+                          setBurgerFriesChoice((prev) => ({
+                            ...prev,
+                            [selectedItem.id]: newFriesChoice,
+                          }))
+                          // Don't reset dips - dips are available for all meals
+                        }}
                                     className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500 flex-shrink-0"
                                   />
                                   <span className="text-sm text-gray-900">{option.label}</span>
@@ -2938,13 +3010,11 @@ export default function MenuPage() {
                         </div>
                       </div>
 
-                      {/* Dips options - For all burgers with loaded fries */}
-                      {burgerFriesChoice[selectedItem.id] !== 'regular' &&
-                        burgerFriesChoice[selectedItem.id] !== undefined && (
-                          <div>
-                            <p className="text-sm font-semibold text-gray-700 mb-2">
-                              Dips (Select up to 2):
-                            </p>
+                      {/* Dips options - For all burger meals */}
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700 mb-2">
+                          Choice of 2 Dips:
+                        </p>
                             <div className="space-y-2">
                               {burgerDipOptions.map((option) => {
                                 const selectedDips = burgerDipsChoice[selectedItem.id] || []
@@ -2999,7 +3069,6 @@ export default function MenuPage() {
                               })}
                             </div>
                           </div>
-                        )}
                     </div>
                   )}
                 </div>
