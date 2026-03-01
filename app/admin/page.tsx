@@ -794,14 +794,7 @@ export default function AdminPage() {
               !previousOrderIds.has(order.id)
           )
           
-          if (newPendingOrders.length > 0) {
-            console.log(`🔔 Detected ${newPendingOrders.length} new pending order(s)`)
-            // Show notification
-            toast.success(`🔔 New order received!`, {
-              icon: '🔔',
-              duration: 3000,
-            })
-          }
+          // Notification removed per user request
           
           setPreviousOrderIds(currentOrderIds)
         } else {
@@ -1200,7 +1193,7 @@ export default function AdminPage() {
                 })}
               </div>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-300px)] pr-2">
               {orders.length === 0 ? (
                 <div className="bg-white rounded-2xl shadow-lg p-8 text-center border border-primary-100">
                   <Package className="w-16 h-16 mx-auto text-primary-300 mb-4" />
@@ -1343,10 +1336,10 @@ export default function AdminPage() {
           {/* Order Details Sidebar */}
           <div className="lg:col-span-1 order-3">
             {selectedOrder ? (
-              <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-24 border border-primary-100">
+              <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-24 border border-primary-100 flex flex-col max-h-[calc(100vh-200px)]">
                 <h2 className="text-xl font-semibold mb-4 text-gray-900">Order Details</h2>
 
-                <div className="space-y-4 mb-6">
+                <div className="space-y-4 mb-6 overflow-y-auto flex-1 pr-2">
                   <div>
                     <h3 className="font-semibold mb-2">Customer Info</h3>
                     <p className="text-sm text-gray-700">{selectedOrder.customerName}</p>
