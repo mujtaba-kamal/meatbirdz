@@ -98,16 +98,6 @@ export default function Navbar() {
                   About
                 </a>
                 <a
-                  href="#gallery"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    scrollToSection('gallery')
-                  }}
-                  className="text-gray-700 hover:text-primary-600 transition-colors font-medium px-3 py-2 rounded-lg hover:bg-gray-50"
-                >
-                  Gallery
-                </a>
-                <a
                   href="#locations"
                   onClick={(e) => {
                     e.preventDefault()
@@ -179,16 +169,6 @@ export default function Navbar() {
                   className="text-gray-700 hover:text-primary-600 transition-colors font-medium px-3 py-2 rounded-lg hover:bg-gray-50"
                 >
                   About
-                </a>
-                <a
-                  href="#gallery"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    scrollToSection('gallery')
-                  }}
-                  className="text-gray-700 hover:text-primary-600 transition-colors font-medium px-3 py-2 rounded-lg hover:bg-gray-50"
-                >
-                  Gallery
                 </a>
                 <a
                   href="#locations"
@@ -303,16 +283,6 @@ export default function Navbar() {
                     About
                   </a>
                   <a
-                    href="#gallery"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      scrollToSection('gallery')
-                    }}
-                    className="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    Gallery
-                  </a>
-                  <a
                     href="#locations"
                     onClick={(e) => {
                       e.preventDefault()
@@ -369,16 +339,6 @@ export default function Navbar() {
                     className="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
                   >
                     About
-                  </a>
-                  <a
-                    href="#gallery"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      scrollToSection('gallery')
-                    }}
-                    className="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    Gallery
                   </a>
                   <a
                     href="#locations"

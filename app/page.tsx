@@ -165,26 +165,71 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8 sm:mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4">About MeatBirdz</h2>
-            <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto px-2">
-              We&apos;re passionate about serving delicious, high-quality fast food made fresh daily. 
-              Our commitment to excellence has made us a favorite among food lovers.
-            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 mt-8 sm:mt-12">
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h3 className="text-2xl font-bold mb-4 text-gray-900">Our Story</h3>
-              <p className="text-gray-600 leading-relaxed">
-                Founded with a vision to bring quality fast food to everyone, MeatBirdz has been serving 
-                delicious burgers, wraps, fries, and drinks since day one. We use only the freshest ingredients 
-                and prepare everything with care.
+          
+          {/* About Us */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 mb-6 sm:mb-8">
+            <h3 className="text-2xl font-bold mb-4 text-gray-900">About Us</h3>
+            <div className="text-gray-600 leading-relaxed space-y-4">
+              <p>
+                MeatBirdz was created with a clear standard — premium food, freshly prepared, and served properly.
+              </p>
+              <p>
+                We focus on quality Angus smash burgers, crispy fried chicken, grilled selections, our unique HexWraps and loaded sides, all crafted using carefully selected ingredients and cooked to order. Nothing is pre-made. Nothing sits waiting. Every dish begins when you place your order.
+              </p>
+              <p>
+                Our model is built around convenience without compromising quality.
+                Order online or call us directly, park up, and your food will be brought straight to your car with our kerbside collection service. No queues. No unnecessary delays.
+              </p>
+              <p>
+                Prefer delivery? We&apos;ll bring it to your door, fresh and ready.
+              </p>
+              <p>
+                We operate from 5:30pm to midnight Sunday–Thursday, and until 1am on Fridays and Saturdays — providing a reliable evening option for families and anyone who values food done right.
+              </p>
+              <p className="font-semibold text-gray-800">
+                Quality without shortcuts. Service without hassle.
               </p>
             </div>
-            <div className="bg-white rounded-2xl shadow-lg p-8">
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+              <h3 className="text-2xl font-bold mb-4 text-gray-900">Our Story</h3>
+              <div className="text-gray-600 leading-relaxed space-y-4">
+                <p>
+                  MeatBirdz was created to challenge the standard.
+                </p>
+                <p>
+                  The takeaway industry has become predictable — the same menus, the same suppliers, the same ready-made ingredients repeated everywhere. We knew there was room to do better.
+                </p>
+                <p>
+                  Before launching, we spent over a year developing and testing everything in-house. From seasoning blends and coatings to sauce recipes and flavour combinations, every detail was trialled, refined and rebuilt until it met our standard. Nothing was rushed. Nothing was copied.
+                </p>
+                <p>
+                  We don&apos;t rely on generic off-the-shelf ingredients or frozen shortcuts. Our flavours are developed internally and built to deliver something you won&apos;t find replicated elsewhere — bold, balanced and consistent.
+                </p>
+                <p>
+                  Our model is simple: premium food, made fresh when you order. Every burger is smashed to order. Every piece of chicken is prepared fresh. No holding trays. No pre-cooked batches.
+                </p>
+                <p>
+                  We built MeatBirdz to prove that convenience doesn&apos;t have to mean compromise.
+                </p>
+                <p className="font-semibold text-gray-800">
+                  Different by design. Raised by standards.
+                </p>
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
               <h3 className="text-2xl font-bold mb-4 text-gray-900">Our Mission</h3>
-              <p className="text-gray-600 leading-relaxed">
-                To provide exceptional food experiences through quality ingredients, fast service, and 
-                outstanding customer care. We believe everyone deserves great food, delivered fresh and hot.
-              </p>
+              <div className="text-gray-600 leading-relaxed space-y-4">
+                <p>
+                  To redefine convenient by proving that premium food and efficient service can exist together.
+                </p>
+                <p>
+                  Every order is prepared fresh, handled with care, and delivered with the same standard we would expect ourselves.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -200,9 +245,13 @@ export default function Home() {
           <div className="max-w-md mx-auto">
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <MapPin className="w-8 h-8 text-primary-600 mb-4" />
-              <h3 className="text-xl font-bold mb-2 text-gray-900">Birmingham City Centre</h3>
-              <p className="text-gray-600 mb-2">123 High Street, Birmingham B1 1AA</p>
-              <p className="text-gray-600">0121 123 4567</p>
+              <h3 className="text-xl font-bold mb-2 text-gray-900">MeatBirdz Collection Point</h3>
+              <p className="text-gray-600 mb-2">198 heybarnes road B10 9JF</p>
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <p className="text-sm font-semibold text-gray-700 mb-2">Opening Hours:</p>
+                <p className="text-sm text-gray-600">Sun - Thu: 17:30 - 00:00</p>
+                <p className="text-sm text-gray-600">Fri & Sat: 17:30 - 01:00</p>
+              </div>
             </div>
           </div>
         </div>

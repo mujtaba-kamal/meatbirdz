@@ -11,7 +11,7 @@ const restaurants = [
     name: 'MeatBirdz Collection Point',
     address: '198 heybarnes road B10 9JF',
     phone: '0121 123 4567',
-    hours: 'Mon-Sun: 11:00 AM - 11:00 PM',
+    hours: 'Sun - Thu: 17:30 - 00:00 | Fri & Sat: 17:30 - 01:00',
   },
 ]
 

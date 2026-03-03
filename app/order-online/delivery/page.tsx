@@ -7,16 +7,24 @@ import toast from 'react-hot-toast'
 import { deliveryFees } from '@/lib/deliveryFees'
 
 const birminghamPostalCodes = [
-  { code: 'B1', area: 'Birmingham City Centre' },
   { code: 'B2', area: 'Birmingham City Centre' },
   { code: 'B3', area: 'Birmingham Jewellery Quarter' },
   { code: 'B4', area: 'Birmingham City Centre' },
   { code: 'B5', area: 'Birmingham Digbeth' },
-  { code: 'B15', area: 'Birmingham Edgbaston' },
-  { code: 'B16', area: 'Birmingham Edgbaston' },
-  { code: 'B17', area: 'Birmingham Harborne' },
-  { code: 'B18', area: 'Birmingham Hockley' },
-  { code: 'B19', area: 'Birmingham Newtown' },
+  { code: 'B6', area: 'Birmingham' },
+  { code: 'B7', area: 'Birmingham' },
+  { code: 'B8', area: 'Birmingham' },
+  { code: 'B9', area: 'Birmingham' },
+  { code: 'B10', area: 'Birmingham' },
+  { code: 'B11', area: 'Birmingham' },
+  { code: 'B12', area: 'Birmingham' },
+  { code: 'B13', area: 'Birmingham' },
+  { code: 'B14', area: 'Birmingham' },
+  { code: 'B25', area: 'Birmingham' },
+  { code: 'B26', area: 'Birmingham' },
+  { code: 'B33', area: 'Birmingham' },
+  { code: 'B34', area: 'Birmingham' },
+  { code: 'B35', area: 'Birmingham' },
 ]
 
 export default function DeliveryPage() {
@@ -29,7 +37,8 @@ export default function DeliveryPage() {
     // Store selected postal code and delivery fee in localStorage
     localStorage.setItem('orderType', 'delivery')
     localStorage.setItem('selectedLocation', JSON.stringify({ postalCode, area, deliveryFee }))
-    toast.success(`Selected ${area} (${postalCode}) - Delivery fee: £${deliveryFee.toFixed(2)}`)
+    const feeText = deliveryFee === 0 ? 'Free delivery' : `Delivery fee: £${deliveryFee.toFixed(2)}`
+    toast.success(`Selected ${area} (${postalCode}) - ${feeText}`)
     router.push('/menu')
   }
 
@@ -65,7 +74,11 @@ export default function DeliveryPage() {
                     </h3>
                     <p className="text-sm text-gray-600">{location.area}</p>
                     <p className="text-sm font-semibold text-primary-600 mt-1">
-                      Delivery fee: £{(deliveryFees[location.code] || 0).toFixed(2)}
+                      {deliveryFees[location.code] === 0 ? (
+                        <span className="text-green-600">Free delivery</span>
+                      ) : (
+                        `Delivery fee: £${(deliveryFees[location.code] || 0).toFixed(2)}`
+                      )}
                     </p>
                   </div>
                 </div>
