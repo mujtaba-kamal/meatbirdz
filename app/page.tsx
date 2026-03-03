@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Menu, ShoppingCart, MapPin, Star, Shield, Zap } from 'lucide-react'
+import { Menu, ShoppingCart, MapPin, Star, Shield, Zap, Instagram } from 'lucide-react'
 
 export default function Home() {
   const { data: session } = useSession()
@@ -193,7 +193,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+          <div className="space-y-6 sm:space-y-8">
             <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
               <h3 className="text-2xl font-bold mb-4 text-gray-900">Our Story</h3>
               <div className="text-gray-600 leading-relaxed space-y-4">
@@ -327,6 +327,87 @@ export default function Home() {
           </Link>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-gray-300 py-8 sm:py-12 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+            {/* Brand */}
+            <div>
+              <h3 className="text-xl font-bold text-white mb-4">MeatBirdz</h3>
+              <p className="text-sm text-gray-400">
+                Premium food, freshly prepared, and served properly.
+              </p>
+            </div>
+
+            {/* Quick Links */}
+            <div>
+              <h4 className="text-lg font-semibold text-white mb-4">Quick Links</h4>
+              <ul className="space-y-2">
+                <li>
+                  <a href="#home" className="text-sm hover:text-primary-400 transition-colors">
+                    Home
+                  </a>
+                </li>
+                <li>
+                  <a href="#about" className="text-sm hover:text-primary-400 transition-colors">
+                    About Us
+                  </a>
+                </li>
+                <li>
+                  <a href="#locations" className="text-sm hover:text-primary-400 transition-colors">
+                    Locations
+                  </a>
+                </li>
+                <li>
+                  <Link href="/menu" className="text-sm hover:text-primary-400 transition-colors">
+                    Menu
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/order-online" className="text-sm hover:text-primary-400 transition-colors">
+                    Order Online
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Social Media */}
+            <div>
+              <h4 className="text-lg font-semibold text-white mb-4">Follow Us</h4>
+              <div className="flex gap-4">
+                <a
+                  href="https://www.instagram.com/meatbirdz?igsh=MWlpazZoOW54MWg0&utm_source=qr"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center w-10 h-10 bg-gray-800 rounded-full hover:bg-primary-600 transition-colors"
+                  aria-label="Instagram"
+                >
+                  <Instagram className="w-5 h-5" />
+                </a>
+                <a
+                  href="https://www.tiktok.com/@meatbirdz?_r=1&_t=ZN-94NToQ0nLtu"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center w-10 h-10 bg-gray-800 rounded-full hover:bg-primary-600 transition-colors"
+                  aria-label="TikTok"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                  </svg>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Copyright */}
+          <div className="border-t border-gray-800 pt-6 mt-6 text-center">
+            <p className="text-sm text-gray-400">
+              © {new Date().getFullYear()} MeatBirdz. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
