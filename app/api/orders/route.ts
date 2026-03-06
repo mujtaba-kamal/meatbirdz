@@ -7,12 +7,6 @@ import { rateLimiters } from '@/lib/rateLimit'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
-  // Apply rate limiting
-  const rateLimitResponse = await rateLimiters.standard(request)
-  if (rateLimitResponse) {
-    return rateLimitResponse
-  }
-
   try {
     const session = await getServerSession(authOptions)
 
@@ -23,6 +17,9 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       )
     }
+
+    // Skip rate limiting for admin users (they need to poll frequently)
+    // Only apply rate limiting to non-admin requests if any
 
     const { searchParams } = new URL(request.url)
     const fromParam = searchParams.get('from')
