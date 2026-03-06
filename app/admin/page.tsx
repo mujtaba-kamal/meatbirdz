@@ -92,6 +92,8 @@ export default function AdminPage() {
   const [showCustomPicker, setShowCustomPicker] = useState(false)
   const [activeTab, setActiveTab] = useState<'orders' | 'menu'>('orders')
   const [previousOrderIds, setPreviousOrderIds] = useState<Set<string>>(new Set())
+  const [isFirstLoadAfterFilterChange, setIsFirstLoadAfterFilterChange] = useState(false)
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null)
   
   // Menu management state
   const [menuItems, setMenuItems] = useState<any[]>([])
@@ -140,29 +142,36 @@ export default function AdminPage() {
 
 
 
-  // Initialize audio on first user interaction
+  // Initialize audio context on first user interaction
   useEffect(() => {
     const initAudio = () => {
-      // Just create and resume audio context to unlock audio
       try {
+        if (typeof window === 'undefined') return
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+        setAudioContext(ctx)
+        // Resume if suspended
         if (ctx.state === 'suspended') {
-          ctx.resume()
+          ctx.resume().then(() => {
+            console.log('Audio context resumed')
+          }).catch(() => {
+            // Ignore resume errors
+          })
         }
       } catch (e) {
-        // Ignore errors
+        console.warn('Audio initialization error:', e)
       }
     }
     
     // Initialize on any user interaction
-    document.addEventListener('click', initAudio, { once: true })
-    document.addEventListener('touchstart', initAudio, { once: true })
-    document.addEventListener('keydown', initAudio, { once: true })
+    const events = ['click', 'touchstart', 'keydown', 'mousedown']
+    events.forEach(event => {
+      document.addEventListener(event, initAudio, { once: true, passive: true })
+    })
     
     return () => {
-      document.removeEventListener('click', initAudio)
-      document.removeEventListener('touchstart', initAudio)
-      document.removeEventListener('keydown', initAudio)
+      events.forEach(event => {
+        document.removeEventListener(event, initAudio)
+      })
     }
   }, [])
 
@@ -170,6 +179,7 @@ export default function AdminPage() {
     if (session?.user?.role === 'ADMIN' && activeTab === 'orders') {
       // Reset previous order IDs when date filter changes to avoid false notifications
       setPreviousOrderIds(new Set())
+      setIsFirstLoadAfterFilterChange(true) // Mark as first load after filter change
       fetchOrders()
       
       // Set up real-time updates using shorter polling (every 2 seconds)
@@ -790,33 +800,38 @@ export default function AdminPage() {
   }
 
   // Simple bell sound function
-  const playBellSound = () => {
+  const playBellSound = async () => {
     try {
       if (typeof window === 'undefined') return
       
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      // Use existing audio context or create new one
+      let ctx = audioContext
+      if (!ctx) {
+        ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+        setAudioContext(ctx)
+      }
+      
+      // Resume audio context if suspended (required for Mac/Windows browsers)
+      if (ctx.state === 'suspended') {
+        await ctx.resume()
+      }
       
       // Create oscillator for bell sound
-      const oscillator = audioContext.createOscillator()
-      const gainNode = audioContext.createGain()
+      const oscillator = ctx.createOscillator()
+      const gainNode = ctx.createGain()
       
       oscillator.connect(gainNode)
-      gainNode.connect(audioContext.destination)
+      gainNode.connect(ctx.destination)
       
       // Simple bell tone
       oscillator.frequency.value = 800
       oscillator.type = 'sine'
       
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
+      gainNode.gain.setValueAtTime(0.3, ctx.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5)
       
-      oscillator.start(audioContext.currentTime)
-      oscillator.stop(audioContext.currentTime + 0.5)
-      
-      // Resume audio context if suspended
-      if (audioContext.state === 'suspended') {
-        audioContext.resume()
-      }
+      oscillator.start(ctx.currentTime)
+      oscillator.stop(ctx.currentTime + 0.5)
     } catch (error) {
       console.warn('Bell sound error:', error)
     }
@@ -847,7 +862,7 @@ export default function AdminPage() {
         console.log(`✅ Loaded ${data.length} orders`)
         
         // Check for new orders (only PENDING status orders that weren't in previous set)
-        if (previousOrderIds.size > 0) {
+        if (previousOrderIds.size > 0 && !isFirstLoadAfterFilterChange) {
           const currentOrderIds = new Set(data.map((order: Order) => order.id))
           const newPendingOrders = data.filter(
             (order: Order) => 
@@ -855,7 +870,7 @@ export default function AdminPage() {
               !previousOrderIds.has(order.id)
           )
           
-          // Play bell sound when new order is received
+          // Play bell sound when new order is received (but not on filter change)
           if (newPendingOrders.length > 0) {
             playBellSound()
             toast.success(`🔔 New order received!`, {
@@ -866,8 +881,9 @@ export default function AdminPage() {
           
           setPreviousOrderIds(currentOrderIds)
         } else {
-          // First load - initialize with current order IDs
+          // First load or after filter change - initialize with current order IDs
           setPreviousOrderIds(new Set(data.map((order: Order) => order.id)))
+          setIsFirstLoadAfterFilterChange(false) // Reset flag after first load
         }
         
       setOrders(data)
