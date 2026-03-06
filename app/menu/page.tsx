@@ -44,12 +44,12 @@ const burgerDrinkOptions = [
 ]
 
 const burgerDipOptions = [
-  { id: 'signature-sauce', label: 'Signature sauce' },
+  { id: 'signature-sauce', label: 'Signature' },
   { id: 'garlic-mayo', label: 'Garlic mayo' },
   { id: 'cajun-tomato', label: 'Cajun & tomato' },
-  { id: 'cheese-sauce', label: 'Cheese sauce' },
   { id: 'mayo', label: 'Mayo' },
   { id: 'ketchup', label: 'Ketchup' },
+  { id: 'cheese-sauce', label: 'Cheese sauce' },
 ]
 
 // Tender quantity options
@@ -142,6 +142,7 @@ export default function MenuPage() {
   const [hexWrapBoxFriesChoice, setHexWrapBoxFriesChoice] = useState<Record<string, string>>({}) // menuItemId -> selected fries option id
   const [hexWrapBoxDrinkChoice, setHexWrapBoxDrinkChoice] = useState<Record<string, string>>({}) // menuItemId -> selected drink option id
   const [hexWrapBoxDipsChoice, setHexWrapBoxDipsChoice] = useState<Record<string, string[]>>({}) // menuItemId -> selected dips (max 2)
+  const [hexWrapBoxHeatLevel, setHexWrapBoxHeatLevel] = useState<Record<string, 'classic' | 'heat'>>({}) // menuItemId -> heat level for Crispy Bird Hex
   const addItem = useCartStore((state) => state.addItem)
 
   useEffect(() => {
@@ -395,6 +396,11 @@ export default function MenuPage() {
       }
       if (hexWrapBoxDrinkChoice[item.id] === undefined) {
         setHexWrapBoxDrinkChoice((prev) => ({ ...prev, [item.id]: burgerDrinkOptions[0].id }))
+      }
+      // Initialize heat level if Crispy Bird Hex is selected (default to classic)
+      const selectedWrapId = hexWrapBoxWrapChoice[item.id] || hexWrapBoxOptions[0].id
+      if (selectedWrapId === 'crispy-bird-hex' && hexWrapBoxHeatLevel[item.id] === undefined) {
+        setHexWrapBoxHeatLevel((prev) => ({ ...prev, [item.id]: 'classic' }))
       }
     }
   }
@@ -1084,9 +1090,14 @@ export default function MenuPage() {
       const selectedDips = hexWrapBoxDipsChoice[item.id] || []
       
       // Add box selections to add-ons
+      // Include heat level if Crispy Bird Hex is selected
+      const wrapLabel = selectedWrap.id === 'crispy-bird-hex' 
+        ? `${selectedWrap.label} (${hexWrapBoxHeatLevel[item.id] === 'heat' ? 'Heat' : 'Classic'})`
+        : selectedWrap.label
+      
       selectedAddOnsData.push({
         addOnId: `hexwrap-wrap-${selectedWrap.id}`,
-        name: `Wrap: ${selectedWrap.label}`,
+        name: `Wrap: ${wrapLabel}`,
         price: selectedWrap.price,
       })
       
@@ -1155,6 +1166,11 @@ export default function MenuPage() {
         return updated
       })
       setHexWrapBoxDipsChoice((prev) => {
+        const updated = { ...prev }
+        delete updated[item.id]
+        return updated
+      })
+      setHexWrapBoxHeatLevel((prev) => {
         const updated = { ...prev }
         delete updated[item.id]
         return updated
@@ -2561,12 +2577,16 @@ export default function MenuPage() {
                                 type="radio"
                                 name={`hexwrap-wrap-${selectedItem.id}`}
                                 checked={isSelected}
-                                onChange={() =>
+                                onChange={() => {
                                   setHexWrapBoxWrapChoice((prev) => ({
                                     ...prev,
                                     [selectedItem.id]: option.id,
                                   }))
-                                }
+                                  // Initialize heat level if Crispy Bird Hex is selected
+                                  if (option.id === 'crispy-bird-hex' && hexWrapBoxHeatLevel[selectedItem.id] === undefined) {
+                                    setHexWrapBoxHeatLevel((prev) => ({ ...prev, [selectedItem.id]: 'classic' }))
+                                  }
+                                }}
                                 className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                               />
                               <span className="font-medium text-gray-900">{option.label}</span>
@@ -2581,6 +2601,50 @@ export default function MenuPage() {
                       })}
                     </div>
                   </div>
+
+                  {/* Heat Level Selection - For Crispy Bird Hex */}
+                  {hexWrapBoxWrapChoice[selectedItem.id] === 'crispy-bird-hex' && (
+                    <div>
+                      <label className="block text-base font-semibold text-gray-700 mb-3">
+                        Heat Level:
+                      </label>
+                      <div className="space-y-2">
+                        {[
+                          { id: 'classic', label: 'Classic' },
+                          { id: 'heat', label: 'Heat' },
+                        ].map((option) => {
+                          const currentChoice = hexWrapBoxHeatLevel[selectedItem.id] || 'classic'
+                          const isSelected = currentChoice === option.id
+                          return (
+                            <label
+                              key={option.id}
+                              className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'border-primary-600 bg-primary-50'
+                                  : 'border-gray-200 bg-white hover:border-gray-300'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="radio"
+                                  name={`hexwrap-heat-level-${selectedItem.id}`}
+                                  checked={isSelected}
+                                  onChange={() =>
+                                    setHexWrapBoxHeatLevel((prev) => ({
+                                      ...prev,
+                                      [selectedItem.id]: option.id as 'classic' | 'heat',
+                                    }))
+                                  }
+                                  className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                                />
+                                <span className="font-medium text-gray-900">{option.label}</span>
+                              </div>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Choose Loaded Fries */}
                   <div>
