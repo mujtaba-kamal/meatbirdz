@@ -46,6 +46,7 @@ interface Order {
   deliveryAddress: string
   city: string
   postalCode: string | null
+  carDetails: string | null
   totalAmount: number
   status: string
   paymentStatus: string
@@ -1355,6 +1356,13 @@ export default function AdminPage() {
                       {selectedOrder.city} {selectedOrder.postalCode}
                     </p>
                   </div>
+
+                  {selectedOrder.carDetails && (
+                    <div>
+                      <h3 className="font-semibold mb-2">Car Details</h3>
+                      <p className="text-sm text-gray-700">{selectedOrder.carDetails}</p>
+                    </div>
+                  )}
 
                   <div>
                     <h3 className="font-semibold mb-2">Payment Status</h3>

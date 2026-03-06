@@ -30,6 +30,7 @@ interface Order {
   deliveryAddress: string
   city: string
   postalCode: string | null
+  carDetails: string | null
   totalAmount: number
   status: string
   paymentStatus: string
@@ -347,6 +348,12 @@ function OrderConfirmationContent() {
               <br />
               {order.city} {order.postalCode && order.postalCode}
             </p>
+            {order.carDetails && (
+              <div className="mt-4">
+                <h4 className="font-semibold mb-2">Car Details</h4>
+                <p className="text-gray-700">{order.carDetails}</p>
+              </div>
+            )}
           </div>
 
           <div className="border-t pt-4 mt-4">

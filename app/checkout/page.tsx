@@ -6,6 +6,7 @@ import { useCartStore } from '@/store/cartStore'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Store, Truck } from 'lucide-react'
+import { freeDeliveryPostcodes, MINIMUM_ORDER_FOR_FREE_DELIVERY, DELIVERY_FEE_BELOW_MINIMUM } from '@/lib/deliveryFees'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -18,6 +19,7 @@ export default function CheckoutPage() {
   const [orderType, setOrderType] = useState<string | null>(null)
   const [selectedLocation, setSelectedLocation] = useState<any>(null)
   const [mounted, setMounted] = useState(false)
+  const [isFreeDeliveryPostcode, setIsFreeDeliveryPostcode] = useState(false)
   const [formData, setFormData] = useState({
     customerName: '',
     customerEmail: '',
@@ -25,6 +27,7 @@ export default function CheckoutPage() {
     deliveryAddress: '',
     city: '',
     postalCode: '',
+    carDetails: '',
   })
 
   useEffect(() => {
@@ -47,6 +50,11 @@ export default function CheckoutPage() {
       const postalCode = storedOrderType === 'delivery' 
         ? parsedLocation?.postalCode || '' 
         : parsedLocation?.address?.split(',').pop()?.trim() || ''
+      
+      // Check if it's a free delivery postcode
+      if (storedOrderType === 'delivery' && postalCode && freeDeliveryPostcodes.includes(postalCode)) {
+        setIsFreeDeliveryPostcode(true)
+      }
 
       if (session?.user) {
         setFormData({
@@ -56,6 +64,7 @@ export default function CheckoutPage() {
           deliveryAddress: storedOrderType === 'delivery' ? '' : parsedLocation?.address || '',
           city: 'Birmingham',
           postalCode: postalCode,
+          carDetails: '',
         })
       } else {
         setFormData({
@@ -65,6 +74,7 @@ export default function CheckoutPage() {
           deliveryAddress: storedOrderType === 'delivery' ? '' : parsedLocation?.address || '',
           city: 'Birmingham',
           postalCode: postalCode,
+          carDetails: '',
         })
       }
     } else {
@@ -173,10 +183,23 @@ export default function CheckoutPage() {
                   <span>Subtotal</span>
                   <span>£{subtotal.toFixed(2)}</span>
                 </div>
+                {isFreeDeliveryPostcode && subtotal < MINIMUM_ORDER_FOR_FREE_DELIVERY && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p className="text-xs text-yellow-800">
+                      Add £{(MINIMUM_ORDER_FOR_FREE_DELIVERY - subtotal).toFixed(2)} more for free delivery
+                    </p>
+                  </div>
+                )}
                 {deliveryFee > 0 && (
                   <div className="flex justify-between text-sm">
                     <span>Delivery Fee</span>
                     <span>£{deliveryFee.toFixed(2)}</span>
+                  </div>
+                )}
+                {isFreeDeliveryPostcode && subtotal >= MINIMUM_ORDER_FOR_FREE_DELIVERY && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Delivery Fee</span>
+                    <span>Free</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center pt-2 border-t">
@@ -280,6 +303,26 @@ export default function CheckoutPage() {
                       }
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       placeholder="Street address"
+                    />
+                  </div>
+                )}
+
+                {orderType === 'collection' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Car Details (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.carDetails}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          carDetails: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      placeholder="Enter your car details e.g. registration number, color, make, model etc"
                     />
                   </div>
                 )}

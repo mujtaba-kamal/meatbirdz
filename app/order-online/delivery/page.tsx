@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MapPin, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { deliveryFees } from '@/lib/deliveryFees'
+import { deliveryFees, freeDeliveryPostcodes, MINIMUM_ORDER_FOR_FREE_DELIVERY, DELIVERY_FEE_BELOW_MINIMUM } from '@/lib/deliveryFees'
 
 const birminghamPostalCodes = [
   { code: 'B2', area: 'Birmingham City Centre' },
@@ -33,11 +33,13 @@ export default function DeliveryPage() {
 
   const handleSelect = (postalCode: string, area: string) => {
     setSelectedPostalCode(postalCode)
-    const deliveryFee = deliveryFees[postalCode] || 0
-    // Store selected postal code and delivery fee in localStorage
+    // Store selected postal code in localStorage (delivery fee will be calculated dynamically based on order total)
     localStorage.setItem('orderType', 'delivery')
-    localStorage.setItem('selectedLocation', JSON.stringify({ postalCode, area, deliveryFee }))
-    const feeText = deliveryFee === 0 ? 'Free delivery' : `Delivery fee: £${deliveryFee.toFixed(2)}`
+    localStorage.setItem('selectedLocation', JSON.stringify({ postalCode, area }))
+    const isFreeDelivery = freeDeliveryPostcodes.includes(postalCode)
+    const feeText = isFreeDelivery 
+      ? `Free delivery (min order £${MINIMUM_ORDER_FOR_FREE_DELIVERY})` 
+      : `Delivery fee: £${(deliveryFees[postalCode] || 0).toFixed(2)}`
     toast.success(`Selected ${area} (${postalCode}) - ${feeText}`)
     router.push('/menu')
   }
@@ -73,13 +75,22 @@ export default function DeliveryPage() {
                       {location.code}
                     </h3>
                     <p className="text-sm text-gray-600">{location.area}</p>
-                    <p className="text-sm font-semibold text-primary-600 mt-1">
-                      {deliveryFees[location.code] === 0 ? (
-                        <span className="text-green-600">Free delivery</span>
+                    <div className="mt-1">
+                      {freeDeliveryPostcodes.includes(location.code) ? (
+                        <div>
+                          <p className="text-sm font-semibold text-green-600">
+                            Free delivery
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Min order: £{MINIMUM_ORDER_FOR_FREE_DELIVERY} (or £{DELIVERY_FEE_BELOW_MINIMUM.toFixed(2)} fee)
+                          </p>
+                        </div>
                       ) : (
-                        `Delivery fee: £${(deliveryFees[location.code] || 0).toFixed(2)}`
+                        <p className="text-sm font-semibold text-primary-600">
+                          Delivery fee: £{(deliveryFees[location.code] || 0).toFixed(2)}
+                        </p>
                       )}
-                    </p>
+                    </div>
                   </div>
                 </div>
                 {selectedPostalCode === location.code && (

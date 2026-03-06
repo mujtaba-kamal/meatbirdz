@@ -4,15 +4,35 @@ import { useCartStore } from '@/store/cartStore'
 import { Plus, Minus, Trash2, ShoppingBag } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { freeDeliveryPostcodes, MINIMUM_ORDER_FOR_FREE_DELIVERY, DELIVERY_FEE_BELOW_MINIMUM } from '@/lib/deliveryFees'
 
 export default function CartPage() {
   const router = useRouter()
   const { items, updateQuantity, removeItem, getTotal, getDeliveryFee, getGrandTotal, clearCart } =
     useCartStore()
+  const [isFreeDeliveryPostcode, setIsFreeDeliveryPostcode] = useState(false)
 
   const subtotal = getTotal()
   const deliveryFee = getDeliveryFee()
   const total = getGrandTotal()
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const selectedLocation = localStorage.getItem('selectedLocation')
+      if (selectedLocation) {
+        try {
+          const location = JSON.parse(selectedLocation)
+          const postalCode = location.postalCode
+          if (postalCode && freeDeliveryPostcodes.includes(postalCode)) {
+            setIsFreeDeliveryPostcode(true)
+          }
+        } catch {
+          // Ignore parsing errors
+        }
+      }
+    }
+  }, [])
 
   if (items.length === 0) {
     return (
@@ -102,10 +122,23 @@ export default function CartPage() {
               <span>Subtotal</span>
               <span>£{subtotal.toFixed(2)}</span>
             </div>
+            {isFreeDeliveryPostcode && subtotal < MINIMUM_ORDER_FOR_FREE_DELIVERY && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-2">
+                <p className="text-xs text-yellow-800">
+                  Add £{(MINIMUM_ORDER_FOR_FREE_DELIVERY - subtotal).toFixed(2)} more for free delivery
+                </p>
+              </div>
+            )}
             {deliveryFee > 0 && (
               <div className="flex justify-between text-sm">
                 <span>Delivery Fee</span>
                 <span>£{deliveryFee.toFixed(2)}</span>
+              </div>
+            )}
+            {isFreeDeliveryPostcode && subtotal >= MINIMUM_ORDER_FOR_FREE_DELIVERY && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span>Delivery Fee</span>
+                <span>Free</span>
               </div>
             )}
           </div>

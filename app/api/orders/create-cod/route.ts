@@ -38,6 +38,30 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // Auto-migrate: Ensure carDetails column exists
+    try {
+      const columnCheck = await prisma.$queryRawUnsafe(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'Order' 
+        AND column_name = 'carDetails'
+      `)
+      
+      if ((columnCheck as any[]).length === 0) {
+        console.log('🔧 Auto-migrating: Adding carDetails column...')
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "Order" 
+          ADD COLUMN IF NOT EXISTS "carDetails" TEXT
+        `)
+        console.log('✅ Successfully added carDetails column')
+      }
+    } catch (migrationError: any) {
+      // If column already exists or migration fails, log but continue
+      if (!migrationError.message?.includes('already exists')) {
+        console.warn('⚠️ Migration check failed (non-critical):', migrationError.message)
+      }
+    }
+    
     const { items, customerInfo, total, deliveryFee } = await request.json()
     const session = await getServerSession(authOptions)
 
@@ -65,6 +89,7 @@ export async function POST(request: NextRequest) {
         deliveryAddress: customerInfo.deliveryAddress,
         city: customerInfo.city,
         postalCode: customerInfo.postalCode || null,
+        carDetails: customerInfo.carDetails || null,
         totalAmount: total,
         status: 'PENDING',
         paymentStatus: 'PENDING', // Will be marked as PAID when payment is received

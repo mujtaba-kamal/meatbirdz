@@ -85,7 +85,13 @@ export const useCartStore = create<CartStore>()(
         if (!selectedLocation) return 0
         try {
           const location = JSON.parse(selectedLocation)
-          return location.deliveryFee || 0
+          const postalCode = location.postalCode
+          if (!postalCode) return location.deliveryFee || 0
+          
+          // Import getDeliveryFee dynamically to avoid SSR issues
+          const { getDeliveryFee } = require('@/lib/deliveryFees')
+          const orderTotal = get().getTotal()
+          return getDeliveryFee(postalCode, orderTotal)
         } catch {
           return 0
         }

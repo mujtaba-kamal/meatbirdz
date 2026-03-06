@@ -50,6 +50,7 @@ model Order {
   deliveryAddress     String
   city                String
   postalCode          String?
+  carDetails          String? // Car details for collection orders (optional)
   totalAmount         Float
   status              OrderStatus   @default(PENDING)
   paymentStatus       PaymentStatus @default(PENDING)
