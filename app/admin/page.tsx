@@ -92,8 +92,6 @@ export default function AdminPage() {
   const [showCustomPicker, setShowCustomPicker] = useState(false)
   const [activeTab, setActiveTab] = useState<'orders' | 'menu'>('orders')
   const [previousOrderIds, setPreviousOrderIds] = useState<Set<string>>(new Set())
-  const [audioContext, setAudioContext] = useState<AudioContext | null>(null)
-  const [audioInitialized, setAudioInitialized] = useState(false)
   
   // Menu management state
   const [menuItems, setMenuItems] = useState<any[]>([])
@@ -141,32 +139,32 @@ export default function AdminPage() {
   }, [status, session, router])
 
 
-  // Initialize audio context on user interaction
+
+  // Initialize audio on first user interaction
   useEffect(() => {
-    const initializeAudio = () => {
-      if (typeof window !== 'undefined' && !audioInitialized) {
-        try {
-          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-          setAudioContext(ctx)
-          setAudioInitialized(true)
-        } catch (error) {
-          console.warn('Failed to initialize audio context:', error)
+    const initAudio = () => {
+      // Just create and resume audio context to unlock audio
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+        if (ctx.state === 'suspended') {
+          ctx.resume()
         }
+      } catch (e) {
+        // Ignore errors
       }
     }
-
+    
     // Initialize on any user interaction
-    const events = ['click', 'touchstart', 'keydown']
-    events.forEach(event => {
-      document.addEventListener(event, initializeAudio, { once: true })
-    })
-
+    document.addEventListener('click', initAudio, { once: true })
+    document.addEventListener('touchstart', initAudio, { once: true })
+    document.addEventListener('keydown', initAudio, { once: true })
+    
     return () => {
-      events.forEach(event => {
-        document.removeEventListener(event, initializeAudio)
-      })
+      document.removeEventListener('click', initAudio)
+      document.removeEventListener('touchstart', initAudio)
+      document.removeEventListener('keydown', initAudio)
     }
-  }, [audioInitialized])
+  }, [])
 
   useEffect(() => {
     if (session?.user?.role === 'ADMIN' && activeTab === 'orders') {
@@ -791,63 +789,36 @@ export default function AdminPage() {
     return { from, to }
   }
 
-  // Function to play bell sound
-  const playBellSound = async () => {
+  // Simple bell sound function
+  const playBellSound = () => {
     try {
       if (typeof window === 'undefined') return
       
-      // Get or create audio context
-      let ctx = audioContext
-      if (!ctx) {
-        ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-        setAudioContext(ctx)
-      }
-
-      // Resume audio context if suspended (required by browsers)
-      if (ctx.state === 'suspended') {
-        await ctx.resume()
-      }
-
-      // Create bell sound using Web Audio API
-      const oscillator = ctx.createOscillator()
-      const gainNode = ctx.createGain()
-
-      oscillator.type = 'sine'
-      oscillator.connect(gainNode)
-      gainNode.connect(ctx.destination)
-
-      // Bell-like frequency pattern (two tones)
-      oscillator.frequency.setValueAtTime(800, ctx.currentTime)
-      oscillator.frequency.setValueAtTime(1000, ctx.currentTime + 0.1)
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
       
-      gainNode.gain.setValueAtTime(0.3, ctx.currentTime)
-      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3)
-
-      oscillator.start(ctx.currentTime)
-      oscillator.stop(ctx.currentTime + 0.3)
-    } catch (error) {
-      console.warn('Failed to play bell sound:', error)
-      // Try fallback
-      try {
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-        const oscillator = ctx.createOscillator()
-        const gainNode = ctx.createGain()
-
-        oscillator.type = 'sine'
-        oscillator.connect(gainNode)
-        gainNode.connect(ctx.destination)
-
-        oscillator.frequency.setValueAtTime(800, ctx.currentTime)
-        oscillator.frequency.setValueAtTime(1000, ctx.currentTime + 0.1)
-        
-        gainNode.gain.setValueAtTime(0.3, ctx.currentTime)
-        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3)
-
-        oscillator.start()
-        oscillator.stop(ctx.currentTime + 0.3)
-      } catch (fallbackError) {
-        console.warn('Fallback bell sound also failed:', fallbackError)
+      // Create oscillator for bell sound
+      const oscillator = audioContext.createOscillator()
+      const gainNode = audioContext.createGain()
+      
+      oscillator.connect(gainNode)
+      gainNode.connect(audioContext.destination)
+      
+      // Simple bell tone
+      oscillator.frequency.value = 800
+      oscillator.type = 'sine'
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
+      
+      oscillator.start(audioContext.currentTime)
+      oscillator.stop(audioContext.currentTime + 0.5)
+      
+      // Resume audio context if suspended
+      if (audioContext.state === 'suspended') {
+        audioContext.resume()
       }
+    } catch (error) {
+      console.warn('Bell sound error:', error)
     }
   }
 
@@ -886,9 +857,7 @@ export default function AdminPage() {
           
           // Play bell sound when new order is received
           if (newPendingOrders.length > 0) {
-            playBellSound().catch(() => {
-              // Silently fail if audio doesn't play
-            })
+            playBellSound()
             toast.success(`🔔 New order received!`, {
               duration: 3000,
               icon: '🔔',
