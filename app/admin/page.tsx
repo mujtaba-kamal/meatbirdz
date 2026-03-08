@@ -1172,7 +1172,7 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
-          <>
+
         {/* Date Filter Section */}
         <div className="mb-6 bg-white rounded-lg shadow-md p-4 border border-gray-200">
           <div className="flex items-center gap-2 mb-4">
