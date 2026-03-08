@@ -75,17 +75,17 @@ const classicBoxBurgerOptions = [
 ]
 
 const classicBoxFriesOptions = [
-  { id: 'none', label: 'No fries', price: 0 },
-  { id: 'loaded-chicken', label: 'Loaded fries with crispy chicken', price: 0 },
+  { id: 'loaded-chicken', label: 'Skin on loaded fries with crispy chicken', price: 0 },
   { id: 'loaded-angus-jalapeno', label: 'Skin loaded fries topped with fresh Angus, melted cheese, jalapenos & drizzled with house sauce.', price: 0 },
   { id: 'loaded-both-jalapeno', label: 'Skin loaded fries topped with crispy chicken and fresh Angus, melted cheese, jalapenos & drizzled with house sauce.', price: 3.99 },
 ]
 
 // HexWrap Box wrap options
 const hexWrapBoxOptions = [
-  { id: 'crispy-bird-hex', label: 'The Crispy Bird Hex', price: 0 },
-  { id: 'grilled-bird-hex', label: 'The Grilled Bird Hex', price: 0 },
-  { id: 'meat-hex', label: 'The Meat Hex', price: 0 },
+  { id: 'angus-classic', label: 'Angus classic', price: 0 },
+  { id: 'crispy-bird-heat', label: 'Crispy bird (heat)', price: 0 },
+  { id: 'crispy-bird-classic', label: 'Crispy bird (classic)', price: 0 },
+  { id: 'grilled-bird', label: 'Grilled bird', price: 0 },
 ]
 
 const categories = [
@@ -143,7 +143,6 @@ export default function MenuPage() {
   const [hexWrapBoxFriesChoice, setHexWrapBoxFriesChoice] = useState<Record<string, string>>({}) // menuItemId -> selected fries option id
   const [hexWrapBoxDrinkChoice, setHexWrapBoxDrinkChoice] = useState<Record<string, string>>({}) // menuItemId -> selected drink option id
   const [hexWrapBoxDipsChoice, setHexWrapBoxDipsChoice] = useState<Record<string, string[]>>({}) // menuItemId -> selected dips (max 2)
-  const [hexWrapBoxHeatLevel, setHexWrapBoxHeatLevel] = useState<Record<string, 'classic' | 'heat'>>({}) // menuItemId -> heat level for Crispy Bird Hex
   const addItem = useCartStore((state) => state.addItem)
 
   // Fetch menu status function
@@ -432,15 +431,10 @@ export default function MenuPage() {
         setHexWrapBoxWrapChoice((prev) => ({ ...prev, [item.id]: hexWrapBoxOptions[0].id }))
       }
       if (hexWrapBoxFriesChoice[item.id] === undefined) {
-        setHexWrapBoxFriesChoice((prev) => ({ ...prev, [item.id]: classicBoxFriesOptions[1].id })) // Default to first fries option (skip 'none')
+        setHexWrapBoxFriesChoice((prev) => ({ ...prev, [item.id]: classicBoxFriesOptions[0].id })) // Default to first fries option
       }
       if (hexWrapBoxDrinkChoice[item.id] === undefined) {
         setHexWrapBoxDrinkChoice((prev) => ({ ...prev, [item.id]: burgerDrinkOptions[0].id }))
-      }
-      // Initialize heat level if Crispy Bird Hex is selected (default to classic)
-      const selectedWrapId = hexWrapBoxWrapChoice[item.id] || hexWrapBoxOptions[0].id
-      if (selectedWrapId === 'crispy-bird-hex' && hexWrapBoxHeatLevel[item.id] === undefined) {
-        setHexWrapBoxHeatLevel((prev) => ({ ...prev, [item.id]: 'classic' }))
       }
     }
   }
@@ -509,7 +503,7 @@ export default function MenuPage() {
       
       // Add double burger price if selected
       if (charFlameBoxDoubleBurger[item.id]) {
-        totalPrice += 1.5
+        totalPrice += 2.0
       }
       
       return totalPrice
@@ -859,13 +853,11 @@ export default function MenuPage() {
       })
       
       // Add fries
-      if (selectedFries.id !== 'none') {
-        selectedAddOnsData.push({
-          addOnId: `box-fries-${selectedFries.id}`,
-          name: `Fries: ${selectedFries.label}`,
-          price: selectedFries.price,
-        })
-      }
+      selectedAddOnsData.push({
+        addOnId: `box-fries-${selectedFries.id}`,
+        name: `Fries: ${selectedFries.label}`,
+        price: selectedFries.price,
+      })
       
       // Add drinks with quantities
       Object.entries(drinkQuantities).forEach(([drinkId, quantity]) => {
@@ -965,13 +957,11 @@ export default function MenuPage() {
       })
       
       // Add fries
-      if (selectedFries.id !== 'none') {
-        selectedAddOnsData.push({
-          addOnId: `box-fries-${selectedFries.id}`,
-          name: `Fries: ${selectedFries.label}`,
-          price: selectedFries.price,
-        })
-      }
+      selectedAddOnsData.push({
+        addOnId: `box-fries-${selectedFries.id}`,
+        name: `Fries: ${selectedFries.label}`,
+        price: selectedFries.price,
+      })
       
       // Add drinks with quantities
       Object.entries(drinkQuantities).forEach(([drinkId, quantity]) => {
@@ -1059,7 +1049,7 @@ export default function MenuPage() {
         selectedAddOnsData.push({
           addOnId: 'char-flame-double-burger',
           name: 'Make it a double burger',
-          price: 1.5,
+          price: 2.0,
         })
       }
       
@@ -1128,8 +1118,8 @@ export default function MenuPage() {
       const selectedWrapId = hexWrapBoxWrapChoice[item.id] || hexWrapBoxOptions[0].id
       const selectedWrap = hexWrapBoxOptions.find((opt) => opt.id === selectedWrapId) || hexWrapBoxOptions[0]
       
-      const selectedFriesId = hexWrapBoxFriesChoice[item.id] || classicBoxFriesOptions[1].id
-      const selectedFries = classicBoxFriesOptions.find((opt) => opt.id === selectedFriesId) || classicBoxFriesOptions[1]
+      const selectedFriesId = hexWrapBoxFriesChoice[item.id] || classicBoxFriesOptions[0].id
+      const selectedFries = classicBoxFriesOptions.find((opt) => opt.id === selectedFriesId) || classicBoxFriesOptions[0]
       
       const selectedDrinkId = hexWrapBoxDrinkChoice[item.id] || burgerDrinkOptions[0].id
       const selectedDrink = burgerDrinkOptions.find((opt) => opt.id === selectedDrinkId) || burgerDrinkOptions[0]
@@ -1137,25 +1127,18 @@ export default function MenuPage() {
       const selectedDips = hexWrapBoxDipsChoice[item.id] || []
       
       // Add box selections to add-ons
-      // Include heat level if Crispy Bird Hex is selected
-      const wrapLabel = selectedWrap.id === 'crispy-bird-hex' 
-        ? `${selectedWrap.label} (${hexWrapBoxHeatLevel[item.id] === 'heat' ? 'Heat' : 'Classic'})`
-        : selectedWrap.label
-      
       selectedAddOnsData.push({
         addOnId: `hexwrap-wrap-${selectedWrap.id}`,
-        name: `Wrap: ${wrapLabel}`,
+        name: `Wrap: ${selectedWrap.label}`,
         price: selectedWrap.price,
       })
       
-      // Only add fries if not "none"
-      if (selectedFries.id !== 'none') {
-        selectedAddOnsData.push({
-          addOnId: `hexwrap-fries-${selectedFries.id}`,
-          name: `Fries: ${selectedFries.label}`,
-          price: selectedFries.price,
-        })
-      }
+      // Add fries
+      selectedAddOnsData.push({
+        addOnId: `hexwrap-fries-${selectedFries.id}`,
+        name: `Fries: ${selectedFries.label}`,
+        price: selectedFries.price,
+      })
       
       selectedAddOnsData.push({
         addOnId: `hexwrap-drink-${selectedDrink.id}`,
@@ -1213,11 +1196,6 @@ export default function MenuPage() {
         return updated
       })
       setHexWrapBoxDipsChoice((prev) => {
-        const updated = { ...prev }
-        delete updated[item.id]
-        return updated
-      })
-      setHexWrapBoxHeatLevel((prev) => {
         const updated = { ...prev }
         delete updated[item.id]
         return updated
@@ -2523,7 +2501,7 @@ export default function MenuPage() {
                           Make it a double burger
                         </span>
                       </div>
-                      <span className="text-primary-600 font-semibold">+£1.50</span>
+                      <span className="text-primary-600 font-semibold">+£2.00</span>
                     </label>
                   </div>
 
@@ -2657,10 +2635,6 @@ export default function MenuPage() {
                                     ...prev,
                                     [selectedItem.id]: option.id,
                                   }))
-                                  // Initialize heat level if Crispy Bird Hex is selected
-                                  if (option.id === 'crispy-bird-hex' && hexWrapBoxHeatLevel[selectedItem.id] === undefined) {
-                                    setHexWrapBoxHeatLevel((prev) => ({ ...prev, [selectedItem.id]: 'classic' }))
-                                  }
                                 }}
                                 className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                               />
@@ -2677,49 +2651,6 @@ export default function MenuPage() {
                     </div>
                   </div>
 
-                  {/* Heat Level Selection - For Crispy Bird Hex */}
-                  {hexWrapBoxWrapChoice[selectedItem.id] === 'crispy-bird-hex' && (
-                    <div>
-                      <label className="block text-base font-semibold text-gray-700 mb-3">
-                        Heat Level:
-                      </label>
-                      <div className="space-y-2">
-                        {[
-                          { id: 'classic', label: 'Classic' },
-                          { id: 'heat', label: 'Heat' },
-                        ].map((option) => {
-                          const currentChoice = hexWrapBoxHeatLevel[selectedItem.id] || 'classic'
-                          const isSelected = currentChoice === option.id
-                          return (
-                            <label
-                              key={option.id}
-                              className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                                isSelected
-                                  ? 'border-primary-600 bg-primary-50'
-                                  : 'border-gray-200 bg-white hover:border-gray-300'
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <input
-                                  type="radio"
-                                  name={`hexwrap-heat-level-${selectedItem.id}`}
-                                  checked={isSelected}
-                                  onChange={() =>
-                                    setHexWrapBoxHeatLevel((prev) => ({
-                                      ...prev,
-                                      [selectedItem.id]: option.id as 'classic' | 'heat',
-                                    }))
-                                  }
-                                  className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
-                                />
-                                <span className="font-medium text-gray-900">{option.label}</span>
-                              </div>
-                            </label>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
 
                   {/* Choose Loaded Fries */}
                   <div>
@@ -2728,7 +2659,7 @@ export default function MenuPage() {
                     </label>
                     <div className="space-y-2">
                       {classicBoxFriesOptions.map((option) => {
-                        const currentChoice = hexWrapBoxFriesChoice[selectedItem.id] || classicBoxFriesOptions[1].id
+                        const currentChoice = hexWrapBoxFriesChoice[selectedItem.id] || classicBoxFriesOptions[0].id
                         const isSelected = currentChoice === option.id
                         return (
                           <label

@@ -247,6 +247,7 @@ export default function Home() {
               <MapPin className="w-8 h-8 text-primary-600 mb-4" />
               <h3 className="text-xl font-bold mb-2 text-gray-900">MeatBirdz Collection Point</h3>
               <p className="text-gray-600 mb-2">198 heybarnes road B10 9JF</p>
+              <p className="text-gray-600 mb-2">Phone: 01215170802</p>
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <p className="text-sm font-semibold text-gray-700 mb-2">Opening Hours:</p>
                 <p className="text-sm text-gray-600">Sun - Thu: 17:30 - 00:00</p>
@@ -394,6 +395,17 @@ export default function Home() {
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                  </svg>
+                </a>
+                <a
+                  href="https://www.snapchat.com/add/meatbirdz"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center w-10 h-10 bg-gray-800 rounded-full hover:bg-primary-600 transition-colors"
+                  aria-label="Snapchat"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12.206.793c.99 0 4.347.276 5.93 3.821.529 1.193.403 3.219.299 4.847l-.003.031c-.012.15-.024.3-.024.45 0 .15.012.3.024.45l.003.031c.104 1.628.23 3.654.299 4.847.058 1.172.085 1.763-.298 2.37-.383.607-1.08 1.08-1.92 1.08-.84 0-1.537-.473-1.92-1.08-.383-.607-.356-1.198-.298-2.37.069-1.193.195-3.219.299-4.847l.003-.031c.012-.15.024-.3.024-.45 0-.15-.012-.3-.024-.45l-.003-.031c-.104-1.628-.23-3.654-.299-4.847-.058-1.172-.085-1.763.298-2.37.383-.607 1.08-1.08 1.92-1.08zM5.429 9.48c.276 1.193.403 3.219.299 4.847l-.003.031c-.012.15-.024.3-.024.45 0 .15.012.3.024.45l.003.031c.104 1.628.23 3.654.299 4.847.058 1.172.085 1.763-.298 2.37-.383.607-1.08 1.08-1.92 1.08-.84 0-1.537-.473-1.92-1.08-.383-.607-.356-1.198-.298-2.37.069-1.193.195-3.219.299-4.847l.003-.031c.012-.15.024-.3.024-.45 0-.15-.012-.3-.024-.45l-.003-.031c-.104-1.628-.23-3.654-.299-4.847-.058-1.172-.085-1.763.298-2.37.383-.607 1.08-1.08 1.92-1.08.84 0 1.537.473 1.92 1.08.383.607.356 1.198.298 2.37z"/>
                   </svg>
                 </a>
               </div>
