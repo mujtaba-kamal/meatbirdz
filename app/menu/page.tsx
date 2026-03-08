@@ -146,37 +146,36 @@ export default function MenuPage() {
   const [hexWrapBoxHeatLevel, setHexWrapBoxHeatLevel] = useState<Record<string, 'classic' | 'heat'>>({}) // menuItemId -> heat level for Crispy Bird Hex
   const addItem = useCartStore((state) => state.addItem)
 
-  // Fetch menu status on mount and poll regularly
-  useEffect(() => {
-    const fetchMenuStatus = async () => {
-      try {
-        const response = await fetch('/api/menu-status', {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache',
-          },
-        })
-        if (response.ok) {
-          const data = await response.json()
-          setMenuEnabled(data.enabled)
-        } else {
-          console.error('Failed to fetch menu status:', response.status)
-          // Default to enabled if API fails
-          setMenuEnabled(true)
-        }
-      } catch (error) {
-        console.error('Error fetching menu status:', error)
-        // Default to enabled if fetch fails
+  // Fetch menu status function
+  const fetchMenuStatus = async () => {
+    try {
+      const response = await fetch('/api/menu-status', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setMenuEnabled(data.enabled)
+        return data.enabled
+      } else {
+        console.error('Failed to fetch menu status:', response.status)
+        // Default to enabled if API fails
         setMenuEnabled(true)
+        return true
       }
+    } catch (error) {
+      console.error('Error fetching menu status:', error)
+      // Default to enabled if fetch fails
+      setMenuEnabled(true)
+      return true
     }
-    
-    // Fetch immediately on mount
+  }
+
+  // Fetch menu status only on initial page load
+  useEffect(() => {
     fetchMenuStatus()
-    
-    // Poll menu status every 5 seconds to check for changes
-    const interval = setInterval(fetchMenuStatus, 5000)
-    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
@@ -317,6 +316,13 @@ export default function MenuPage() {
   }
 
   const openDrawer = async (item: MenuItem) => {
+    // Check menu status when user clicks on an item
+    const isEnabled = await fetchMenuStatus()
+    if (!isEnabled) {
+      toast.error('Menu is currently disabled. Orders cannot be placed.')
+      return
+    }
+    
     if (!item.available) {
       toast.error('This item is currently unavailable')
       return
@@ -594,7 +600,14 @@ export default function MenuPage() {
     return true // Other items don't need validation
   }
 
-  const handleAddToCart = (item: MenuItem) => {
+  const handleAddToCart = async (item: MenuItem) => {
+    // Check menu status before adding to cart
+    const isEnabled = await fetchMenuStatus()
+    if (!isEnabled) {
+      toast.error('Menu is currently disabled. Orders cannot be placed.')
+      return
+    }
+    
     if (!item.available) {
       toast.error('This item is currently unavailable')
       return
