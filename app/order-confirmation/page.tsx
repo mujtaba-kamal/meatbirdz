@@ -241,11 +241,17 @@ function OrderConfirmationContent() {
   }
 
   // Check if order is a collection order
-  const isCollectionOrder = order && (
-    order.deliveryAddress.includes('High Street') ||
-    order.deliveryAddress.includes('Hagley Road') ||
-    order.deliveryAddress.includes('Digbeth')
-  )
+  const isCollectionOrder = order && (() => {
+    const address = order.deliveryAddress.toLowerCase()
+    return (
+      address.includes('high street') ||
+      address.includes('hagley road') ||
+      address.includes('digbeth') ||
+      address.includes('198 heybarnes') ||
+      address.includes('heybarnes road') ||
+      address.includes('heybarnes')
+    )
+  })()
 
   if (loading) {
     return (
@@ -295,7 +301,9 @@ function OrderConfirmationContent() {
             <p>
               <span className="font-semibold">Payment Status:</span>{' '}
               <span className="capitalize text-green-600">
-                {order.paymentStatus.toLowerCase()}
+                {!order.stripePaymentId && isCollectionOrder
+                  ? 'Collection'
+                  : order.paymentStatus.toLowerCase()}
               </span>
             </p>
           </div>

@@ -79,6 +79,19 @@ const orderStatuses = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED'
 
 type DateFilter = '24h' | '3d' | '7d' | '15d' | '30d' | '6m' | '1y' | 'custom'
 
+// Helper function to check if an order is a collection order
+const isCollectionOrder = (order: Order): boolean => {
+  const address = order.deliveryAddress.toLowerCase()
+  return (
+    address.includes('high street') ||
+    address.includes('hagley road') ||
+    address.includes('digbeth') ||
+    address.includes('198 heybarnes') ||
+    address.includes('heybarnes road') ||
+    address.includes('heybarnes')
+  )
+}
+
 export default function AdminPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -1377,7 +1390,11 @@ export default function AdminPage() {
                 orders.map((order) => (
                   <div
                     key={order.id}
-                    className={`bg-white rounded-lg shadow-md p-4 cursor-pointer hover:shadow-lg transition-all border ${statusRowColors[order.status] || statusRowColors.PENDING}`}
+                    className={`bg-white rounded-lg shadow-md p-4 cursor-pointer hover:shadow-lg transition-all border ${
+                      isCollectionOrder(order) 
+                        ? 'border-orange-400 bg-orange-50/30' 
+                        : statusRowColors[order.status] || statusRowColors.PENDING
+                    }`}
                     onClick={() => setSelectedOrder(order)}
                   >
                     {/* Header Row */}
@@ -1475,11 +1492,15 @@ export default function AdminPage() {
                         ) : (
                           <div className="flex items-center gap-2">
                             {!order.stripePaymentId ? (
-                              <span className="flex items-center bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-semibold">
-                                {order.deliveryAddress.includes('High Street') || order.deliveryAddress.includes('Hagley Road') || order.deliveryAddress.includes('Digbeth') ? (
+                              <span className={`flex items-center px-2 py-1 rounded text-xs font-semibold ${
+                                isCollectionOrder(order)
+                                  ? 'bg-orange-100 text-orange-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {isCollectionOrder(order) ? (
                                   <>
                                     <CreditCard className="w-3 h-3 mr-1" />
-                                    Pay at Collection
+                                    Collection
                                   </>
                                 ) : (
                                   <>
@@ -1553,10 +1574,10 @@ export default function AdminPage() {
                             <div className="flex items-center">
                               {!selectedOrder.stripePaymentId ? (
                                 <>
-                                  {selectedOrder.deliveryAddress.includes('High Street') || selectedOrder.deliveryAddress.includes('Hagley Road') || selectedOrder.deliveryAddress.includes('Digbeth') ? (
+                                  {isCollectionOrder(selectedOrder) ? (
                                     <>
                                       <CreditCard className="w-5 h-5 text-orange-600 mr-2" />
-                                      <span className="font-semibold text-orange-800">Pay at Collection</span>
+                                      <span className="font-semibold text-orange-800">Collection</span>
                                     </>
                                   ) : (
                                     <>
