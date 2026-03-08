@@ -12,6 +12,53 @@ export default function CartPage() {
   const { items, updateQuantity, removeItem, getTotal, getDeliveryFee, getGrandTotal, clearCart } =
     useCartStore()
   const [isFreeDeliveryPostcode, setIsFreeDeliveryPostcode] = useState(false)
+  const [menuEnabled, setMenuEnabled] = useState<boolean>(true)
+
+  const subtotal = getTotal()
+  const deliveryFee = getDeliveryFee()
+  const total = getGrandTotal()
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const selectedLocation = localStorage.getItem('selectedLocation')
+      if (selectedLocation) {
+        try {
+          const location = JSON.parse(selectedLocation)
+          const postalCode = location.postalCode
+          if (postalCode && freeDeliveryPostcodes.includes(postalCode)) {
+            setIsFreeDeliveryPostcode(true)
+          }
+        } catch {
+          // Ignore parsing errors
+        }
+      }
+    }
+  }, [])
+
+  // Check menu status
+  useEffect(() => {
+    const checkMenuStatus = async () => {
+      try {
+        const response = await fetch('/api/menu-status')
+        if (response.ok) {
+          const data = await response.json()
+          setMenuEnabled(data.enabled)
+          if (!data.enabled) {
+            router.push('/menu')
+          }
+        }
+      } catch (error) {
+        console.error('Error checking menu status:', error)
+      }
+    }
+    checkMenuStatus()
+  }, [router])
+
+export default function CartPage() {
+  const router = useRouter()
+  const { items, updateQuantity, removeItem, getTotal, getDeliveryFee, getGrandTotal, clearCart } =
+    useCartStore()
+  const [isFreeDeliveryPostcode, setIsFreeDeliveryPostcode] = useState(false)
 
   const subtotal = getTotal()
   const deliveryFee = getDeliveryFee()

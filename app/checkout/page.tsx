@@ -20,6 +20,7 @@ export default function CheckoutPage() {
   const [selectedLocation, setSelectedLocation] = useState<any>(null)
   const [mounted, setMounted] = useState(false)
   const [isFreeDeliveryPostcode, setIsFreeDeliveryPostcode] = useState(false)
+  const [menuEnabled, setMenuEnabled] = useState<boolean>(true)
   const [formData, setFormData] = useState({
     customerName: '',
     customerEmail: '',
@@ -33,6 +34,28 @@ export default function CheckoutPage() {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Check menu status
+  useEffect(() => {
+    const checkMenuStatus = async () => {
+      try {
+        const response = await fetch('/api/menu-status')
+        if (response.ok) {
+          const data = await response.json()
+          setMenuEnabled(data.enabled)
+          if (!data.enabled) {
+            toast.error('Menu is currently disabled. Orders cannot be placed.')
+            router.push('/menu')
+          }
+        }
+      } catch (error) {
+        console.error('Error checking menu status:', error)
+      }
+    }
+    if (mounted) {
+      checkMenuStatus()
+    }
+  }, [mounted, router])
 
   useEffect(() => {
     // Only run on client side after mount
@@ -94,6 +117,14 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Check if menu is enabled
+    if (!menuEnabled) {
+      toast.error('Menu is currently disabled. Orders cannot be placed.')
+      router.push('/menu')
+      return
+    }
+    
     setLoading(true)
 
     try {

@@ -94,6 +94,8 @@ export default function AdminPage() {
   const [previousOrderIds, setPreviousOrderIds] = useState<Set<string>>(new Set())
   const [isFirstLoadAfterFilterChange, setIsFirstLoadAfterFilterChange] = useState(false)
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null)
+  const [menuEnabled, setMenuEnabled] = useState<boolean>(true)
+  const [menuStatusLoading, setMenuStatusLoading] = useState(false)
   
   // Menu management state
   const [menuItems, setMenuItems] = useState<any[]>([])
@@ -194,6 +196,52 @@ export default function AdminPage() {
       fetchMenuItems()
     }
   }, [session, activeTab])
+
+  // Fetch menu status
+  useEffect(() => {
+    if (session?.user?.role === 'ADMIN') {
+      fetchMenuStatus()
+    }
+  }, [session])
+
+  const fetchMenuStatus = async () => {
+    try {
+      const response = await fetch('/api/menu-status')
+      if (response.ok) {
+        const data = await response.json()
+        setMenuEnabled(data.enabled)
+      }
+    } catch (error) {
+      console.error('Error fetching menu status:', error)
+    }
+  }
+
+  const toggleMenuStatus = async () => {
+    setMenuStatusLoading(true)
+    try {
+      const newStatus = !menuEnabled
+      const response = await fetch('/api/menu-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ enabled: newStatus }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setMenuEnabled(data.enabled)
+        toast.success(data.message || (newStatus ? 'Menu enabled' : 'Menu disabled'))
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to update menu status')
+      }
+    } catch (error) {
+      toast.error('Failed to update menu status')
+    } finally {
+      setMenuStatusLoading(false)
+    }
+  }
 
   const fetchMenuItems = async () => {
     try {
@@ -1094,6 +1142,37 @@ export default function AdminPage() {
         {/* Orders Tab Content */}
         {activeTab === 'orders' && (
           <>
+            {/* Menu Status Toggle */}
+            <div className="mb-6 bg-white rounded-lg shadow-md p-4 sm:p-6 border-2 border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                    Menu Status
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {menuEnabled 
+                      ? 'Menu is currently enabled - customers can place orders'
+                      : 'Menu is currently disabled - customers cannot place orders'}
+                  </p>
+                </div>
+                <button
+                  onClick={toggleMenuStatus}
+                  disabled={menuStatusLoading}
+                  className={`relative inline-flex h-11 w-20 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                    menuEnabled
+                      ? 'bg-green-500'
+                      : 'bg-gray-300'
+                  } ${menuStatusLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  <span
+                    className={`inline-block h-9 w-9 transform rounded-full bg-white transition-transform ${
+                      menuEnabled ? 'translate-x-10' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          <>
         {/* Date Filter Section */}
         <div className="mb-6 bg-white rounded-lg shadow-md p-4 border border-gray-200">
           <div className="flex items-center gap-2 mb-4">
@@ -1250,6 +1329,37 @@ export default function AdminPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+          {/* Menu Status Toggle */}
+          <div className="mb-6 bg-white rounded-lg shadow-md p-4 sm:p-6 border-2 border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                  Menu Status
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {menuEnabled 
+                    ? 'Menu is currently enabled - customers can place orders'
+                    : 'Menu is currently disabled - customers cannot place orders'}
+                </p>
+              </div>
+              <button
+                onClick={toggleMenuStatus}
+                disabled={menuStatusLoading}
+                className={`relative inline-flex h-11 w-20 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                  menuEnabled
+                    ? 'bg-green-500'
+                    : 'bg-gray-300'
+                } ${menuStatusLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                <span
+                  className={`inline-block h-9 w-9 transform rounded-full bg-white transition-transform ${
+                    menuEnabled ? 'translate-x-10' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
           {/* Orders List */}
           <div className="lg:col-span-2">
             <div className="mb-4">

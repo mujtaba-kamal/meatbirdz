@@ -145,6 +145,25 @@ export default function MenuPage() {
   const [hexWrapBoxHeatLevel, setHexWrapBoxHeatLevel] = useState<Record<string, 'classic' | 'heat'>>({}) // menuItemId -> heat level for Crispy Bird Hex
   const addItem = useCartStore((state) => state.addItem)
 
+  // Fetch menu status
+  useEffect(() => {
+    const fetchMenuStatus = async () => {
+      try {
+        const response = await fetch('/api/menu-status')
+        if (response.ok) {
+          const data = await response.json()
+          setMenuEnabled(data.enabled)
+        }
+      } catch (error) {
+        console.error('Error fetching menu status:', error)
+      }
+    }
+    fetchMenuStatus()
+    // Poll menu status every 5 seconds
+    const interval = setInterval(fetchMenuStatus, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     
@@ -1353,7 +1372,34 @@ export default function MenuPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 relative">
+      {/* Menu Disabled Overlay */}
+      {!menuEnabled && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
+            <div className="mb-6">
+              <div className="w-20 h-20 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Menu Currently Unavailable</h2>
+              <p className="text-gray-600">
+                We&apos;re currently not accepting orders. Please check back later.
+              </p>
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Grey out content when menu is disabled */}
+      <div className={menuEnabled ? '' : 'opacity-50 pointer-events-none'}>
         {/* Location Banner */}
         {orderType && selectedLocation && (
         <div className="bg-white border-b border-gray-200 sticky top-0 z-30">
@@ -3246,6 +3292,7 @@ export default function MenuPage() {
         </div>
         </>
         )}
+      </div>
     </div>
   )
 }
