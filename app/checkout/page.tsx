@@ -358,36 +358,38 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      City *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.city}
-                      onChange={(e) =>
-                        setFormData({ ...formData, city: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    />
-                  </div>
+                {orderType === 'delivery' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        City *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.city}
+                        onChange={(e) =>
+                          setFormData({ ...formData, city: e.target.value })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Postal Code
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.postalCode}
-                      onChange={(e) =>
-                        setFormData({ ...formData, postalCode: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    />
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Postal Code
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.postalCode}
+                        onChange={(e) =>
+                          setFormData({ ...formData, postalCode: e.target.value })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <button

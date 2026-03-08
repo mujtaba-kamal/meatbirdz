@@ -350,13 +350,21 @@ function OrderConfirmationContent() {
           <div className="border-t pt-4">
             <h3 className="font-semibold mb-3 flex items-center">
               <MapPin className="w-5 h-5 mr-2" />
-              Delivery Address
+              {isCollectionOrder ? 'Collection Address' : 'Delivery Address'}
             </h3>
-            <p className="text-gray-700">
-              {order.deliveryAddress}
-              <br />
-              {order.city} {order.postalCode && order.postalCode}
-            </p>
+            {isCollectionOrder ? (
+              <p className="text-gray-700">
+                MeatBirdz Collection Point
+                <br />
+                198 heybarnes road B10 9JF
+              </p>
+            ) : (
+              <p className="text-gray-700">
+                {order.deliveryAddress}
+                <br />
+                {order.city} {order.postalCode && order.postalCode}
+              </p>
+            )}
             {order.carDetails && (
               <div className="mt-4">
                 <h4 className="font-semibold mb-2">Car Details</h4>

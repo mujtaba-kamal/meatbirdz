@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { MapPin, Check } from 'lucide-react'
+import { MapPin, Check, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { deliveryFees, freeDeliveryPostcodes, MINIMUM_ORDER_FOR_FREE_DELIVERY, DELIVERY_FEE_BELOW_MINIMUM } from '@/lib/deliveryFees'
 
@@ -54,6 +54,23 @@ export default function DeliveryPage() {
           <p className="text-base sm:text-lg lg:text-xl text-gray-600">
             Choose your postal code for delivery
           </p>
+        </div>
+
+        {/* Warning Message */}
+        <div className="mb-6 bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-bold text-yellow-900 mb-2 text-sm sm:text-base">
+                Important: Delivery Area Restriction
+              </h3>
+              <p className="text-sm sm:text-base text-yellow-800 leading-relaxed">
+                Please <strong>only select</strong> the postal codes listed below as we are only delivering to these areas. 
+                If you are not from these areas, you can choose <strong>collection</strong> to collect your order. 
+                <strong className="block mt-2">If a delivery order is placed outside these postal codes, the order will be discarded.</strong>
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
