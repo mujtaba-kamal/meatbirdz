@@ -111,6 +111,7 @@ export default function MenuPage() {
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [menuEnabled, setMenuEnabled] = useState<boolean>(true)
   // Burger meal specific state
   const [burgerMealSelected, setBurgerMealSelected] = useState<Record<string, boolean>>({})
   const [burgerFriesChoice, setBurgerFriesChoice] = useState<Record<string, 'regular' | 'loaded-chicken' | 'loaded-angus' | 'loaded-both'>>({})
