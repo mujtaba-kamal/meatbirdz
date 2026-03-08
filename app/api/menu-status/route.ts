@@ -2,46 +2,58 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { readFileSync, writeFileSync, existsSync } from 'fs'
-import { join } from 'path'
 
 export const dynamic = 'force-dynamic'
-
-const MENU_STATUS_FILE = join(process.cwd(), '.menu-status.json')
-
-// Get menu status from file or default to true
-function getMenuStatus(): boolean {
-  try {
-    if (existsSync(MENU_STATUS_FILE)) {
-      const content = readFileSync(MENU_STATUS_FILE, 'utf-8')
-      const data = JSON.parse(content)
-      return data.enabled !== false // Default to true if not set
-    }
-  } catch (error) {
-    console.warn('Error reading menu status file:', error)
-  }
-  return true // Default to enabled
-}
-
-// Save menu status to file
-function saveMenuStatus(enabled: boolean): void {
-  try {
-    writeFileSync(MENU_STATUS_FILE, JSON.stringify({ enabled, updatedAt: new Date().toISOString() }), 'utf-8')
-  } catch (error) {
-    console.error('Error saving menu status file:', error)
-  }
-}
 
 // GET - Get menu status (public endpoint)
 export async function GET() {
   try {
-    const status = getMenuStatus()
-    return NextResponse.json({ enabled: status })
+    // Auto-migrate: Ensure Settings table exists
+    try {
+      const tableCheck = await prisma.$queryRawUnsafe(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_name = 'settings'
+      `)
+      
+      if ((tableCheck as any[]).length === 0) {
+        console.log('🔧 Auto-migrating: Creating Settings table...')
+        await prisma.$executeRawUnsafe(`
+          CREATE TABLE IF NOT EXISTS "settings" (
+            "id" TEXT NOT NULL PRIMARY KEY,
+            "menuEnabled" BOOLEAN NOT NULL DEFAULT true,
+            "updatedAt" TIMESTAMP(3) NOT NULL,
+            "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+          )
+        `)
+        console.log('✅ Successfully created Settings table')
+      }
+    } catch (migrationError: any) {
+      if (!migrationError.message?.includes('already exists')) {
+        console.warn('⚠️ Migration check failed (non-critical):', migrationError.message)
+      }
+    }
+
+    // Try to get settings from database
+    let settings = await prisma.settings.findUnique({
+      where: { id: 'settings' }
+    })
+
+    // If settings don't exist, create with default (enabled)
+    if (!settings) {
+      settings = await prisma.settings.create({
+        data: {
+          id: 'settings',
+          menuEnabled: true
+        }
+      })
+    }
+
+    return NextResponse.json({ enabled: settings.menuEnabled })
   } catch (error: any) {
-    return NextResponse.json(
-      { error: 'Failed to fetch menu status', details: error.message },
-      { status: 500 }
-    )
+    console.error('Error fetching menu status:', error)
+    // If there's an error (e.g., table doesn't exist), default to enabled
+    return NextResponse.json({ enabled: true })
   }
 }
 
@@ -67,12 +79,45 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Save to file for persistence
-    saveMenuStatus(enabled)
+    // Auto-migrate: Ensure Settings table exists
+    try {
+      const tableCheck = await prisma.$queryRawUnsafe(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_name = 'settings'
+      `)
+      
+      if ((tableCheck as any[]).length === 0) {
+        console.log('🔧 Auto-migrating: Creating Settings table...')
+        await prisma.$executeRawUnsafe(`
+          CREATE TABLE IF NOT EXISTS "settings" (
+            "id" TEXT NOT NULL PRIMARY KEY,
+            "menuEnabled" BOOLEAN NOT NULL DEFAULT true,
+            "updatedAt" TIMESTAMP(3) NOT NULL,
+            "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+          )
+        `)
+        console.log('✅ Successfully created Settings table')
+      }
+    } catch (migrationError: any) {
+      if (!migrationError.message?.includes('already exists')) {
+        console.warn('⚠️ Migration check failed (non-critical):', migrationError.message)
+      }
+    }
+
+    // Update or create settings in database
+    const settings = await prisma.settings.upsert({
+      where: { id: 'settings' },
+      update: { menuEnabled: enabled },
+      create: {
+        id: 'settings',
+        menuEnabled: enabled
+      }
+    })
 
     return NextResponse.json({ 
       success: true, 
-      enabled: enabled,
+      enabled: settings.menuEnabled,
       message: enabled ? 'Menu is now enabled' : 'Menu is now disabled'
     })
   } catch (error: any) {

@@ -206,10 +206,17 @@ export default function AdminPage() {
 
   const fetchMenuStatus = async () => {
     try {
-      const response = await fetch('/api/menu-status')
+      const response = await fetch('/api/menu-status', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
       if (response.ok) {
         const data = await response.json()
         setMenuEnabled(data.enabled)
+      } else {
+        console.error('Failed to fetch menu status:', response.status)
       }
     } catch (error) {
       console.error('Error fetching menu status:', error)
@@ -232,9 +239,13 @@ export default function AdminPage() {
         const data = await response.json()
         setMenuEnabled(data.enabled)
         toast.success(data.message || (newStatus ? 'Menu enabled' : 'Menu disabled'))
+        // Refresh status to ensure it's in sync
+        await fetchMenuStatus()
       } else {
         const error = await response.json()
         toast.error(error.error || 'Failed to update menu status')
+        // Refresh status even on error to get current state
+        await fetchMenuStatus()
       }
     } catch (error) {
       toast.error('Failed to update menu status')

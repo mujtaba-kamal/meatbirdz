@@ -169,3 +169,12 @@ enum UserRole {
   CUSTOMER
   ADMIN
 }
+
+model Settings {
+  id        String   @id @default("settings")
+  menuEnabled Boolean @default(true)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@map("settings")
+}
