@@ -1054,6 +1054,38 @@ export default function AdminPage() {
     }
   }
 
+  const handleDeleteOrder = async (orderId: string, customerName: string) => {
+    // Show confirmation popup
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the order for ${customerName}?\n\nThis action cannot be undone.`
+    )
+    
+    if (!confirmed) return
+
+    try {
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast.success('Order deleted successfully')
+        // Remove order from local state
+        setOrders(orders.filter(order => order.id !== orderId))
+        // Clear selected order if it was the deleted one
+        if (selectedOrder?.id === orderId) {
+          setSelectedOrder(null)
+        }
+      } else {
+        toast.error(data.error || 'Failed to delete order')
+      }
+    } catch (error) {
+      console.error('Error deleting order:', error)
+      toast.error('Failed to delete order')
+    }
+  }
+
   const acknowledgeArrival = async (orderId: string, e: React.MouseEvent) => {
     e.stopPropagation() // Prevent selecting the order
     try {
