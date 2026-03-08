@@ -54,33 +54,6 @@ export default function CartPage() {
     checkMenuStatus()
   }, [router])
 
-export default function CartPage() {
-  const router = useRouter()
-  const { items, updateQuantity, removeItem, getTotal, getDeliveryFee, getGrandTotal, clearCart } =
-    useCartStore()
-  const [isFreeDeliveryPostcode, setIsFreeDeliveryPostcode] = useState(false)
-
-  const subtotal = getTotal()
-  const deliveryFee = getDeliveryFee()
-  const total = getGrandTotal()
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const selectedLocation = localStorage.getItem('selectedLocation')
-      if (selectedLocation) {
-        try {
-          const location = JSON.parse(selectedLocation)
-          const postalCode = location.postalCode
-          if (postalCode && freeDeliveryPostcodes.includes(postalCode)) {
-            setIsFreeDeliveryPostcode(true)
-          }
-        } catch {
-          // Ignore parsing errors
-        }
-      }
-    }
-  }, [])
-
   if (items.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
