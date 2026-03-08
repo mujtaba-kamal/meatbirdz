@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { CheckCircle, MapPin, Phone, Mail, CheckCircle2 } from 'lucide-react'
+import { CheckCircle, MapPin, Phone, Mail, CheckCircle2, Camera } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface OrderItem {
@@ -387,8 +387,27 @@ function OrderConfirmationContent() {
             </div>
           </div>
 
+          {/* Screenshot Reminder for Collection Orders */}
+          {isCollectionOrder && (
+            <div className="border-t pt-4 mt-4">
+              <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <Camera className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-bold text-blue-900 mb-1 text-sm sm:text-base">
+                      Important: Take a Screenshot
+                    </h4>
+                    <p className="text-sm sm:text-base text-blue-800 leading-relaxed">
+                      Please take a screenshot of this order confirmation and show it at the collection point to pick up your order.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Arrival Button for Collection Orders */}
-          {isCollectionOrder && (order.status === 'CONFIRMED' || order.status === 'PREPARING' || order.status === 'READY') && (
+          {isCollectionOrder && (
             <div className="border-t pt-4 mt-4">
               {order.arrivalNotification ? (
                 <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
@@ -419,6 +438,25 @@ function OrderConfirmationContent() {
               )}
             </div>
           )}
+
+          {/* Contact Information Section */}
+          <div className="border-t pt-4 mt-4">
+            <h3 className="font-semibold mb-3 flex items-center">
+              <Phone className="w-5 h-5 mr-2" />
+              Contact Us
+            </h3>
+            <div className="space-y-2 text-gray-700">
+              <p className="flex items-center">
+                <Phone className="w-4 h-4 mr-2" />
+                Landline: 01215170802
+              </p>
+              {isCollectionOrder && (
+                <p className="text-sm text-gray-600 mt-2">
+                  Collection Point: MeatBirdz Collection Point, 198 heybarnes road B10 9JF
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="text-center">

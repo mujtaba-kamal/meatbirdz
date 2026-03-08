@@ -11,17 +11,9 @@ export async function POST(
 ) {
   try {
     const session = await getServerSession(authOptions)
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
     const orderId = params.id
 
-    // Verify the order belongs to the user
+    // Verify the order exists
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       select: { userId: true, status: true },
@@ -34,13 +26,23 @@ export async function POST(
       )
     }
 
-    // Check if order belongs to user (or allow if userId is null for guest orders)
-    if (order.userId && order.userId !== session.user.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized - This order does not belong to you' },
-        { status: 403 }
-      )
+    // For authenticated users, verify the order belongs to them
+    // For guest orders (userId is null), allow without authentication
+    if (order.userId) {
+      if (!session?.user?.id) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+      if (order.userId !== session.user.id) {
+        return NextResponse.json(
+          { error: 'Unauthorized - This order does not belong to you' },
+          { status: 403 }
+        )
+      }
     }
+    // If userId is null (guest order), allow without authentication check
 
     // Allow arrival notification for orders that are PENDING, CONFIRMED, PREPARING, or READY
     if (order.status !== 'PENDING' && order.status !== 'CONFIRMED' && order.status !== 'PREPARING' && order.status !== 'READY') {
