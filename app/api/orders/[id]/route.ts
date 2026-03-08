@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 export async function GET(
   request: NextRequest,
@@ -66,6 +68,53 @@ export async function PATCH(
     console.error('Error updating order:', error)
     return NextResponse.json(
       { error: 'Failed to update order' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Unauthorized. Admin access required.' },
+        { status: 401 }
+      )
+    }
+
+    const orderId = params.id
+
+    // Check if order exists
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { id: true },
+    })
+
+    if (!order) {
+      return NextResponse.json(
+        { error: 'Order not found' },
+        { status: 404 }
+      )
+    }
+
+    // Delete order (OrderItems will be deleted automatically due to onDelete: Cascade)
+    await prisma.order.delete({
+      where: { id: orderId },
+    })
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Order deleted successfully' 
+    })
+  } catch (error: any) {
+    console.error('Error deleting order:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete order', details: error.message },
       { status: 500 }
     )
   }

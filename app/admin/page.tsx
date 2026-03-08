@@ -1518,8 +1518,21 @@ export default function AdminPage() {
                           </div>
                         )}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        Click to view details
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="text-xs text-gray-500">
+                          Click to view details
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteOrder(order.id, order.customerName)
+                          }}
+                          className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Delete order"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Delete
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1532,7 +1545,17 @@ export default function AdminPage() {
           <div className="lg:col-span-1 order-3">
             {selectedOrder ? (
               <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-24 border border-primary-100 flex flex-col max-h-[calc(100vh-200px)]">
-                <h2 className="text-xl font-semibold mb-4 text-gray-900">Order Details</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900">Order Details</h2>
+                  <button
+                    onClick={() => handleDeleteOrder(selectedOrder.id, selectedOrder.customerName)}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Delete order"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                </div>
 
                 <div className="space-y-4 mb-6 overflow-y-auto flex-1 pr-2">
                   <div>
