@@ -34,6 +34,7 @@ interface Order {
   totalAmount: number
   status: string
   paymentStatus: string
+  stripePaymentId: string | null
   arrivalNotification: string | null
   arrivalAcknowledged: boolean
   items: OrderItem[]
