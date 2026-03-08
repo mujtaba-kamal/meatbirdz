@@ -1329,37 +1329,6 @@ export default function AdminPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-          {/* Menu Status Toggle */}
-          <div className="mb-6 bg-white rounded-lg shadow-md p-4 sm:p-6 border-2 border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                  Menu Status
-                </h3>
-                <p className="text-sm text-gray-600">
-                  {menuEnabled 
-                    ? 'Menu is currently enabled - customers can place orders'
-                    : 'Menu is currently disabled - customers cannot place orders'}
-                </p>
-              </div>
-              <button
-                onClick={toggleMenuStatus}
-                disabled={menuStatusLoading}
-                className={`relative inline-flex h-11 w-20 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-                  menuEnabled
-                    ? 'bg-green-500'
-                    : 'bg-gray-300'
-                } ${menuStatusLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                <span
-                  className={`inline-block h-9 w-9 transform rounded-full bg-white transition-transform ${
-                    menuEnabled ? 'translate-x-10' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-
           {/* Orders List */}
           <div className="lg:col-span-2">
             <div className="mb-4">

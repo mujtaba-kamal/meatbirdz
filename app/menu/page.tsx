@@ -160,8 +160,10 @@ export default function MenuPage() {
       }
     }
     fetchMenuStatus()
-    // Poll menu status every 5 seconds
-    const interval = setInterval(fetchMenuStatus, 5000)
+    // Poll menu status every 5 seconds (only when menu is disabled to check when it's re-enabled)
+    const interval = setInterval(() => {
+      fetchMenuStatus()
+    }, 5000)
     return () => clearInterval(interval)
   }, [])
 
