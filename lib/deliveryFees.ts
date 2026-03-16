@@ -15,6 +15,8 @@ export const deliveryFees: Record<string, number> = {
   'B14': 4.00,
   'B25': 0, // Free delivery (with minimum order)
   'B26': 2.00,
+  'B27': 2.00,
+  'B28': 2.50,
   'B33': 2.50,
   'B34': 3.50,
   'B35': 4.00,

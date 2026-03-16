@@ -22,6 +22,8 @@ const birminghamPostalCodes = [
   { code: 'B14', area: 'Birmingham' },
   { code: 'B25', area: 'Birmingham' },
   { code: 'B26', area: 'Birmingham' },
+  { code: 'B27', area: 'Birmingham' },
+  { code: 'B28', area: 'Birmingham' },
   { code: 'B33', area: 'Birmingham' },
   { code: 'B34', area: 'Birmingham' },
   { code: 'B35', area: 'Birmingham' },
