@@ -56,15 +56,11 @@ const burgerDipOptions = [
 const crispyTenderOptions = [
   { id: '3', quantity: 3, price: 4.99 },
   { id: '6', quantity: 6, price: 6.99 },
-  { id: '9', quantity: 9, price: 8.99 },
-  { id: '12', quantity: 12, price: 11.99 },
 ]
 
 const chargrilledTenderOptions = [
   { id: '3', quantity: 3, price: 5.99 },
   { id: '6', quantity: 6, price: 7.99 },
-  { id: '9', quantity: 9, price: 9.99 },
-  { id: '12', quantity: 12, price: 12.99 },
 ]
 
 // Box customization options
@@ -120,7 +116,7 @@ export default function MenuPage() {
   // Heat level state for crispy items
   const [heatLevelChoice, setHeatLevelChoice] = useState<Record<string, 'classic' | 'heat'>>({})
   // Tender quantity selection state
-  const [tenderQuantityChoice, setTenderQuantityChoice] = useState<Record<string, string>>({}) // menuItemId -> selected quantity option id (e.g., '3', '6', '9', '12')
+  const [tenderQuantityChoice, setTenderQuantityChoice] = useState<Record<string, string>>({}) // menuItemId -> selected quantity option id (e.g., '3', '6')
   // Box customization state
   const [boxBurgerChoice, setBoxBurgerChoice] = useState<Record<string, string>>({}) // menuItemId -> selected burger option id (Classic Box)
   const [boxFriesChoice, setBoxFriesChoice] = useState<Record<string, string>>({}) // menuItemId -> selected fries option id

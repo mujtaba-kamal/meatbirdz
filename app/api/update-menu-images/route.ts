@@ -28,12 +28,8 @@ const menuItemImages: Record<string, string> = {
   'Piri Fries - Large': 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=400&fit=crop',
   'Crispy Chicken Tenders - 3pc': 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=400&h=400&fit=crop',
   'Crispy Chicken Tenders - 6pc': 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=400&h=400&fit=crop',
-  'Crispy Chicken Tenders - 9pc': 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=400&h=400&fit=crop',
-  'Crispy Chicken Tenders - 12pc': 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=400&h=400&fit=crop',
   'Chargrilled Tenders - 3pc': 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400&h=400&fit=crop',
   'Chargrilled Tenders - 6pc': 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400&h=400&fit=crop',
-  'Chargrilled Tenders - 9pc': 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400&h=400&fit=crop',
-  'Chargrilled Tenders - 12pc': 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400&h=400&fit=crop',
   // LOADED FRIES
   'The Big Smash Up': 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=400&fit=crop',
   'The Dirty Bird': 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=400&fit=crop',
