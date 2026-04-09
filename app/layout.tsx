@@ -7,17 +7,16 @@ import Providers from '@/components/Providers'
 import CookieConsent from '@/components/CookieConsent'
 
 const inter = Inter({ subsets: ['latin'] })
-const brandLogoUrl = 'https://res.cloudinary.com/dzuo7rbfa/image/upload/v1770882972/Gemini_Generated_Image_3gu4av3gu4av3gu4_lv8p1v.png'
 
 export const metadata: Metadata = {
   title: 'MeatBirdz - Fast Food Online Ordering',
   description: 'Order delicious burgers, wraps, fries, and drinks online',
   icons: {
     icon: [
-      { url: brandLogoUrl, type: 'image/png' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
     ],
-    shortcut: [brandLogoUrl],
-    apple: [brandLogoUrl],
+    shortcut: ['/favicon.svg'],
+    apple: ['/favicon.svg'],
   },
 }
 
