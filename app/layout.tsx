@@ -13,10 +13,10 @@ export const metadata: Metadata = {
   description: 'Order delicious burgers, wraps, fries, and drinks online',
   icons: {
     icon: [
-      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icon', type: 'image/png' },
     ],
-    shortcut: ['/favicon.svg'],
-    apple: ['/favicon.svg'],
+    shortcut: ['/icon'],
+    apple: ['/apple-icon'],
   },
 }
 
